@@ -1,22 +1,16 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text } from 'react-native';
+import { useState } from 'react';
 
 export default function TimerPage() {
-  return (
-    <View style={styles.innerContainer}>
-      <Text style={styles.text}>This is the timer page</Text>
-      {/* You can add your actual timer logic here later! */}
+  const [running, setRunning] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(0);
+  const [editMode, setEditMode] = useState(false);
+  const [timeText, setTimeText] = useState("00:00:00");
+
+  return(
+    <View>
+      <Text></Text>
     </View>
   );
-}
 
-const styles = StyleSheet.create({
-  innerContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  text: {
-    fontSize: 20,
-    color: '#333',
-  },
-});
+}
