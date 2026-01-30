@@ -19,6 +19,17 @@ export default function TimerPage() {
       .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const parseTimeText = () => {
+    const parts = timeText.split(":");
+    if (parts.length !== 3) return 0;
+
+    const h = parseInt(parts[0]) || 0;
+    const m = parseInt(parts[1]) || 0;
+    const s = parseInt(parts[2]) || 0;
+
+    return h * 3600 + m * 60 + s;
+  }
+
   return(
     <View>
       <Text></Text>
