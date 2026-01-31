@@ -52,35 +52,24 @@ function HomePage() {
 
       <View style={styles.topSubContainer}>
         <Text style={styles.welcomemsg}>Welcome Back!!</Text>
-       
-
         <View style={styles.mascotCircle}>
           <Image source={require('../assets/images/logo.png')} 
-          style={styles.mascotImg}  />
-          
+          style={styles.mascotImg}  />  
         </View>
          <View style={styles.bubble}>
               <Text style={styles.bubbleText}>{message}</Text>
              
               <View style={styles.bubbleTail} />
            </View>
-        
-
-        
-
       </View>
 
       <ScrollView style={styles.bottomSubContainer}>
-        
-        
           <NavCard
             title="search-page"
             icon="🔍"
             href="/loginPage"
             description="Testing the Reusable Card component"
           />
-          
-        
         <NavCard
           title="community -page"
           icon="🔍"
@@ -93,6 +82,7 @@ function HomePage() {
           href="/loginPage"
           description={"Testing the Reusable Card component 2"}
         ></NavCard>
+        
          
       </ScrollView>
     </View>
@@ -136,19 +126,28 @@ const styles = StyleSheet.create({
   },
   bottomSubContainer:{
     borderWidth:1,
-    borderColor: "#26e30d",
+    marginBottom:0,
+    borderColor: "#f0871f45",
     borderStyle: "solid",
     padding:25,
     marginInline:25,
+     borderRadius: 20,
+    backgroundColor:"#eab17745",
+    
+ 
 
   },
   topSubContainer:{
      borderWidth:1,
-    borderColor: "#e6391b",
+    borderColor: "#f0871f45",
     borderStyle: "solid",
     padding:15,
     alignItems:'center',
     margin:25,
+    borderRadius: 20,
+    backgroundColor:"#eab17745",
+ 
+    
   },
   mascotCircle: {
     width: 225,
@@ -167,15 +166,15 @@ const styles = StyleSheet.create({
   mascotImg: { width: '100%', height: '100%' },
   welcomemsg:{
     marginRight:"auto",
-    fontWeight:'bold',
+    
     marginBottom:10,
-    fontSize:18,
+    fontSize:22,
     padding:0
   },
 bubble: {
-    backgroundColor: '#fff',
+    backgroundColor: '#ffffff',
     paddingTop: 10,
-    paddingInline:8,
+    paddingInline:10,
     paddingBottom:10,
     borderRadius: 20,
     marginTop: 10,
@@ -184,7 +183,7 @@ bubble: {
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.4,
   },
   bubbleText: {
     fontSize: 16,
