@@ -2,12 +2,12 @@ import { View, Text, StyleSheet, Button } from 'react-native';
 import { useState, useRef } from 'react';
 
 export default function TimerPage() {
-  const [running, setRunning] = useState(false);
-  const [secondsLeft, setSecondsLeft] = useState(0);
-  const [editMode, setEditMode] = useState(false);
-  const [timeText, setTimeText] = useState("00:00:00");
+  const [running, setRunning] = useState<boolean>(false);
+  const [secondsLeft, setSecondsLeft] = useState<number>(0);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [timeText, setTimeText] = useState<string>("00:00:00");
 
-  const stopRef = useRef(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
