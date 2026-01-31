@@ -1,8 +1,13 @@
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground } from 'react-native';
 import { Link } from 'expo-router';
 
 export default function SignupPage() {
   return (
+    <ImageBackground
+      source ={require('../assets/images/background.jpeg')}
+      style={styles.container}
+      resizeMode="cover"
+      >
     <View style={styles.container}>
       <Text style={styles.title}>This is the Sign Up Page</Text>
       
@@ -11,6 +16,7 @@ export default function SignupPage() {
         Back to Home Page
       </Link>
     </View>
+    </ImageBackground>
   );
 }
 
