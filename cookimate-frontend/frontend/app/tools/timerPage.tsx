@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function TimerPage() {
   const [running, setRunning] = useState<boolean>(false);
@@ -28,13 +28,49 @@ export default function TimerPage() {
     const s = parseInt(parts[2]) || 0;
 
     return h * 3600 + m * 60 + s;
-  }
+  };
 
-  const startTimer = () => {}
+  const startTimer = (): void => {
+    if (running) return;
+
+    const totalSeconds = parseTimeText();
+    if (totalSeconds <= 0) return;
+
+    setSecondsLeft(totalSeconds);
+    setRunning(true);
+    setEditMode(false);
+
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev: number) => {
+        if (prev <= 1) {
+          if (intervalRef.current != null) {
+            clearInterval(intervalRef.current);
+          }
+
+          setRunning(false);
+          setTimeText("00:00:00");
+          return 0;
+        }
+
+        const newVal = prev - 1;
+        setTimeText(formatTime(newVal));
+        return newVal;
+      });
+    }, 1000);
+  };
+
+  useEffect(() => {
+    if (running) {
+      setTimeText(formatTime(secondsLeft));
+    }
+  }, [secondsLeft, running]);
 
   const stopTimer = (): void => {
     if (intervalRef.current !== null) {
       clearInterval(intervalRef.current);
+      intervalRef.current = null;
     }
     setRunning(false);
   };
@@ -55,9 +91,10 @@ export default function TimerPage() {
           onChangeText={setTimeText}
           placeholder='HH:MM:SS'
           autoFocus
+          onBlur={() => setEditMode(false)}
         />  
       ) : (
-        <Text onPress={() => !running && setEditMode(true)}>{timeText}</Text>
+        <Text style={styles.timerInput} onPress={() => !running && setEditMode(true)}>{timeText}</Text>
       )}
 
       <View style={styles.buttons}>
@@ -74,14 +111,14 @@ const styles = StyleSheet.create({
     flex: 1,
     borderWidth: 1,
     justifyContent: "center",
-    width: 550,
     alignSelf: "center",
+    padding: 30,
   },
 
   buttons: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: 50,
+    marginTop: 40,
   },
 
   timerInput: {
