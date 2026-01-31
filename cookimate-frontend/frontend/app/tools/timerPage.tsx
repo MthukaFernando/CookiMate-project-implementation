@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Button } from 'react-native';
+import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
 import { useState, useRef } from 'react';
 
 export default function TimerPage() {
@@ -47,7 +47,18 @@ export default function TimerPage() {
 
   return(
     <View style = {styles.container}>
-      <Text style={styles.title}>Timer</Text>
+
+      {editMode ? (
+        <TextInput 
+          style={styles.timerInput}
+          value={timeText}
+          onChangeText={setTimeText}
+          placeholder='HH:MM:SS'
+          autoFocus
+        />  
+      ) : (
+        <Text onPress={() => !running && setEditMode(true)}>{timeText}</Text>
+      )}
 
       <View style={styles.buttons}>
         <Button title="Start" onPress={startTimer}></Button>
@@ -67,15 +78,15 @@ const styles = StyleSheet.create({
     alignSelf: "center",
   },
 
-  title: {
-    fontSize: 20,
-    textAlign: "center",
-  },
-
   buttons: {
     flexDirection: "row",
     justifyContent: "space-around",
     marginTop: 50,
+  },
+
+  timerInput: {
+    textAlign: "center",
+    fontSize: 50,
   }
   
 });
