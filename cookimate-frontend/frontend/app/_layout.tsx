@@ -7,7 +7,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" options={{ title: 'Home' }} />
       
       {/* These match your page filenames exactly */}
-      <Stack.Screen name="loginPage" options={{ title: 'Login' }} />
+      <Stack.Screen name="loginPage" options={{ title: 'Login'  }} />
       <Stack.Screen name="signupPage" options={{ title: 'Sign Up' }} />
       <Stack.Screen name="menuPlanerPage" options={{ title: 'Menu Planner' }} />
       
