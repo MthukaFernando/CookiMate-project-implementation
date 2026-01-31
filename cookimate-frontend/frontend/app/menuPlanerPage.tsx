@@ -2,25 +2,19 @@ import { View, StyleSheet } from 'react-native';
 import React from 'react';
 import { Calendar } from 'react-native-calendars';
 
+import { containerStyles, calendarStyles } from './menuPlannerPage.style';
+
 const Page = () => {
   return (
-    <View style={styles.container}>
+    <View style={containerStyles.container}>
       <Calendar
-        // Props go inside the opening tag
+        theme={calendarStyles}
         onDayPress={(day) => {
-          alert(day.dateString); // Matches the 'day' argument
+          alert("let's plan a meal suckerzzzzz"); 
         }}
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 50, // Added padding so it doesn't hit the status bar
-    backgroundColor: '#fff',
-  },
-});
 
 export default Page;
