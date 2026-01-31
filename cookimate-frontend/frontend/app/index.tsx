@@ -1,6 +1,9 @@
 import { Link } from "expo-router";
 import { router } from "expo-router";
-import { Pressable, StyleSheet, Text, View ,Image} from "react-native";
+import React, { useState, useEffect } from 'react';
+import { Pressable, StyleSheet, Text, View ,Image,ScrollView} from "react-native";
+
+
 
 type NavCardProps = {
   title: string;
@@ -26,29 +29,48 @@ const NavCard = ({ title, icon, description,href }: NavCardProps) => {
 };
 
 function HomePage() {
+  const [message, setMessage] = useState("Hi! What would you like to cook today");
+
+  useEffect(() => {
+    const messages = [
+      "Hi! Are you feeling hungry?",
+      "Let's make something tasty!",
+      "I'm ready to help you find recipes!",
+  
+    ];
+
+    const interval = setInterval(() => {
+      const randomIndex = Math.floor(Math.random() * messages.length);
+      setMessage(messages[randomIndex]);
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <View style={styles.mainContainer}>
 
       <View style={styles.topSubContainer}>
         <Text style={styles.welcomemsg}>Welcome Back!!</Text>
-        <View style={styles.bubble}>
-              <Text style={styles.bubbleText}>hii hope you ajhhhhre having a good day</Text>
-             
-              <View style={styles.bubbleTail} />
-           </View>
+       
 
         <View style={styles.mascotCircle}>
           <Image source={require('../assets/images/logo.png')} 
           style={styles.mascotImg}  />
           
         </View>
+         <View style={styles.bubble}>
+              <Text style={styles.bubbleText}>{message}</Text>
+             
+              <View style={styles.bubbleTail} />
+           </View>
         
 
         
 
       </View>
 
-      <View style={styles.bottomSubContainer}>
+      <ScrollView style={styles.bottomSubContainer}>
         
         
           <NavCard
@@ -57,6 +79,7 @@ function HomePage() {
             href="/loginPage"
             description="Testing the Reusable Card component"
           />
+          
         
         <NavCard
           title="community -page"
@@ -64,8 +87,14 @@ function HomePage() {
           href="/loginPage"
           description={"Testing the Reusable Card component 2"}
         ></NavCard>
+         <NavCard
+          title="community -page"
+          icon="🔍"
+          href="/loginPage"
+          description={"Testing the Reusable Card component 2"}
+        ></NavCard>
          
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -110,6 +139,7 @@ const styles = StyleSheet.create({
     borderColor: "#26e30d",
     borderStyle: "solid",
     padding:25,
+    marginInline:25,
 
   },
   topSubContainer:{
@@ -142,17 +172,19 @@ const styles = StyleSheet.create({
     fontSize:18,
     padding:0
   },
-  bubble: {
+bubble: {
     backgroundColor: '#fff',
-    padding: 7,
+    paddingTop: 10,
+    paddingInline:8,
+    paddingBottom:10,
     borderRadius: 20,
-    marginBottom: 20,
-    maxWidth: '99%',
-    position: 'relative', 
+    marginTop: 10,
+    maxWidth: '90%',
+    position: 'relative', // Necessary for tail positioning
     elevation: 3,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.1,
   },
   bubbleText: {
     fontSize: 16,
@@ -161,15 +193,16 @@ const styles = StyleSheet.create({
   },
   bubbleTail: {
     position: 'absolute',
-    bottom: -8, 
-    left: '50%',
+    top: -8, // Positioned at the bottom of the bubble
+    left: '20%',
     marginLeft: -10,
     width: 20,
     height: 20,
     backgroundColor: '#fff',
     transform: [{ rotate: '45deg' }],
-    zIndex: -1, 
+    zIndex: -1, // Sits behind the main bubble
   },
+
 
 
 
