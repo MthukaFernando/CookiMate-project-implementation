@@ -30,6 +30,7 @@ function HomePage() {
     <View style={styles.mainContainer}>
 
       <View style={styles.topSubContainer}>
+        <Text style={styles.welcomemsg}>Welcome Back!!</Text>
 
         <View style={styles.mascotCircle}>
           <Image source={require('../assets/images/logo.png')} 
@@ -110,10 +111,12 @@ const styles = StyleSheet.create({
     borderColor: "#e6391b",
     borderStyle: "solid",
     padding:25,
+    alignItems:'center',
+    margin:25,
   },
   mascotCircle: {
-    width: 300,
-    height :300,
+    width: 250,
+    height :250,
      borderWidth:1,
     borderColor: "#e6391b",
     borderStyle: "solid",
@@ -126,6 +129,13 @@ const styles = StyleSheet.create({
     
   },
   mascotImg: { width: '100%', height: '100%' },
+  welcomemsg:{
+    marginRight:"auto",
+    fontWeight:'bold',
+    marginBottom:10,
+    fontSize:18,
+    padding:0
+  }
 
 
 });
