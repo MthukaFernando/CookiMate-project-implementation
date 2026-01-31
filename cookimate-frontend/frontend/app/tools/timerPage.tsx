@@ -1,4 +1,4 @@
-import { View, Text } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
 import { useState, useRef } from 'react';
 
 export default function TimerPage() {
@@ -31,9 +31,22 @@ export default function TimerPage() {
   }
 
   return(
-    <View>
-      <Text></Text>
+    <View style = {styles.container}>
+      <Text style={styles.title}>Timer</Text>
     </View>
   );
-
 }
+  
+const styles = StyleSheet.create({
+  container: {
+    borderWidth: 1,
+    justifyContent: "center",
+  },
+
+  title: {
+    fontSize: 20,
+    textAlign: "center",
+  }
+  
+});
+
