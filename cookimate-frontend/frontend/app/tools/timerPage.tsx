@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, TextInput, Touchable } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
 import { useAudioPlayer } from 'expo-audio';
 
@@ -7,11 +7,23 @@ export default function TimerPage() {
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [timeText, setTimeText] = useState<string>("00:00:00");
-  
-  const alarmPlayer = useAudioPlayer(
-    require('../../assets/sounds/alarm1.mp3')
-  );
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const alarms = [
+    {name: "🛎️  Classic", file: require('../../assets/sounds/classic.mp3')},
+    {name: "🔊  Beep", file: require('../../assets/sounds/beep.mp3')},
+    {name: "⏰  Chime", file: require('../../assets/sounds/chime.mp3')},
+    {name: "📳  Buzz", file: require('../../assets/sounds/buzz.mp3')},
+    {name: "🎵  Melody", file: require('../../assets/sounds/melody.mp3')},
+    {name: "🎹  Tune", file: require('../../assets/sounds/tune.mp3')},
+  ];
+
+  const [selectedAlarm, setSelectedAlarm] = useState<{name: string, file: any} | null>(null);
+
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const alarmPlayer = useAudioPlayer(selectedAlarm ? selectedAlarm.file : null);
+
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
@@ -119,14 +131,45 @@ export default function TimerPage() {
         <Text style={styles.timerInput} onPress={() => !running && setEditMode(true)}>{timeText}</Text>
       )}
 
-      <View>
-        <Button title="Alarm sound" onPress={playAlarm}></Button>
+      <View style={{ alignItems: "center"}}>
+        <Text 
+          onPress={() => setShowDropdown(prev => !prev)}
+          style={styles.alarmSoundText}
+        >
+          {selectedAlarm ? selectedAlarm.name : "🔔 Alarm sounds"}
+        </Text>
+
+        {showDropdown && (
+          <View>
+            {alarms
+              .filter(alarm => alarm !== selectedAlarm)
+              .map(alarm => (
+                <TouchableOpacity 
+                  key={alarm.name}
+                  onPress={() => {
+                    setSelectedAlarm(alarm);
+                    setShowDropdown(false);
+                  }}
+                >
+                  <Text style={styles.alarmNames}>{alarm.name}</Text>
+                </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <View style={styles.buttons}>
-        <Button title="Start" onPress={startTimer}></Button>
-        <Button title="Stop" onPress={stopTimer}></Button>
-        <Button title="Reset" onPress={resetTimer}></Button>
+        <TouchableOpacity onPress={startTimer}>
+          <Text style={styles.btn}>Start</Text>
+        </TouchableOpacity>
+          
+        <TouchableOpacity onPress={stopTimer}>
+          <Text style={styles.btn}>Stop</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity onPress={resetTimer}>
+          <Text style={styles.btn}>Reset</Text>
+        </TouchableOpacity>
       </View>
     </View>
   );
@@ -137,7 +180,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignSelf: "center",
-    padding: 30
+    padding: 30,
   },
 
   timerLabelContainer: {
@@ -157,9 +200,37 @@ const styles = StyleSheet.create({
     marginTop: 40
   },
 
+  btn: {
+    borderWidth: 1,
+    padding: 12,
+    marginLeft: 10,
+    borderRadius: 5,
+    fontWeight: "bold",
+    textTransform: "uppercase"
+  },
+
   timerInput: {
     textAlign: "center",
     fontSize: 50
+  },
+
+  alarmSoundText: {
+    borderWidth: 2,
+    marginTop: 20,
+    textAlign: "center",
+    fontSize: 15,
+    width: 150,
+    paddingLeft: 4,
+    paddingRight: 4,
+    paddingTop: 7,
+    paddingBottom: 7,
+    borderRadius: 20
+  },
+
+  alarmNames: {
+    padding: 5,
+    borderWidth: 1,
+    marginTop: 8
   }
   
 });
