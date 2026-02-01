@@ -1,12 +1,16 @@
 import { View, Text, StyleSheet, Button, TextInput } from 'react-native';
 import { useState, useRef, useEffect } from 'react';
+import { useAudioPlayer } from 'expo-audio';
 
 export default function TimerPage() {
   const [running, setRunning] = useState<boolean>(false);
   const [secondsLeft, setSecondsLeft] = useState<number>(0);
   const [editMode, setEditMode] = useState<boolean>(false);
   const [timeText, setTimeText] = useState<string>("00:00:00");
-
+  
+  const alarmPlayer = useAudioPlayer(
+    require('../../assets/sounds/alarm1.mp3')
+  );
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const formatTime = (seconds: number) => {
@@ -51,11 +55,13 @@ export default function TimerPage() {
 
           setRunning(false);
           setTimeText("00:00:00");
+
+          playAlarm();
+
           return 0;
         }
 
         const newVal = prev - 1;
-        setTimeText(formatTime(newVal));
         return newVal;
       });
     }, 1000);
@@ -72,6 +78,7 @@ export default function TimerPage() {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
+    stopAlarm();
     setRunning(false);
   };
 
@@ -81,8 +88,23 @@ export default function TimerPage() {
     setTimeText("00:00:00");
   };
 
+  const playAlarm = () => {
+    alarmPlayer.seekTo(0);
+    alarmPlayer.play();
+  };
+
+  const stopAlarm = () => {
+    alarmPlayer.pause();
+  };
+
   return(
     <View style = {styles.container}>
+      <View style={styles.timerLabelContainer}>
+        <Text style={styles.timerLabel}>hr</Text>
+        <Text style={styles.timerLabel}>min</Text>
+        <Text style={styles.timerLabel}>sec</Text>
+      </View>
+      
 
       {editMode ? (
         <TextInput 
@@ -97,6 +119,10 @@ export default function TimerPage() {
         <Text style={styles.timerInput} onPress={() => !running && setEditMode(true)}>{timeText}</Text>
       )}
 
+      <View>
+        <Button title="Alarm sound" onPress={playAlarm}></Button>
+      </View>
+
       <View style={styles.buttons}>
         <Button title="Start" onPress={startTimer}></Button>
         <Button title="Stop" onPress={stopTimer}></Button>
@@ -109,21 +135,31 @@ export default function TimerPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    borderWidth: 1,
     justifyContent: "center",
     alignSelf: "center",
-    padding: 30,
+    padding: 30
+  },
+
+  timerLabelContainer: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 30
+  },
+
+  timerLabel: {
+    fontSize: 18,
+    paddingLeft: 8,
   },
 
   buttons: {
     flexDirection: "row",
     justifyContent: "space-around",
-    marginTop: 40,
+    marginTop: 40
   },
 
   timerInput: {
     textAlign: "center",
-    fontSize: 50,
+    fontSize: 50
   }
   
 });
