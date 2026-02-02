@@ -1,4 +1,4 @@
-import { View, StyleSheet, Modal, Text, Button, TouchableOpacity } from 'react-native'; 
+import { Image, View, StyleSheet, Modal, Text, Button, TouchableOpacity } from 'react-native'; 
 import React, { useState } from 'react'; 
 import { Calendar } from 'react-native-calendars';
 import { Dropdown } from 'react-native-element-dropdown';
@@ -74,6 +74,10 @@ const Page = () => {
           </View>
         </View>
       </Modal>
+      <Image
+        source={require('../assets/images/festivals.png')}
+        style={styles.festivalsImage}>
+      </Image>
     </View>
   );
 };
@@ -161,6 +165,12 @@ export const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     marginLeft: 8,
+  },
+  festivalsImage: {
+  width: '100%',  
+  height: '50%', 
+  position: 'absolute', 
+  bottom: 0,  
   },
 });
 
