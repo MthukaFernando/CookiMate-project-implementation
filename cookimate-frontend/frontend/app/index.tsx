@@ -125,11 +125,11 @@ const styles = StyleSheet.create({
 
      
   mainContainer: {
-    borderWidth: 4,
+    
     flex: 1,
         
-    backgroundColor: '#f2ece2',
-    borderColor: "#751212",
+    
+    
     borderStyle: "solid",
   },
   bottomSubContainer:{
