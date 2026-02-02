@@ -1,5 +1,6 @@
 import { Link } from "expo-router";
 import { router } from "expo-router";
+import { globalStyle } from "./globalStyleSheet.style";
 import React, { useState, useEffect } from 'react';
 import { Pressable, StyleSheet, Text, View ,Image,ScrollView} from "react-native";
 
@@ -124,19 +125,22 @@ const styles = StyleSheet.create({
 
      
   mainContainer: {
-    borderWidth: 1,
-    
+    borderWidth: 4,
+    flex: 1,
+        
+    backgroundColor: '#f2ece2',
     borderColor: "#751212",
     borderStyle: "solid",
   },
   bottomSubContainer:{
     borderWidth:1,
-    marginBottom:0,
+    marginBottom:50,
     borderColor: "#f0871f45",
     borderStyle: "solid",
     padding:25,
     maxHeight:400,
     marginInline:25,
+    
      borderRadius: 20,
     backgroundColor:"#eab17745",
     
