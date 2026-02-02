@@ -36,12 +36,9 @@ export default function LoginPage() {
 
         <View style={styles.bottomRow}>
           <View style={styles.navContainer}>
-            {/* Link to Signup */}
             <Link href="/signupPage" style={styles.link}>
               Don't have an account? Sign up
             </Link>
-
-            
           </View>
         </View>
       </View>
@@ -51,56 +48,46 @@ export default function LoginPage() {
 
 const styles = StyleSheet.create({
   container: {
-  flex: 1,
-  justifyContent: 'flex-end', 
-  alignItems: 'center',
-},
-
-  title: {
-    fontSize: 22,
-    marginBottom: 20,
+    flex: 1,
+    justifyContent: 'center',   // ✅ center vertically
+    alignItems: 'center',
   },
-  navContainer: {
-  flexDirection: 'row',    
-  justifyContent: 'space-between', 
-  alignItems: 'center',
-  marginTop: 10,
-},
 
+  navContainer: {
+    flexDirection: 'row',    
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    marginTop: 10,
+  },
 
   link: {
     color: 'black',
     fontSize: 16,
   },
-  homeLink: {
-    color: 'gray',
-    fontSize: 14,
-    marginTop: 10,
-  },
+
   card: {
-  position: 'absolute',     
-  bottom: 40,               
-  left: 20,                 
-  right: 20,                
-  backgroundColor: "#fff1c4",
-  padding: 20,
-  borderRadius: 12,
-},
+    width: '90%',                               // keeps it nicely centered
+    backgroundColor: 'rgba(255, 241, 196, 0.75)',
+    padding: 20,
+    borderRadius: 12,
+  },
 
   label: {
     fontSize: 14,
     marginBottom: 6,
     color: "#160303",
   },
+
   input: {
     borderWidth: 1,
-    backgroundColor:"white",
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderColor: "#ffffff",
     borderRadius: 8,
     height: 40,
     padding: 10,
     marginBottom: 15,
   },
+
   loginButton: {
     backgroundColor: "#5f4436e6",
     paddingVertical: 12,
@@ -108,28 +95,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 5,
   },
+
   loginText: {
     color: "#fff",
     fontSize: 16,
     fontWeight: "bold",
   },
+
   bottomRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 15,
   },
+
   forgot: {
     fontSize: 13,
     color: "#333",
     textDecorationLine: 'underline',
     alignSelf: 'flex-start',
     marginBottom: 10,
-  },
-  
-  signupText: {
-    color: "#fff",
-    fontSize: 13,
-    
   },
 });
