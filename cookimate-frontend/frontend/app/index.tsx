@@ -12,14 +12,15 @@ import {
 type NavCardProps = {
   title: string;
   icon: string;
+  bColor : string,
   description: string;
   href: string;
 };
-const NavCard = ({ title, icon, description, href }: NavCardProps) => {
+const NavCard = ({ title, icon, description, href,bColor }: NavCardProps) => {
   return (
     <Pressable
       onPress={() => router.push(href as any)}
-      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+      style={({ pressed }) => [styles.card,{ borderColor: bColor },  pressed && styles.cardPressed]}
     >
       <View style={styles.iconCircle}>
         <Text>{icon}</Text>
@@ -73,19 +74,23 @@ function HomePage() {
           title="Find Recipes"
           icon="🔍"
           href="/loginPage"
-          description="Tell me what you have in your kitchen"
+          description="Tell me what's in your kitchen"
+          bColor= "#4b2819c1"
+          
         />
         <NavCard
           title="Generate Custom"
           icon="✨"
           href="/loginPage"
           description="AI will create a recipe for you"
+          bColor="orange"
         ></NavCard>
         <NavCard
           title="Community"
           icon="👥"
           href="/loginPage"
           description="See what others are cooking"
+          bColor="red"
         ></NavCard>
       
       </View>
@@ -98,7 +103,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     backgroundColor: "#fff",
     padding: 15,
-
+     borderWidth: 2,
+    borderColor:'red',
     borderRadius: 20,
     marginTop: 10,
     marginBottom: 10,
@@ -129,16 +135,16 @@ const styles = StyleSheet.create({
   mainContainer: {
     padding: 25,
     flex: 1,
-
+    backgroundColor: '#f2ece2',
     borderStyle: "solid",
   },
   bottomSubContainer: {
-    borderWidth: 1,
+   
     padding: 20,
-    borderColor: "#f0871f45",
-    marginBottom:100,
+   
+    marginBottom:20,
     borderRadius: 20,
-    backgroundColor: "#eab17745",
+   
   },
   topSubContainer: {
     borderWidth: 1,
@@ -146,7 +152,7 @@ const styles = StyleSheet.create({
     borderStyle: "solid",
     padding: 15,
     alignItems: "center",
-    marginBottom: 25,
+    
     borderRadius: 20,
     backgroundColor: "#eab17745",
   },
