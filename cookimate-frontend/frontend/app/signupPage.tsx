@@ -46,7 +46,9 @@ export default function SignupPage() {
       setPasswordError('Password is required');
     } else if (value.length < 6) {
       setPasswordError('Password must be at least 6 characters');
-    } else {
+    } else if (!/\d/.test(value)) {
+      setPasswordError('Password must contain atleast 1 number')
+    }else {
       setPasswordError('');
     }
   };
