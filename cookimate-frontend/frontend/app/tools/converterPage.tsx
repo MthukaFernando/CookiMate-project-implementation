@@ -2,7 +2,6 @@ import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Dimensions,
   Image,
   SafeAreaView,
   ScrollView,
@@ -13,28 +12,17 @@ import {
   View,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
-
-interface NavIconProps {
-  icon: any;
-  label: string;
-  active?: boolean;
-}
-
 export default function ConverterPage() {
   const router = useRouter();
 
-  // --- STATE ---
-  const [activeTab, setActiveTab] = useState<"Timer" | "Converter">(
-    "Converter",
-  );
+  // states
   const [conversionType, setConversionType] = useState("Weight");
 
   // Input values
   const [input1, setInput1] = useState("");
   const [input2, setInput2] = useState("");
 
-  // --- LOGIC ---
+  // conversion logics
   const getUnits = () => {
     switch (conversionType) {
       case "Temperature":
@@ -48,6 +36,7 @@ export default function ConverterPage() {
 
   const units = getUnits();
 
+  // Clear inputs when switching unit types
   useEffect(() => {
     setInput1("");
     setInput2("");
@@ -100,144 +89,88 @@ export default function ConverterPage() {
           </TouchableOpacity>
         </View>
 
-        {/* --- TOP TOGGLE --- */}
-        <View style={styles.topToggleWrapper}>
-          <View style={styles.topToggleContainer}>
-            <TouchableOpacity
-              style={[
-                styles.topToggleBtn,
-                activeTab === "Timer" && styles.topToggleActive,
-              ]}
-              onPress={() => setActiveTab("Timer")}
-            >
-              <Text style={styles.topToggleText}>Timer</Text>
-            </TouchableOpacity>
+        {/* --- TITLE --- */}
+        <View style={styles.pageTitleContainer}>
+          <Text style={styles.pageTitle}>Kitchen Converter</Text>
+        </View>
 
-            <TouchableOpacity
-              style={[
-                styles.topToggleBtn,
-                activeTab === "Converter" && styles.topToggleActive,
-              ]}
-              onPress={() => setActiveTab("Converter")}
-            >
-              {activeTab === "Converter" && (
-                <Ionicons
-                  name="checkmark"
-                  size={16}
-                  color="#3E2723"
-                  style={{ marginRight: 5 }}
+        {/* --- MAIN CARD --- */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Convert</Text>
+
+          {/* Type Selector */}
+          <View style={styles.innerToggleContainer}>
+            {["Weight", "Temperature", "Volume"].map((type, index) => (
+              <TouchableOpacity
+                key={type}
+                style={[
+                  styles.innerToggleBtn,
+                  conversionType === type && styles.innerToggleActive,
+                  index !== 2 && styles.innerToggleBorder,
+                ]}
+                onPress={() => setConversionType(type)}
+              >
+                {conversionType === type && (
+                  <Ionicons
+                    name="checkmark"
+                    size={14}
+                    color="#3E2723"
+                    style={{ marginRight: 3 }}
+                  />
+                )}
+                <Text style={styles.innerToggleText}>{type}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          {/* Inputs */}
+          <View style={styles.inputsRow}>
+            <View style={styles.inputColumn}>
+              <Text style={styles.unitText}>{units.left}</Text>
+              <View style={styles.inputFieldContainer}>
+                <Text style={styles.inputLabel}>From:</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={input1}
+                  onChangeText={(text) => handleConversion(text, true)}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#rgba(93, 64, 55, 0.4)"
                 />
-              )}
-              <Text style={styles.topToggleText}>Converter</Text>
-            </TouchableOpacity>
+              </View>
+              <View style={styles.underline} />
+            </View>
+
+            <View style={styles.inputColumn}>
+              <Text style={styles.unitText}>{units.right}</Text>
+              <View style={styles.inputFieldContainer}>
+                <Text style={styles.inputLabel}>To:</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={input2}
+                  onChangeText={(text) => handleConversion(text, false)}
+                  keyboardType="numeric"
+                  placeholder="0"
+                  placeholderTextColor="#rgba(93, 64, 55, 0.4)"
+                />
+              </View>
+              <View style={styles.underline} />
+            </View>
           </View>
         </View>
 
-        {activeTab === "Timer" ? (
-          /* --- TIMER VIEW  --- */
-          <View style={styles.timerContainer}>
-            <Text style={styles.timerText}>This is the timer page</Text>
-            {/* You can add your actual timer logic here later! */}
-          </View>
-        ) : (
-          /* --- CONVERTER VIEW --- */
-          <View>
-            {/* Main Card */}
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>Converter</Text>
-
-              {/* Type Selector */}
-              <View style={styles.innerToggleContainer}>
-                {["Weight", "Temperature", "Volume"].map((type, index) => (
-                  <TouchableOpacity
-                    key={type}
-                    style={[
-                      styles.innerToggleBtn,
-                      conversionType === type && styles.innerToggleActive,
-                      index !== 2 && styles.innerToggleBorder,
-                    ]}
-                    onPress={() => setConversionType(type)}
-                  >
-                    {conversionType === type && (
-                      <Ionicons
-                        name="checkmark"
-                        size={14}
-                        color="#3E2723"
-                        style={{ marginRight: 3 }}
-                      />
-                    )}
-                    <Text style={styles.innerToggleText}>{type}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-
-              {/* Inputs */}
-              <View style={styles.inputsRow}>
-                <View style={styles.inputColumn}>
-                  <Text style={styles.unitText}>{units.left}</Text>
-                  <View style={styles.inputFieldContainer}>
-                    <Text style={styles.inputLabel}>From:</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={input1}
-                      onChangeText={(text) => handleConversion(text, true)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                      placeholderTextColor="#rgba(93, 64, 55, 0.4)"
-                    />
-                  </View>
-                  <View style={styles.underline} />
-                </View>
-
-                <View style={styles.inputColumn}>
-                  <Text style={styles.unitText}>{units.right}</Text>
-                  <View style={styles.inputFieldContainer}>
-                    <Text style={styles.inputLabel}>To:</Text>
-                    <TextInput
-                      style={styles.textInput}
-                      value={input2}
-                      onChangeText={(text) => handleConversion(text, false)}
-                      keyboardType="numeric"
-                      placeholder="0"
-                      placeholderTextColor="#rgba(93, 64, 55, 0.4)"
-                    />
-                  </View>
-                  <View style={styles.underline} />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.mascotContainer}>
-              <Image
-                source={require("../../assets/images/toast_mascot.png")}
-                style={styles.mascotImage}
-                resizeMode="contain"
-              />
-            </View>
-          </View>
-        )}
+        {/* --- MASCOT --- */}
+        <View style={styles.mascotContainer}>
+          <Image
+            source={require("../../assets/images/toast_mascot.png")}
+            style={styles.mascotImage}
+            resizeMode="contain"
+          />
+        </View>
       </ScrollView>
-
-      {/* --- BOTTOM BAR --- */}
-      <View style={styles.bottomBar}>
-        <NavIcon icon="home-outline" label="HOME" />
-        <NavIcon icon="timer-outline" label="TOOLS" active={true} />
-        <NavIcon icon="calendar-outline" label="PLANNER" />
-        <NavIcon icon="cart-outline" label="SHOP" />
-        <NavIcon icon="person-outline" label="PROFILE" />
-      </View>
     </SafeAreaView>
   );
 }
-
-const NavIcon: React.FC<NavIconProps> = ({ icon, label, active = false }) => (
-  <View style={styles.navItem}>
-    <Ionicons name={icon} size={24} color={active ? "#A1887F" : "#3E2723"} />
-    <Text style={[styles.navLabel, active && styles.navLabelActive]}>
-      {label}
-    </Text>
-  </View>
-);
 
 const styles = StyleSheet.create({
   container: {
@@ -245,13 +178,13 @@ const styles = StyleSheet.create({
     backgroundColor: "#F7F1E8",
   },
   scrollContent: {
-    paddingBottom: 100,
-    minHeight: "100%", // Ensures the background fills the screen
+    paddingBottom: 50,
+    minHeight: "100%",
   },
   header: {
     paddingHorizontal: 20,
     paddingTop: 10,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   backButton: {
     width: 44,
@@ -261,48 +194,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  topToggleWrapper: {
+  pageTitleContainer: {
     alignItems: "center",
-    marginBottom: 30,
+    marginBottom: 20,
   },
-  topToggleContainer: {
-    flexDirection: "row",
-    width: width * 0.75,
-    height: 46,
-    borderRadius: 25,
-    borderWidth: 1,
-    borderColor: "#8D6E63",
-    overflow: "hidden",
-  },
-  topToggleBtn: {
-    flex: 1,
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "transparent",
-  },
-  topToggleActive: {
-    backgroundColor: "#EACDB3",
-  },
-  topToggleText: {
-    fontSize: 16,
-    fontWeight: "600",
+  pageTitle: {
+    fontSize: 24,
+    fontWeight: "bold",
     color: "#3E2723",
   },
-
-  // --- TIMER STYLES ---
-  timerContainer: {
-    marginTop: 50,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  timerText: {
-    fontSize: 20,
-    color: "#333",
-    fontWeight: "bold",
-  },
-
-  // --- CONVERTER STYLES ---
   card: {
     backgroundColor: "#E2BC95",
     marginHorizontal: 20,
@@ -310,6 +210,7 @@ const styles = StyleSheet.create({
     padding: 20,
     height: 380,
     zIndex: 1,
+    marginTop: 10,
   },
   cardTitle: {
     fontSize: 20,
@@ -394,28 +295,5 @@ const styles = StyleSheet.create({
   mascotImage: {
     width: 130,
     height: 130,
-  },
-  bottomBar: {
-    position: "absolute",
-    bottom: 0,
-    width: "100%",
-    flexDirection: "row",
-    justifyContent: "space-around",
-    backgroundColor: "#E2BC95",
-    paddingVertical: 15,
-    paddingBottom: 30,
-    zIndex: 20,
-  },
-  navItem: {
-    alignItems: "center",
-  },
-  navLabel: {
-    fontSize: 10,
-    fontWeight: "bold",
-    marginTop: 4,
-    color: "#3E2723",
-  },
-  navLabelActive: {
-    color: "#A1887F",
   },
 });
