@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, ScrollView, Platform } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 
@@ -108,6 +108,11 @@ export default function SignupPage() {
       style={styles.container}
       resizeMode="cover"
     >
+
+    <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+
       <View style={styles.card}>
 
         {/* Email */}
@@ -171,16 +176,26 @@ export default function SignupPage() {
         </Link>
 
       </View>
+
+      </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-    justifyContent: 'flex-start', 
-    alignItems: 'center',         
+    flex: 1,       
     paddingTop: 40,              
+  },
+  keyboardAvoiding: {
+    flex: 1,
+    width: '100%',
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
     width: '90%',
