@@ -278,10 +278,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-  loginLink: {
-    textAlign: 'center',
-    marginTop: 15,
-    color: 'black',
-    fontSize: 14,
-  }
 });
+
