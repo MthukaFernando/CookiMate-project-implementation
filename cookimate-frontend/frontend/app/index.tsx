@@ -78,7 +78,7 @@ function HomePage() {
           icon="🔍"
           href="/loginPage"
           description="Tell me what's in your kitchen"
-          bColor= "#f1d15cc1"
+          bColor= "#E8C28E"
           
         />
         <NavCard
@@ -86,14 +86,14 @@ function HomePage() {
           icon="✨"
           href="/loginPage"
           description="AI will create a recipe for you"
-         bColor= "#d97c54c1"
+         bColor= "#B86D2A"
         ></NavCard>
         <NavCard
           title="Community"
           icon="👥"
           href="/loginPage"
           description="See what others are cooking"
-          bColor= "#edd95ac1"
+          bColor= "#612D25"
         ></NavCard>
       
       </View>
@@ -158,13 +158,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     
     borderRadius: 20,
-    backgroundColor: "#eab17745",
+    backgroundColor: '#E0C2A0',
   },
   mascotCircle: {
     width: 225,
     height: 225,
-    borderWidth: 1,
-    borderColor: "#e6391b",
+    borderWidth: 3,
+    borderColor: '#EBEBEB',
     borderStyle: "solid",
     padding: 25,
 
