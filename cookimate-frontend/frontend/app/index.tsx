@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { globalStyle } from "./globalStyleSheet.style";
 import {
   Image,
   Pressable,
@@ -54,7 +55,9 @@ function HomePage() {
   }, []);
 
   return (
-    <ScrollView style={styles.mainContainer}>
+
+    
+    <ScrollView style={[styles.mainContainer , globalStyle.container]}>
       <View style={styles.topSubContainer}>
         <Text style={styles.welcomemsg}>Welcome Back!!</Text>
         <View style={styles.mascotCircle}>
@@ -75,7 +78,7 @@ function HomePage() {
           icon="🔍"
           href="/loginPage"
           description="Tell me what's in your kitchen"
-          bColor= "#4b2819c1"
+          bColor= "#f1d15cc1"
           
         />
         <NavCard
@@ -83,18 +86,19 @@ function HomePage() {
           icon="✨"
           href="/loginPage"
           description="AI will create a recipe for you"
-          bColor="orange"
+         bColor= "#d97c54c1"
         ></NavCard>
         <NavCard
           title="Community"
           icon="👥"
           href="/loginPage"
           description="See what others are cooking"
-          bColor="red"
+          bColor= "#edd95ac1"
         ></NavCard>
       
       </View>
     </ScrollView>
+    
   );
 }
 
@@ -133,9 +137,9 @@ const styles = StyleSheet.create({
   cardDescription: { fontSize: 14, color: "#777", marginTop: 2 },
 
   mainContainer: {
-    padding: 25,
-    flex: 1,
-    backgroundColor: '#f2ece2',
+    paddingInline: 25,
+    
+    
     borderStyle: "solid",
   },
   bottomSubContainer: {
