@@ -47,28 +47,31 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingTop: 60,
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#F2ECE2',
   },
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: '#f0f0f0',
-    borderRadius: 10,
+    borderRadius: 20,
     marginBottom: 20,
+    borderWidth: 1
   },
   button: {
     paddingVertical: 10,
     paddingHorizontal: 30,
-    borderRadius: 10,
+    backgroundColor: '#F2ECE2',
+    borderRadius: 20
   },
   activeButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#E0C2A0",
   },
   activeText: {
-    color: '#fff',
+    color: 'black',
     fontWeight: 'bold',
   },
   inactiveText: {
-    color: '#333',
+    color: 'black',
+    fontWeight: 'bold',
   },
   content: {
     flex: 1,

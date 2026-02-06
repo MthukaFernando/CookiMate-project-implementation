@@ -1,8 +1,16 @@
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput } from 'react-native';
-import { Link } from 'expo-router';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons'; // Import Icons
+
+import { auth } from '../config/firebase'; 
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'; 
 
 export default function SignupPage() {
+  const router = useRouter();
+
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false); // Visibility State
 
   // State for form fields
   const [email, setEmail] = useState('');
@@ -21,10 +29,9 @@ export default function SignupPage() {
   const [usernameError, setUsernameError] = useState('');
   const [usernameTouched, setUsernameTouched] = useState(false);
 
-  // Email validation
+  // --- Validation Logic ---
   const validateEmail = (value: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
     if (!value) {
       setEmailError('Email is required');
     } else if (!regex.test(value)) {
@@ -35,19 +42,19 @@ export default function SignupPage() {
     setEmail(value);
   };
 
-  // Password validation
   const validatePassword = (value: string) => {
     setPassword(value);
     if (!value) {
       setPasswordError('Password is required');
     } else if (value.length < 6) {
       setPasswordError('Password must be at least 6 characters');
+    } else if (!/\d/.test(value)) {
+      setPasswordError('Password must contain at least 1 number')
     } else {
       setPasswordError('');
     }
   };
 
-  // Full Name validation
   const validateFullName = (value: string) => {
     setFullName(value);
     if (!value.trim()) {
@@ -57,7 +64,6 @@ export default function SignupPage() {
     }
   };
 
-  // Username validation
   const validateUsername = (value: string) => {
     setUsername(value);
     if (!value.trim()) {
@@ -69,24 +75,41 @@ export default function SignupPage() {
     }
   };
 
-  // Handle Sign in button press
-  const handleSignup = () => {
-    // Mark all fields as touched
+  const handleSignup = async () => {
     setEmailTouched(true);
     setPasswordTouched(true);
     setFullNameTouched(true);
     setUsernameTouched(true);
 
-    // Validate all fields
-    validateEmail(email);
-    validatePassword(password);
-    validateFullName(fullName);
-    validateUsername(username);
+    if (!email || !password || emailError || passwordError || fullNameError || usernameError) {
+      Alert.alert("Error", "Please fix the errors in the form.");
+      return;
+    }
 
-    if (emailError || passwordError || fullNameError || usernameError) return;
+    setIsLoading(true);
 
-    // If all valid
-    console.log('Form is valid');
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      await updateProfile(user, {
+        displayName: username
+      });
+
+      Alert.alert("Success", "Account created successfully!", [
+        { text: "OK", onPress: () => router.replace('/loginPage') }
+      ]);
+    } catch (error: any) {
+      console.error(error.code);
+      let errorMessage = "Something went wrong.";
+      if (error.code === 'auth/email-already-in-use') errorMessage = "That email is already in use!";
+      else if (error.code === 'auth/invalid-email') errorMessage = "Invalid email format.";
+      else if (error.code === 'auth/weak-password') errorMessage = "The password is too weak.";
+      
+      Alert.alert("Signup Error", errorMessage);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -95,117 +118,109 @@ export default function SignupPage() {
       style={styles.container}
       resizeMode="cover"
     >
-      <View style={styles.container}>
+      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          <View style={styles.card}>
 
-        <View style={styles.card}>
+            {/* Email */}
+            <Text style={styles.label}>Email</Text>
+            <TextInput
+              style={[styles.input, emailTouched && emailError ? styles.errorBorder : null]}
+              placeholder="Enter email"
+              placeholderTextColor="#999"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              value={email}
+              onChangeText={validateEmail}
+              onBlur={() => setEmailTouched(true)}
+            />
+            {emailTouched && emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
 
-          {/* Email */}
-          <Text style={styles.label}>Email</Text>
-          <TextInput
-            style={[styles.input, emailTouched && emailError ? { borderColor: 'red' } : null]}
-            placeholder="Enter email"
-            placeholderTextColor="#999"
-            keyboardType="email-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={email}
-            onChangeText={validateEmail}
-            onBlur={() => setEmailTouched(true)}
-          />
-          {emailTouched && emailError ? (
-            <Text style={{ color: 'red', fontSize: 12, marginBottom: 10 }}>{emailError}</Text>
-          ) : null}
+            {/* Full Name */}
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              style={[styles.input, fullNameTouched && fullNameError ? styles.errorBorder : null]}
+              placeholder="Enter full name"
+              placeholderTextColor="#999"
+              value={fullName}
+              onChangeText={validateFullName}
+              onBlur={() => setFullNameTouched(true)}
+            />
+            {fullNameTouched && fullNameError ? <Text style={styles.errorText}>{fullNameError}</Text> : null}
 
-          {/* Full Name */}
-          <Text style={styles.label}>Full Name</Text>
-          <TextInput
-            style={[styles.input, fullNameTouched && fullNameError ? { borderColor: 'red' } : null]}
-            placeholder="Enter full name"
-            placeholderTextColor="#999"
-            value={fullName}
-            onChangeText={validateFullName}
-            onBlur={() => setFullNameTouched(true)}
-          />
-          {fullNameTouched && fullNameError ? (
-            <Text style={{ color: 'red', fontSize: 12, marginBottom: 10 }}>{fullNameError}</Text>
-          ) : null}
+            {/* Username */}
+            <Text style={styles.label}>User Name</Text>
+            <TextInput
+              style={[styles.input, usernameTouched && usernameError ? styles.errorBorder : null]}
+              placeholder="Enter username"
+              placeholderTextColor="#999"
+              value={username}
+              onChangeText={validateUsername}
+              onBlur={() => setUsernameTouched(true)}
+            />
+            {usernameTouched && usernameError ? <Text style={styles.errorText}>{usernameError}</Text> : null}
 
-          {/* Username */}
-          <Text style={styles.label}>User Name</Text>
-          <TextInput
-            style={[styles.input, usernameTouched && usernameError ? { borderColor: 'red' } : null]}
-            placeholder="Enter username"
-            placeholderTextColor="#999"
-            value={username}
-            onChangeText={validateUsername}
-            onBlur={() => setUsernameTouched(true)}
-          />
-          {usernameTouched && usernameError ? (
-            <Text style={{ color: 'red', fontSize: 12, marginBottom: 10 }}>{usernameError}</Text>
-          ) : null}
+            {/* Password */}
+            <Text style={styles.label}>Password</Text>
+            <View style={[styles.passwordContainer, passwordTouched && passwordError ? styles.errorBorder : null]}>
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Enter password"
+                placeholderTextColor="#999"
+                secureTextEntry={!showPassword}
+                value={password}
+                onChangeText={validatePassword}
+                onBlur={() => setPasswordTouched(true)}
+              />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
+                <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="gray" />
+              </TouchableOpacity>
+            </View>
+            {passwordTouched && passwordError ? <Text style={styles.errorText}>{passwordError}</Text> : null}
 
-          {/* Password */}
-          <Text style={styles.label}>Password</Text>
-          <TextInput
-            style={[styles.input, passwordTouched && passwordError ? { borderColor: 'red' } : null]}
-            placeholder="Enter password"
-            placeholderTextColor="#999"
-            secureTextEntry
-            value={password}
-            onChangeText={validatePassword}
-            onBlur={() => setPasswordTouched(true)}
-          />
-          {passwordTouched && passwordError ? (
-            <Text style={{ color: 'red', fontSize: 12, marginBottom: 10 }}>{passwordError}</Text>
-          ) : null}
+            <TouchableOpacity 
+              style={[styles.signupButton, isLoading && styles.disabledButton]} 
+              onPress={handleSignup}
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.signupText}>Sign up</Text>
+              )}
+            </TouchableOpacity>
 
-          {/* Sign in button */}
-          <TouchableOpacity style={styles.signupButton} onPress={handleSignup}>
-            <Text style={styles.signupText}>Sign in</Text>
-          </TouchableOpacity>
+            <Link href="/loginPage" style={styles.loginLink}>
+              Already have an account? Log in
+            </Link>
 
-        </View>
-
-      </View>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </ImageBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,       
+    paddingTop: 40,              
+  },
+  keyboardAvoiding: {
     flex: 1,
+    width: '100%',
   },
-
-  title: {
-    fontSize: 22,
-    marginBottom: 20,
-  },
-  navContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
-  },
-
-  link: {
-    color: 'black',
-    fontSize: 16,
-  },
-  homeLink: {
-    color: 'gray',
-    fontSize: 14,
-    marginTop: 10,
   },
   card: {
-    position: 'absolute',
-    bottom: 40,
-    left: 20,
-    right: 20,
-    backgroundColor: "#fff1c4",
+    width: '90%',
+    backgroundColor: 'rgba(255, 241, 196, 0.75)',
     padding: 20,
     borderRadius: 12,
   },
-
   label: {
     fontSize: 14,
     marginBottom: 6,
@@ -213,34 +228,55 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    backgroundColor: "white",
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderColor: "#ffffff",
     borderRadius: 8,
     height: 40,
     padding: 10,
-    marginBottom: 15,
+    marginBottom: 5,
+  },
+
+  passwordContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderColor: "#ffffff",
+    borderRadius: 8,
+    height: 40,
+    paddingHorizontal: 10,
+    marginBottom: 5,
+  },
+  passwordInput: {
+    flex: 1,
+    height: '100%',
+    color: '#000',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  errorBorder: {
+    borderColor: 'red',
+  },
+  errorText: {
+    color: 'red',
+    fontSize: 12,
+    marginBottom: 10,
   },
   signupButton: {
     backgroundColor: "#5f4436e6",
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: "center",
-    marginTop: 5,
-  },
-  loginText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  bottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
     marginTop: 15,
   },
-
+  disabledButton: {
+    backgroundColor: "#5f443699",
+  },
   signupText: {
     color: "#fff",
-    fontSize: 13,
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
+
