@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons'; // Import Icons
 
 import { auth } from '../config/firebase'; 
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'; 
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth'; 
 
 export default function SignupPage() {
   const router = useRouter();
@@ -96,10 +96,23 @@ export default function SignupPage() {
         displayName: username
       });
 
-      Alert.alert("Success", "Account created successfully!", [
-        { text: "OK", onPress: () => router.replace('/loginPage') }
-      ]);
+      // Send the verification email
+      await sendEmailVerification(user);
+      setIsLoading(false); 
+      Alert.alert(
+        "Verify Your Email", 
+        `An activation link has been sent to ${email}. Please check your inbox (and spam folder) to verify your account before logging in.`,
+        [
+          { 
+            text: "OK", 
+            onPress: () => router.replace('/loginPage') 
+          }
+        ],
+        { cancelable: false } 
+      );
+
     } catch (error: any) {
+      setIsLoading(false); 
       console.error(error.code);
       let errorMessage = "Something went wrong.";
       if (error.code === 'auth/email-already-in-use') errorMessage = "That email is already in use!";
@@ -107,9 +120,7 @@ export default function SignupPage() {
       else if (error.code === 'auth/weak-password') errorMessage = "The password is too weak.";
       
       Alert.alert("Signup Error", errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
+    } 
   };
 
   return (

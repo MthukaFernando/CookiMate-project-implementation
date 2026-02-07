@@ -1,7 +1,7 @@
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, KeyboardAvoidingView, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
 import { auth } from '../config/firebase'; 
 import { Ionicons } from '@expo/vector-icons'; // Import Icons
 
@@ -21,9 +21,41 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      await user.reload(); 
+      const refreshedUser = auth.currentUser;
+
+      // Check if the user is verified
+      if (refreshedUser && !refreshedUser.emailVerified) {
+        setLoading(false);
+        
+        Alert.alert(
+          'Email Not Verified',
+          'Please verify your email before logging in. Check your inbox for the link.',
+          [
+            { 
+              text: 'Resend Link', 
+              onPress: async () => {
+                try {
+                  await sendEmailVerification(refreshedUser);
+                  Alert.alert('Sent', 'A new verification link has been sent.');
+                } catch (err) {
+                  Alert.alert('Error', 'Could not resend email. Try again later.');
+                }
+              } 
+            },
+            { text: 'OK', style: 'cancel' }
+          ]
+        );
+        await signOut(auth);
+        return; 
+      }
+
+      // If verified, proceed to the home page
       setLoading(false);
       router.replace('/'); 
+      
     } catch (error: any) {
       setLoading(false);
       console.log(error.code);
@@ -68,7 +100,7 @@ export default function LoginPage() {
                 style={styles.passwordInput}
                 placeholder="Enter password"
                 placeholderTextColor="#999"
-                secureTextEntry={!showPassword} // Toggle based on state
+                secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={setPassword}
               />
@@ -147,7 +179,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 15,
   },
-
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
