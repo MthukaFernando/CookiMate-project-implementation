@@ -1,8 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -13,16 +11,12 @@ import {
 } from "react-native";
 
 export default function ConverterPage() {
-  const router = useRouter();
-
-  // states
+  // --- STATE ---
   const [conversionType, setConversionType] = useState("Weight");
-
-  // Input values
   const [input1, setInput1] = useState("");
   const [input2, setInput2] = useState("");
 
-  // conversion logics
+  // --- LOGIC ---
   const getUnits = () => {
     switch (conversionType) {
       case "Temperature":
@@ -79,25 +73,8 @@ export default function ConverterPage() {
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        {/* --- HEADER --- */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            onPress={() => router.back()}
-            style={styles.backButton}
-          >
-            <Ionicons name="arrow-back" size={24} color="#5D4037" />
-          </TouchableOpacity>
-        </View>
-
-        {/* --- TITLE --- */}
-        <View style={styles.pageTitleContainer}>
-          <Text style={styles.pageTitle}>Kitchen Converter</Text>
-        </View>
-
         {/* --- MAIN CARD --- */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Convert</Text>
-
           {/* Type Selector */}
           <View style={styles.innerToggleContainer}>
             {["Weight", "Temperature", "Volume"].map((type, index) => (
@@ -114,7 +91,7 @@ export default function ConverterPage() {
                   <Ionicons
                     name="checkmark"
                     size={14}
-                    color="#3E2723"
+                    color="#4A3721"
                     style={{ marginRight: 3 }}
                   />
                 )}
@@ -123,49 +100,42 @@ export default function ConverterPage() {
             ))}
           </View>
 
-          {/* Inputs */}
+          {/* Input Fields */}
           <View style={styles.inputsRow}>
+            {/* Left Column */}
             <View style={styles.inputColumn}>
               <Text style={styles.unitText}>{units.left}</Text>
               <View style={styles.inputFieldContainer}>
-                <Text style={styles.inputLabel}>From:</Text>
+                <Text style={styles.inputLabel}>From</Text>
                 <TextInput
                   style={styles.textInput}
                   value={input1}
                   onChangeText={(text) => handleConversion(text, true)}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#rgba(93, 64, 55, 0.4)"
+                  placeholderTextColor="rgba(74, 55, 33, 0.4)"
                 />
               </View>
               <View style={styles.underline} />
             </View>
 
+            {/* Right Column */}
             <View style={styles.inputColumn}>
               <Text style={styles.unitText}>{units.right}</Text>
               <View style={styles.inputFieldContainer}>
-                <Text style={styles.inputLabel}>To:</Text>
+                <Text style={styles.inputLabel}>To</Text>
                 <TextInput
                   style={styles.textInput}
                   value={input2}
                   onChangeText={(text) => handleConversion(text, false)}
                   keyboardType="numeric"
                   placeholder="0"
-                  placeholderTextColor="#rgba(93, 64, 55, 0.4)"
+                  placeholderTextColor="rgba(74, 55, 33, 0.4)"
                 />
               </View>
               <View style={styles.underline} />
             </View>
           </View>
-        </View>
-
-        {/* --- MASCOT --- */}
-        <View style={styles.mascotContainer}>
-          <Image
-            source={require("../../assets/images/toast_mascot.png")}
-            style={styles.mascotImage}
-            resizeMode="contain"
-          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -175,53 +145,30 @@ export default function ConverterPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F7F1E8",
+    backgroundColor: "#F2ECE2",
   },
   scrollContent: {
     paddingBottom: 50,
     minHeight: "100%",
-  },
-  header: {
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    marginBottom: 10,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: "#EACDB3",
     justifyContent: "center",
-    alignItems: "center",
-  },
-  pageTitleContainer: {
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  pageTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#3E2723",
   },
   card: {
-    backgroundColor: "#E2BC95",
-    marginHorizontal: 20,
-    borderRadius: 20,
-    padding: 20,
-    height: 380,
+    backgroundColor: "#E0C2A0",
+    marginHorizontal: 25,
+    borderRadius: 50,
+    padding: 30,
+    paddingTop: 90,
+    paddingBottom: 90,
     zIndex: 1,
-    marginTop: 10,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: "bold",
-    color: "#160303",
-    marginBottom: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   },
   innerToggleContainer: {
     flexDirection: "row",
     borderWidth: 1,
-    borderColor: "#3E2723",
+    borderColor: "#4A3721",
     borderRadius: 20,
     height: 40,
     marginBottom: 40,
@@ -235,15 +182,15 @@ const styles = StyleSheet.create({
   },
   innerToggleBorder: {
     borderRightWidth: 1,
-    borderRightColor: "#3E2723",
+    borderRightColor: "#4A3721",
   },
   innerToggleActive: {
-    backgroundColor: "#F7F1E8",
+    backgroundColor: "#F2ECE2",
   },
   innerToggleText: {
     fontSize: 13,
     fontWeight: "600",
-    color: "#160303",
+    color: "#4A3721",
   },
   inputsRow: {
     flexDirection: "row",
@@ -255,45 +202,38 @@ const styles = StyleSheet.create({
     width: "45%",
   },
   unitText: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#160303",
-    marginBottom: 30,
+    fontSize: 24,
+    fontWeight: "300",
+    color: "#202020",
+    marginBottom: 20,
+    fontFamily: "System",
   },
   inputFieldContainer: {
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
     marginBottom: 5,
   },
   inputLabel: {
     fontSize: 14,
-    color: "#5D4037",
-    fontWeight: "500",
+    color: "#9e784d",
+    fontWeight: "bold",
     marginRight: 10,
+    letterSpacing: 1,
   },
   textInput: {
     flex: 1,
-    fontSize: 16,
-    color: "#3E2723",
-    fontWeight: "bold",
+    fontSize: 22,
+    color: "#202020",
+    fontWeight: "600",
     textAlign: "right",
     padding: 0,
   },
   underline: {
     width: "100%",
-    height: 1,
-    backgroundColor: "#3E2723",
-    opacity: 0.5,
-  },
-  mascotContainer: {
-    alignItems: "flex-end",
-    marginRight: 20,
-    marginTop: -75,
-    zIndex: 10,
-  },
-  mascotImage: {
-    width: 130,
-    height: 130,
+    height: 2,
+    backgroundColor: "#4A3721",
+    opacity: 0.3,
   },
 });
