@@ -1,16 +1,16 @@
 import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Ionicons } from '@expo/vector-icons'; // Import Icons
+import { Ionicons } from '@expo/vector-icons'; 
 
-import { auth } from '../config/firebase'; 
-import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth'; 
+import { auth } from '../../config/firebase'; 
+import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from 'firebase/auth'; 
 
 export default function SignupPage() {
   const router = useRouter();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false); // Visibility State
+  const [showPassword, setShowPassword] = useState(false); 
 
   // State for form fields
   const [email, setEmail] = useState('');
@@ -89,16 +89,23 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
+      // 1. Create the user
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
+      // 2. Update the profile with Username
       await updateProfile(user, {
         displayName: username
       });
 
-      // Send the verification email
+      // 3. Send verification link
       await sendEmailVerification(user);
+
+      // 4. THE FIX: Sign out immediately so they aren't auto-logged in
+      await signOut(auth);
+
       setIsLoading(false); 
+      
       Alert.alert(
         "Verify Your Email", 
         `An activation link has been sent to ${email}. Please check your inbox (and spam folder) to verify your account before logging in.`,
@@ -125,7 +132,7 @@ export default function SignupPage() {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background.jpeg')}
+      source={require('../../assets/images/background.jpeg')}
       style={styles.container}
       resizeMode="cover"
     >
@@ -201,9 +208,11 @@ export default function SignupPage() {
               )}
             </TouchableOpacity>
 
-            <Link href="/loginPage">
-              Already have an account? Log in
-            </Link>
+            <View style={styles.bottomRow}>
+              <Link href="/loginPage" style={styles.link}>
+                Already have an account? Log in
+              </Link>
+            </View>
 
           </View>
         </ScrollView>
@@ -225,6 +234,7 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingBottom: 20,
   },
   card: {
     width: '90%',
@@ -246,7 +256,6 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 5,
   },
-
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -289,5 +298,13 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  bottomRow: {
+    marginTop: 15,
+    alignItems: 'center',
+  },
+  link: {
+    color: 'black',
+    fontSize: 16,
+    textDecorationLine: 'underline',
+  },
 });
-

@@ -2,7 +2,7 @@ import { Image, View, StyleSheet, Modal, Text, TouchableOpacity, Dimensions, Fla
 import React, { useState, useRef, useEffect } from 'react'; 
 import { Calendar } from 'react-native-calendars';
 import { Dropdown } from 'react-native-element-dropdown';
-import { globalStyle } from './globalStyleSheet.style';
+import { globalStyle } from '../globalStyleSheet.style';
 
 const { width } = Dimensions.get('window');
 
@@ -15,10 +15,10 @@ const mealOptions = [
 
 // Circular arrayof images for the scrolling animation
 const carouselImages = [
-  require('../assets/images/planner_img1.png'),
-  require('../assets/images/planner_img2.png'),
-  require('../assets/images/planner_img3.png'),
-  require('../assets/images/planner_img1.png'), 
+  require('../../assets/images/planner_img1.png'),
+  require('../../assets/images/planner_img2.png'),
+  require('../../assets/images/planner_img3.png'),
+  require('../../assets/images/planner_img1.png'), 
 ];
 
 const Page = () => {
