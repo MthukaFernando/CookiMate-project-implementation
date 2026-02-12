@@ -13,6 +13,6 @@ const RecipeSchema = new mongoose.Schema({
   steps: [String],
   search_terms: [String],
   image: String
-});
+}, {collection: 'recipes'});
 
 module.exports = mongoose.model('Recipe', RecipeSchema);
