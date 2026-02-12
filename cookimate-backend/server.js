@@ -1,30 +1,26 @@
-// 1. Import necessary tools
-require('dotenv').config(); // Loads your .env variables
-const express = require('express');
-const cors = require('cors');
-const connectDB = require('./config/db'); // Import the DB connection logic
-// const recipeRoutes = require('./routes/recipeRoutes'); // Import the recipe "waiter"
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js'; // Ensure the path is correct
 
-// 2. Initialize the app
+// Initialize Express
 const app = express();
 
-// 3. Connect to MongoDB
+// --- 1. CONNECT TO DATABASE ---
+// We call the function from your db.js file
 connectDB();
 
-// 4. Middleware
-app.use(cors()); // Allows your React Native app to talk to this server
-app.use(express.json()); // Allows the server to understand JSON data sent in a request
+// --- 2. MIDDLEWARE ---
+app.use(cors()); // Allows your React/Mobile app to talk to this server
+app.use(express.json()); // Allows the server to accept JSON data (like profile pics)
 
-// 5. Define Routes
-// Add your relevant routes here (example: // app.use('/api/recipes', recipeRoutes);
-
-// 6. Basic Health Check (To see if the server is alive)
+// --- 3. ROUTES ---
 app.get('/', (req, res) => {
-  res.send('Cookimate Server is Running...');
+  res.send("Cookimate API is running! ");
 });
 
-// 7. Start the Server
+// --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`Server is flying on http://localhost:${PORT}`);
+  console.log(` Server humming along on port ${PORT}`);
 });
