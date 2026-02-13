@@ -10,6 +10,7 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
+  ScrollView, 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
@@ -19,12 +20,23 @@ import axios from "axios";
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
 
-// Updated options to match backend controller logic
+// --- 1. Added Cuisine Options ---
+const cuisineOptions = [
+  { label: "All Cuisines", value: "All" },
+  { label: "Italian 🍝", value: "Italian" },
+  { label: "Chinese 🥡", value: "Chinese" },
+  { label: "Mexican 🌮", value: "Mexican" },
+  { label: "Indian 🍛", value: "Indian" },
+  { label: "American 🍔", value: "American" },
+  { label: "Thai 🍜", value: "Thai" },
+  { label: "Japanese 🍣", value: "Japanese" },
+];
+
 const mealOptions = [
   { label: "All Meals", value: "All" },
-  { label: "Breakfast 🍳", value: "Breakfast" },
-  { label: "Lunch 🍛", value: "Lunch" },
-  { label: "Dinner 🥡", value: "Dinner" },
+  { label: "Breakfast", value: "Breakfast" },
+  { label: "Lunch", value: "Lunch" },
+  { label: "Dinner", value: "Dinner" },
 ];
 const timeOptions = [
   { label: "Any Time", value: "All" },
@@ -44,20 +56,26 @@ const MyRecipesPage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [meal, setMeal] = useState("All");
-  const [time, setTime] = useState("All"); 
+  const [time, setTime] = useState("All");
   const [diet, setDiet] = useState("All");
+  // --- 2. Added Cuisine State ---
+  const [cuisine, setCuisine] = useState("All");
 
   const fetchRecipes = async () => {
     setLoading(true);
     try {
+      // Use the IP that works for you (env variable or hardcoded)
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.2:5000';
+      
       const response = await axios.get(
-        `http://172.20.10.2:5000/api/recipes`,
+        `${API_URL}/api/recipes`,
         {
           params: {
-            searchQuery: searchQuery, 
+            searchQuery: searchQuery,
             meal: meal !== "All" ? meal : undefined,
             diet: diet !== "All" ? diet : undefined,
-            // If want add cuisine later
+            // --- 3. Added Cuisine to Params ---
+            cuisine: cuisine !== "All" ? cuisine : undefined,
           },
         },
       );
@@ -69,9 +87,10 @@ const MyRecipesPage = () => {
     }
   };
 
+  // --- 4. Added cuisine to dependency array ---
   useEffect(() => {
     fetchRecipes();
-  }, [searchQuery, meal, diet]);
+  }, [searchQuery, meal, diet, cuisine]);
 
   const renderRecipeItem = ({ item }: { item: any }) => (
     <View style={styles.card}>
@@ -83,7 +102,7 @@ const MyRecipesPage = () => {
         </Text>
         <TouchableOpacity
           style={styles.viewButton}
-          onPress={() => router.push(`/recipe/${item.id}` as any)}
+          onPress={() => router.push(`/recipe/${item._id}` as any)} // Use _id if MongoDB
         >
           <Text style={styles.viewButtonText}>View Recipe</Text>
         </TouchableOpacity>
@@ -111,46 +130,54 @@ const MyRecipesPage = () => {
         </View>
       </View>
 
-      <View style={styles.dropdownRow}>
-        <Dropdown
-          style={styles.dropdown}
-          placeholderStyle={styles.dropText}
-          selectedTextStyle={styles.dropText}
-          data={mealOptions}
-          labelField="label"
-          valueField="value"
-          value={meal}
-          onChange={(item) => setMeal(item.value)}
-          renderRightIcon={() => (
-            <Ionicons name="chevron-down" size={14} color="white" />
-          )}
-        />
-        <Dropdown
-          style={styles.dropdown}
-          placeholderStyle={styles.dropText}
-          selectedTextStyle={styles.dropText}
-          data={timeOptions}
-          labelField="label"
-          valueField="value"
-          value={time}
-          onChange={(item) => setTime(item.value)}
-          renderRightIcon={() => (
-            <Ionicons name="chevron-down" size={14} color="white" />
-          )}
-        />
-        <Dropdown
-          style={styles.dropdown}
-          placeholderStyle={styles.dropText}
-          selectedTextStyle={styles.dropText}
-          data={dietOptions}
-          labelField="label"
-          valueField="value"
-          value={diet}
-          onChange={(item) => setDiet(item.value)}
-          renderRightIcon={() => (
-            <Ionicons name="chevron-down" size={14} color="white" />
-          )}
-        />
+      {/* --- 5. Changed to ScrollView for better layout with 4 items --- */}
+      <View style={styles.filterWrapper}>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            data={mealOptions}
+            labelField="label"
+            valueField="value"
+            value={meal}
+            onChange={(item) => setMeal(item.value)}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            data={cuisineOptions} // New Cuisine Dropdown
+            labelField="label"
+            valueField="value"
+            value={cuisine}
+            onChange={(item) => setCuisine(item.value)}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            data={timeOptions}
+            labelField="label"
+            valueField="value"
+            value={time}
+            onChange={(item) => setTime(item.value)}
+          />
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            data={dietOptions}
+            labelField="label"
+            valueField="value"
+            value={diet}
+            onChange={(item) => setDiet(item.value)}
+          />
+        </ScrollView>
       </View>
 
       {loading ? (
@@ -178,7 +205,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingTop: 15,
-    marginBottom: 15,
+    marginBottom: 10,
   },
   backCircle: {
     width: 40,
@@ -200,21 +227,26 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
-  dropdownRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+  
+  // Updated Styles for Scrolling Filters
+  filterWrapper: {
+    height: 50,
+    marginBottom: 10,
+  },
+  scrollContent: {
     paddingHorizontal: 15,
-    marginBottom: 20,
+    alignItems: 'center',
   },
   dropdown: {
-    flex: 1,
-    height: 40,
+    width: 120, // Fixed width so they look uniform in scroll
+    height: 36,
     backgroundColor: "#c6a484",
-    borderRadius: 20,
+    borderRadius: 18,
     paddingHorizontal: 10,
-    marginHorizontal: 4,
+    marginRight: 8, // Space between items
   },
-  dropText: { color: "white", fontSize: 11, fontWeight: "bold" },
+  dropText: { color: "white", fontSize: 12, fontWeight: "bold", textAlign: 'center' },
+  
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
