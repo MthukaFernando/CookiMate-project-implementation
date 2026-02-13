@@ -20,13 +20,13 @@ export const getAllRecipes = async (req, res) => {
       query.cuisine = cuisine; 
     }
 
-    // 4. Filter by Diet
+    // Filter by Diet
     if (diet && diet !== 'All') {
       query.search_terms = diet.toLowerCase();
     }
 
     //Returns all recipes
-    const recipes = await Recipe.find();
+    const recipes = await Recipe.find(query);
     res.json(recipes);
   } catch (error) {
     res.status(500).json({ message: error.message });
