@@ -50,3 +50,38 @@ export const getLevels = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Edit user with , (username, name , profilepic)
+
+export const updateUser = async (req, res) => {
+  try {
+    const { username, name, profilePic } = req.body;
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: req.params.uid },
+      {
+        username : username,
+        name : name,
+        profilePic : profilePic,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json(updatedUser);
+
+  } catch (error) {
+    if (error.code === 11000) {
+      return res.status(400).json({ message: "Username already taken" });
+    }
+
+    res.status(500).json({ message: error.message });
+  }
+};
+
