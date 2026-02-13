@@ -3,6 +3,9 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
 
+console.log("Current Directory:", process.cwd());
+console.log("Mongo URI is:", process.env.MONGO_URI);
+
 // Initialize Express
 const app = express();
 

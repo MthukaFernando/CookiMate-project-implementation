@@ -44,14 +44,14 @@ const MyRecipesPage = () => {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [meal, setMeal] = useState("All");
-  const [time, setTime] = useState("All"); // Note: Backend controller doesn't have 'time' yet
+  const [time, setTime] = useState("All"); 
   const [diet, setDiet] = useState("All");
 
   const fetchRecipes = async () => {
     setLoading(true);
     try {
       const response = await axios.get(
-        `http://192.168.1.6:5000/api/recipes`,
+        `http://172.20.10.2:5000/api/recipes`,
         {
           params: {
             searchQuery: searchQuery, 
