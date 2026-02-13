@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
+import recipeRoutes from './routes/recipeRoutes.js';
 
 // Initialize Express
 const app = express();
@@ -18,6 +19,8 @@ app.use(express.json()); // Allows the server to accept JSON data (like profile 
 app.get('/', (req, res) => {
   res.send("Cookimate API is running! ");
 });
+
+app.use('/api/recipes', recipeRoutes);
 
 // --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;
