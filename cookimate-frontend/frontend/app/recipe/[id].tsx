@@ -7,7 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 // REPLACE THIS with your specific laptop IP (Same as in myRecipes.tsx)
 // If you set up the .env file, use: process.env.EXPO_PUBLIC_API_URL
-const API_URL = 'http://172.20.10.2:5000'; 
+const API_URL = 'http://192.168.1.6:5000'; 
 
 export default function RecipeDetails() {
   const { id } = useLocalSearchParams(); // This grabs the ID from the URL

@@ -65,7 +65,7 @@ const MyRecipesPage = () => {
     setLoading(true);
     try {
       // Use the IP that works for you (env variable or hardcoded)
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://172.20.10.2:5000';
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:5000';
       
       const response = await axios.get(
         `${API_URL}/api/recipes`,
@@ -102,7 +102,7 @@ const MyRecipesPage = () => {
         </Text>
         <TouchableOpacity
           style={styles.viewButton}
-          onPress={() => router.push(`/recipe/${item._id}` as any)} // Use _id if MongoDB
+          onPress={() => router.push(`/recipe/${item.id}` as any)} // Use item.id (numeric) instead of item._id
         >
           <Text style={styles.viewButtonText}>View Recipe</Text>
         </TouchableOpacity>
@@ -238,12 +238,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dropdown: {
-    width: 120, // Fixed width so they look uniform in scroll
+    width: 120, 
     height: 36,
     backgroundColor: "#c6a484",
     borderRadius: 18,
     paddingHorizontal: 10,
-    marginRight: 8, // Space between items
+    marginRight: 8,
   },
   dropText: { color: "white", fontSize: 12, fontWeight: "bold", textAlign: 'center' },
   
