@@ -44,3 +44,25 @@ export const getRecipeById = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getSeasonalRecipes = async (req, res) => {
+  try {
+    const today = new Date();
+    const currentMonth = today.getUTCMonth() + 1; 
+    const currentDay = today.getUTCDate();
+
+    // Find all recipes where the current date falls between the start and end ranges
+    const recipes = await Recipe.find({
+      $and: [
+        { start_month: { $lte: currentMonth } },
+        { end_month: { $gte: currentMonth } },
+        { start_day: { $lte: currentDay } },
+        { end_day: { $gte: currentDay } }
+      ]
+    });
+
+    res.json(recipes);
+  } catch (error) {
+    res.status(500).json({ message: "Seasonal Fetch Error: " + error.message });
+  }
+};

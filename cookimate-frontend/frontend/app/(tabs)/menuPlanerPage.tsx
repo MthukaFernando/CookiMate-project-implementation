@@ -13,12 +13,11 @@ const mealOptions = [
   { label: 'Snack 🥨', value: 'snack' },
 ];
 
-// Circular arrayof images for the scrolling animation
-const carouselImages = [
+// Local default images for when no season is active
+const defaultImages = [
   require('../../assets/images/planner_img1.png'),
   require('../../assets/images/planner_img2.png'),
   require('../../assets/images/planner_img3.png'),
-  require('../../assets/images/planner_img1.png'), 
 ];
 
 const Page = () => {
@@ -26,11 +25,42 @@ const Page = () => {
   const [selectedDate, setSelectedDate] = useState('');
   const [mealType, setMealType] = useState(null);
   
+  // 1. Updated state to hold seasonal or default images
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  // 1. Auto scroll timer
+  // 2. Fetch seasonal recipes on component mount
   useEffect(() => {
+    const fetchSeasonalContent = async () => {
+      try {
+        // REPLACE WITH YOUR ACTUAL BACKEND IP ADDRESS
+        const response = await fetch('http://YOUR_SERVER_IP:5000/api/recipes/seasonal');
+        const data = await response.json();
+
+        if (data && data.length > 0) {
+          // Map Cloudinary URLs to URI objects
+          const remoteImages = data.map((recipe: any) => ({ uri: recipe.image }));
+          // Maintain circular scroll by adding the first image to the end
+          setCarouselImages([...remoteImages, remoteImages[0]]);
+        } else {
+          // Fallback to local defaults
+          setCarouselImages([...defaultImages, defaultImages[0]]);
+        }
+      } catch (error) {
+        console.error("Seasonal Fetch Error:", error);
+        // Fallback on network failure
+        setCarouselImages([...defaultImages, defaultImages[0]]);
+      }
+    };
+
+    fetchSeasonalContent();
+  }, []);
+
+  // Auto scroll timer
+  useEffect(() => {
+    if (carouselImages.length === 0) return;
+
     const timer = setInterval(() => {
       const nextIndex = currentIndex + 1;
 
@@ -41,23 +71,28 @@ const Page = () => {
         });
         setCurrentIndex(nextIndex);
       }
-    }, 4000); //The time duration per image
+    }, 4000);
 
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, carouselImages]);
 
-  
   const handleScroll = (event: any) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
-    
     const scrollValue = contentOffsetX / width;
-    
     
     if (scrollValue >= carouselImages.length - 1) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       setCurrentIndex(0);
     }
   };
+
+  // 3. Updated renderItem to handle both URI and local require
+  const renderItem = ({ item }: { item: any }) => (
+    <Image 
+      source={item.uri ? { uri: item.uri } : item} 
+      style={styles.festivalsImage} 
+    />
+  );
 
   return (
     <View style={globalStyle.container}>
@@ -132,9 +167,7 @@ const Page = () => {
               setCurrentIndex(newIndex);
             }
           }}
-          renderItem={({ item }) => (
-            <Image source={item} style={styles.festivalsImage} />
-          )}
+          renderItem={renderItem}
         />
       </View>
     </View>
