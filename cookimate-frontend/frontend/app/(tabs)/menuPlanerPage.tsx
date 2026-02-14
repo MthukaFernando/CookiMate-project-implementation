@@ -38,23 +38,19 @@ const Page = () => {
         // Automatically detect the IP of the machine running the server
         const debuggerHost = Constants.expoConfig?.hostUri;
         const address = debuggerHost ? debuggerHost.split(':')[0] : 'localhost';
-        const baseUrl = `http://${address}:5001/api`;
+        const baseUrl = `http://${address}:5000/api`;
 
         const response = await fetch(`${baseUrl}/recipes/seasonal`);
         const data = await response.json();
 
         if (data && data.length > 0) {
-          // Map database images to URI objects
           const remoteImages = data.map((recipe: any) => ({ uri: recipe.image }));
-          // Add first image to end for a smooth infinite scroll loop
           setCarouselImages([...remoteImages, remoteImages[0]]);
         } else {
-          // Fallback to local assets if no seasonal recipes match today's date
           setCarouselImages([...defaultImages, defaultImages[0]]);
         }
       } catch (error) {
         console.error("Seasonal Fetch Error:", error);
-        // Fallback to local assets if the server is offline
         setCarouselImages([...defaultImages, defaultImages[0]]);
       }
     };
@@ -85,7 +81,6 @@ const Page = () => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
     const scrollValue = contentOffsetX / width;
     
-    // Reset to index 0 when we reach the duplicated last item for infinite effect
     if (scrollValue >= carouselImages.length - 1) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       setCurrentIndex(0);
