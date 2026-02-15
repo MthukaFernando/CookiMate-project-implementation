@@ -10,6 +10,7 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   SafeAreaView,
+  ScrollView,
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { Calendar } from "react-native-calendars";
@@ -19,6 +20,18 @@ import { globalStyle } from "../globalStyleSheet.style";
 const { width } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
 
+//category array for planning menus
+const mealCategories = [
+  { label: "Breakfast     🍳🥞", color: "#f8e5ba" },
+  { label: "Lunch     🥗🌮", color: "#c3d7ae" },
+  { label: "Dinner     🥡🍕", color: "#ceb6b0" },
+  { label: "Appetizer     🫒🥟", color: "#c3d8ce" },
+  { label: "Dessert     🍰🥮", color: "#e5d1bb" },
+  { label: "Drink     🥤☕️", color: "#d7f2fa" },
+  { label: "Snack     🍿🥨", color: "#ffe3e0" },
+];
+
+//default image array when no seasons are there
 const defaultImages = [
   require("../../assets/images/planner_img1.png"),
   require("../../assets/images/planner_img2.png"),
@@ -144,7 +157,6 @@ const Page = () => {
         <View style={styles.modalOverlay}>
           <View style={styles.formContainer}>
             {!isAddingMeal ? (
-              // VIEW 1: DATE AND PLUS BUTTON
               <>
                 <TouchableOpacity
                   style={styles.addButton}
@@ -155,8 +167,28 @@ const Page = () => {
                 <Text style={styles.popupBoxDate}>{selectedDate}</Text>
               </>
             ) : (
-              // VIEW 2: EMPTY ADD SCREEN (Only shows Close button)
-              <View style={{ flex: 1 }} />
+              <View style={styles.addMealContainer}>
+                <Text style={styles.addMealHeader}>Select Category</Text>
+                <ScrollView
+                  style={styles.categoryScrollView}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {mealCategories.map((item) => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={[
+                        styles.categoryButton,
+                        { backgroundColor: item.color },
+                      ]}
+                      onPress={() => console.log(`${item.label} selected`)}
+                    >
+                      <Text style={styles.categoryButtonText}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
             )}
 
             <View style={styles.buttonContainer}>
@@ -164,7 +196,7 @@ const Page = () => {
                 style={styles.styledButton}
                 onPress={() => {
                   setIsModalVisible(false);
-                  setIsAddingMeal(false); // Reset to date view for next time
+                  setIsAddingMeal(false);
                 }}
               >
                 <Text style={styles.buttonText}>Close</Text>
@@ -262,6 +294,40 @@ export const styles = StyleSheet.create({
     top: 20,
     left: 0,
     right: 0,
+  },
+  addMealContainer: {
+    flex: 1,
+    width: "100%",
+    marginTop: 10,
+    marginBottom: 20,
+  },
+  addMealHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    textAlign: "center",
+    marginBottom: 15,
+    color: "#522F2F",
+  },
+  categoryScrollView: {
+    flex: 1,
+  },
+  categoryButton: {
+    marginTop: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    marginBottom: 10,
+    alignItems: "flex-start",
+    borderWidth: 3,
+    borderColor: "rgba(0,0,0,0.1)",
+    elevation: 5,
+    minHeight: 20,
+  },
+  categoryButtonText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#000",
+    textTransform: "capitalize",
   },
   buttonContainer: {
     alignItems: "center",
