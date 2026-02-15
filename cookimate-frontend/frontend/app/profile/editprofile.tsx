@@ -9,10 +9,10 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  KeyboardAvoidingView, // ✅ Added for keyboard fix
-  Platform,             // ✅ To handle iOS vs Android behavior
-  TouchableWithoutFeedback, // ✅ To dismiss keyboard on tap
-  Keyboard,             // ✅ To dismiss keyboard
+  KeyboardAvoidingView, 
+  Platform,             
+  TouchableWithoutFeedback, 
+  Keyboard,             
 } from "react-native";
 import axios from "axios";
 import { useRouter } from "expo-router";
