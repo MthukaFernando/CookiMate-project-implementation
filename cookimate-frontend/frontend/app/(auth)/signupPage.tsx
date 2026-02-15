@@ -1,10 +1,26 @@
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ImageBackground, 
+  TouchableOpacity, 
+  TextInput, 
+  Alert, 
+  KeyboardAvoidingView, 
+  ScrollView, 
+  Platform, 
+  ActivityIndicator 
+} from 'react-native';
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons'; 
+import axios from 'axios'; // ✅ Added Axios
 
 import { auth } from '../../config/firebase'; 
 import { createUserWithEmailAndPassword, updateProfile, sendEmailVerification, signOut } from 'firebase/auth'; 
+
+// ✅ Match this to your Backend IP
+const API_URL = "http://192.168.8.184:5000";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -89,42 +105,46 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // 1. Create the user
+      // 1. Create the user in Firebase Auth
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // 2. Update the profile with Username
-      await updateProfile(user, {
-        displayName: username
+      // 2. Update the Firebase Profile with Username
+      await updateProfile(user, { displayName: username });
+
+      // 3. Create the user in your MongoDB via Node.js Backend ✅
+      await axios.post(`${API_URL}/api/users`, {
+        firebaseUid: user.uid,
+        username: username,
+        name: fullName,
       });
 
-      // 3. Send verification link
+      // 4. Send verification link
       await sendEmailVerification(user);
 
-      // 4. THE FIX: Sign out immediately so they aren't auto-logged in
+      // 5. Sign out so they aren't auto-logged in without verifying
       await signOut(auth);
 
       setIsLoading(false); 
       
       Alert.alert(
         "Verify Your Email", 
-        `An activation link has been sent to ${email}. Please check your inbox (and spam folder) to verify your account before logging in.`,
-        [
-          { 
-            text: "OK", 
-            onPress: () => router.replace('/loginPage') 
-          }
-        ],
+        `An activation link has been sent to ${email}. Please check your inbox and verify your account before logging in.`,
+        [{ text: "OK", onPress: () => router.replace('/loginPage') }],
         { cancelable: false } 
       );
 
     } catch (error: any) {
       setIsLoading(false); 
-      console.error(error.code);
+      console.error("Signup Error:", error.code || error.message);
+      
       let errorMessage = "Something went wrong.";
+      // Handle Firebase Errors
       if (error.code === 'auth/email-already-in-use') errorMessage = "That email is already in use!";
       else if (error.code === 'auth/invalid-email') errorMessage = "Invalid email format.";
       else if (error.code === 'auth/weak-password') errorMessage = "The password is too weak.";
+      // Handle Backend Errors (e.g., Username taken)
+      else if (error.response?.data?.message) errorMessage = error.response.data.message;
       
       Alert.alert("Signup Error", errorMessage);
     } 
@@ -136,9 +156,13 @@ export default function SignupPage() {
       style={styles.container}
       resizeMode="cover"
     >
-      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <ScrollView contentContainerStyle={styles.scrollContent}>
+      <KeyboardAvoidingView 
+        style={styles.keyboardAvoiding} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
           <View style={styles.card}>
+            <Text style={{ fontSize: 24, fontWeight: 'bold', textAlign: 'center', marginBottom: 20, color: '#5f4436' }}>Create Account</Text>
 
             {/* Email */}
             <Text style={styles.label}>Email</Text>
@@ -234,64 +258,75 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   card: {
     width: '90%',
-    backgroundColor: 'rgba(255, 241, 196, 0.75)',
+    backgroundColor: 'rgba(255, 241, 196, 0.85)',
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: '#E8C28E',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
   },
   label: {
     fontSize: 14,
+    fontWeight: 'bold',
     marginBottom: 6,
-    color: "#160303",
+    color: "#5D4037",
   },
   input: {
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: "#ffffff",
-    borderRadius: 8,
-    height: 40,
+    backgroundColor: '#fff',
+    borderColor: "#EBEBEB",
+    borderRadius: 10,
+    height: 45,
     padding: 10,
     marginBottom: 5,
+    color: '#333'
   },
   passwordContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: "#ffffff",
-    borderRadius: 8,
-    height: 40,
+    backgroundColor: '#fff',
+    borderColor: "#EBEBEB",
+    borderRadius: 10,
+    height: 45,
     paddingHorizontal: 10,
     marginBottom: 5,
   },
   passwordInput: {
     flex: 1,
     height: '100%',
-    color: '#000',
+    color: '#333',
   },
   eyeIcon: {
     padding: 4,
   },
   errorBorder: {
-    borderColor: 'red',
+    borderColor: '#d9534f',
   },
   errorText: {
-    color: 'red',
-    fontSize: 12,
-    marginBottom: 10,
+    color: '#d9534f',
+    fontSize: 11,
+    marginBottom: 8,
+    marginLeft: 5,
   },
   signupButton: {
-    backgroundColor: "#5f4436e6",
-    paddingVertical: 12,
-    borderRadius: 8,
+    backgroundColor: "#B86D2A",
+    paddingVertical: 14,
+    borderRadius: 12,
     alignItems: "center",
-    marginTop: 15,
+    marginTop: 20,
+    elevation: 3,
   },
   disabledButton: {
-    backgroundColor: "#5f443699",
+    backgroundColor: "#d1a684",
   },
   signupText: {
     color: "#fff",
@@ -299,12 +334,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   bottomRow: {
-    marginTop: 15,
+    marginTop: 20,
     alignItems: 'center',
   },
   link: {
-    color: 'black',
-    fontSize: 16,
+    color: '#5D4037',
+    fontSize: 14,
+    fontWeight: '600',
     textDecorationLine: 'underline',
   },
 });
