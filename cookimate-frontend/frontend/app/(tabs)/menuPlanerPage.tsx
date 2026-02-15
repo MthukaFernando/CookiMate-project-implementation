@@ -10,23 +10,14 @@ import {
   NativeSyntheticEvent,
   NativeScrollEvent,
   SafeAreaView,
-  ImageBackground,
 } from "react-native";
 import React, { useState, useRef, useEffect } from "react";
 import { Calendar } from "react-native-calendars";
-import { Dropdown } from "react-native-element-dropdown";
 import Constants from "expo-constants";
 import { globalStyle } from "../globalStyleSheet.style";
 
 const { width } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
-
-const mealOptions = [
-  { label: "Breakfast 🍳", value: "breakfast" },
-  { label: "Lunch 🍛", value: "lunch" },
-  { label: "Dinner 🥡", value: "dinner" },
-  { label: "Snack 🥨", value: "snack" },
-];
 
 const defaultImages = [
   require("../../assets/images/planner_img1.png"),
@@ -38,7 +29,7 @@ const Page = () => {
   const [isSeasonal, setIsSeasonal] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
-  const [mealType, setMealType] = useState<string | null>(null);
+  const [isAddingMeal, setIsAddingMeal] = useState(false);
 
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
@@ -143,9 +134,7 @@ const Page = () => {
               style={styles.seasonalButton}
               onPress={() => console.log("View Recipe Pressed")}
             >
-              <Text style={styles.seasonalButtonText}>
-                View Recipe
-              </Text>
+              <Text style={styles.seasonalButtonText}>View Recipe</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -154,35 +143,31 @@ const Page = () => {
       <Modal animationType="fade" transparent={true} visible={isModalVisible}>
         <View style={styles.modalOverlay}>
           <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>
-              🍽️ Plan Meal for {selectedDate}
-            </Text>
-            <Dropdown
-              style={styles.dropdown}
-              placeholderStyle={styles.placeholderStyle}
-              selectedTextStyle={styles.selectedTextStyle}
-              data={mealOptions}
-              labelField="label"
-              valueField="value"
-              placeholder="Select meal type 🍔"
-              value={mealType}
-              onChange={(item) => setMealType(item.value)}
-            />
-            <TouchableOpacity style={styles.selectMenuButton}>
-              <Text style={styles.selectedButtonText}>Select a recipe 📖</Text>
-            </TouchableOpacity>
+            {!isAddingMeal ? (
+              // VIEW 1: DATE AND PLUS BUTTON
+              <>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => setIsAddingMeal(true)}
+                >
+                  <Text style={styles.addButtonText}>+</Text>
+                </TouchableOpacity>
+                <Text style={styles.popupBoxDate}>{selectedDate}</Text>
+              </>
+            ) : (
+              // VIEW 2: EMPTY ADD SCREEN (Only shows Close button)
+              <View style={{ flex: 1 }} />
+            )}
+
             <View style={styles.buttonContainer}>
               <TouchableOpacity
                 style={styles.styledButton}
-                onPress={() => setIsModalVisible(false)}
+                onPress={() => {
+                  setIsModalVisible(false);
+                  setIsAddingMeal(false); // Reset to date view for next time
+                }}
               >
                 <Text style={styles.buttonText}>Close</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.styledButton}
-                onPress={() => setIsModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Plan</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -207,7 +192,7 @@ export const calendarStyles: any = {
 export const styles = StyleSheet.create({
   mainContent: {
     flex: 1,
-    justifyContent: "space-between", // Pushes calendar to top, carousel to bottom
+    justifyContent: "space-between",
     paddingBottom: 20,
   },
   calendarContainer: {
@@ -241,30 +226,47 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   formContainer: {
-    width: "80%",
+    width: "90%",
+    minHeight: 400,
     backgroundColor: "#f2ece2",
     padding: 20,
     borderRadius: 15,
     borderWidth: 1.5,
     borderColor: "#522F2F",
+    justifyContent: "flex-end",
   },
-  formTitle: {
-    fontSize: 18,
+  addButton: {
+    position: "absolute",
+    top: 15,
+    left: 15,
+    backgroundColor: "#522F2F",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 1,
+  },
+  addButtonText: {
+    color: "#f2ece2",
+    fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 15,
+    lineHeight: 28,
+  },
+  popupBoxDate: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#000000",
     textAlign: "center",
+    position: "absolute",
+    top: 20,
+    left: 0,
+    right: 0,
   },
-  dropdown: {
-    height: 50,
-    borderColor: "black",
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    marginBottom: 20,
+  buttonContainer: {
+    alignItems: "center",
+    justifyContent: "center",
   },
-  placeholderStyle: { fontSize: 16, color: "#8a6666" },
-  selectedTextStyle: { fontSize: 16 },
-  buttonContainer: { flexDirection: "row", justifyContent: "center", gap: 15 },
   styledButton: {
     backgroundColor: "#522F2F",
     paddingVertical: 12,
@@ -273,35 +275,22 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   buttonText: { color: "#f2ece2", fontSize: 16, fontWeight: "bold" },
-  selectMenuButton: {
-    backgroundColor: "#c6a484",
-    minHeight: 50,
-    marginBottom: 40,
-    borderRadius: 10,
-    justifyContent: "center",
-  },
-  selectedButtonText: {
-    color: "#f2ece2",
-    fontSize: 16,
-    fontWeight: "bold",
-    marginLeft: 8,
-  },
   seasonalButton: {
-    position: 'absolute',
-    bottom: 15,          
-    alignSelf: 'center', 
-    backgroundColor: "#522F2F", 
+    position: "absolute",
+    bottom: 15,
+    alignSelf: "center",
+    backgroundColor: "#522F2F",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#f2ece2',
+    borderColor: "#f2ece2",
   },
   seasonalButtonText: {
-    color: '#f2ece2',
+    color: "#f2ece2",
     fontSize: 14,
-    fontWeight: 'bold',
-  }
+    fontWeight: "bold",
+  },
 });
 
 export default Page;
