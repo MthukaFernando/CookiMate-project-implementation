@@ -188,7 +188,7 @@ const MyRecipesPage = () => {
       ) : (
         <FlatList
           data={recipes}
-          keyExtractor={(item) => item._id} 
+          keyExtractor={(item) => item.id} 
           renderItem={renderRecipeItem}
           contentContainerStyle={styles.listContent}
         />
