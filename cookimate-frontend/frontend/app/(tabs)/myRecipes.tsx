@@ -17,6 +17,7 @@ import { useRouter } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
@@ -65,6 +66,37 @@ const MyRecipesPage = () => {
   const [diet, setDiet] = useState("All");
   const [time, setTime] = useState("All"); 
 
+  // State to store the list of favorite recipe IDs
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  // Load favorites from phone storage when app starts
+  useEffect(() => {
+    loadFavorites();
+  }, []);
+
+  const loadFavorites = async () => {
+    try {
+      const storedFavs = await AsyncStorage.getItem('userFavorites');
+      if (storedFavs) setFavorites(JSON.parse(storedFavs));
+    } catch (error) {
+      console.log("Error loading favorites", error);
+    }
+  };
+
+  const toggleFavorite = async (id: string) => {
+    let newFavorites;
+    if (favorites.includes(id)) {
+      // Remove from favorites
+      newFavorites = favorites.filter(favId => favId !== id);
+    } else {
+      // Add to favorites
+      newFavorites = [...favorites, id];
+    }
+    setFavorites(newFavorites);
+    // Save to phone storage
+    await AsyncStorage.setItem('userFavorites', JSON.stringify(newFavorites));
+  };
+
   const fetchRecipes = async () => {
     setLoading(true);
     try {
@@ -74,7 +106,6 @@ const MyRecipesPage = () => {
           meal: meal !== "All" ? meal : undefined,
           diet: diet !== "All" ? diet : undefined,
           cuisine: cuisine !== "All" ? cuisine : undefined,
-       
         },
       });
       setRecipes(response.data);
@@ -89,26 +120,45 @@ const MyRecipesPage = () => {
     fetchRecipes();
   }, [searchQuery, meal, diet, cuisine, time]);
 
-  const renderRecipeItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <Image 
-        source={{ uri: item.image }} 
-        style={styles.cardImage} 
-      />
-      <View style={styles.cardContent}>
-        <Text style={styles.recipeTitle}>{item.name}</Text>
-        <Text style={styles.recipeDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <TouchableOpacity
-          style={styles.viewButton}
-          onPress={() => router.push(`/recipe/${item.id}` as any)}
-        >
-          <Text style={styles.viewButtonText}>View Recipe</Text>
-        </TouchableOpacity>
+  const renderRecipeItem = ({ item }: { item: any }) => {
+    // Check if this specific recipe is in our favorites list
+    const isFavorite = favorites.includes(item.id);
+
+    return (
+      <View style={styles.card}>
+        <Image 
+          source={{ uri: item.image }} 
+          style={styles.cardImage} 
+        />
+        <View style={styles.cardContent}>
+          {/* Title and Heart Row */}
+          <View style={styles.titleRow}>
+            <Text style={styles.recipeTitle} numberOfLines={2}>{item.name}</Text>
+            
+            {/* THE HEART BUTTON */}
+            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
+              <Ionicons 
+                name={isFavorite ? "heart" : "heart-outline"} 
+                size={24} 
+                color={isFavorite ? "#e74c3c" : "#5F4436"} // Red if liked, Brown if not
+              />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.recipeDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+          
+          <TouchableOpacity
+            style={styles.viewButton}
+            onPress={() => router.push(`/recipe/${item.id}` as any)}
+          >
+            <Text style={styles.viewButtonText}>View Recipe</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -259,12 +309,22 @@ const styles = StyleSheet.create({
     borderRadius: IMAGE_SIZE / 2,
     marginRight: 15,
   },
-  cardContent: { flex: 1 },
+  cardContent: { 
+    flex: 1,
+  },
+  // NEW STYLE: Title row for recipe name + heart button
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 4,
+  },
   recipeTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#5F4436",
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
   recipeDescription: {
     fontSize: 13,

@@ -12,6 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Dynamic IP detection
 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -24,6 +25,45 @@ export default function RecipeDetails() {
   const [recipe, setRecipe] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  // Check if this recipe is a favorite
+  useEffect(() => {
+    const checkFavorite = async () => {
+      try {
+        const storedFavs = await AsyncStorage.getItem('userFavorites');
+        if (storedFavs) {
+          const favorites = JSON.parse(storedFavs);
+          setIsFavorite(favorites.includes(id));
+        }
+      } catch (error) {
+        console.log("Error checking favorite", error);
+      }
+    };
+    
+    if (id) checkFavorite();
+  }, [id]);
+
+  // Toggle favorite status
+  const toggleFavorite = async () => {
+    try {
+      const storedFavs = await AsyncStorage.getItem('userFavorites');
+      let favorites = storedFavs ? JSON.parse(storedFavs) : [];
+      
+      if (isFavorite) {
+        // Remove from favorites
+        favorites = favorites.filter((favId: string) => favId !== id);
+      } else {
+        // Add to favorites
+        favorites.push(id);
+      }
+      
+      await AsyncStorage.setItem('userFavorites', JSON.stringify(favorites));
+      setIsFavorite(!isFavorite);
+    } catch (error) {
+      console.log("Error toggling favorite", error);
+    }
+  };
 
   useEffect(() => {
     const fetchRecipeDetails = async () => {
@@ -73,11 +113,24 @@ export default function RecipeDetails() {
             <View style={[styles.headerImage, { backgroundColor: "#ddd" }]} />
           )}
 
+          {/* Back Button */}
           <TouchableOpacity
             style={styles.roundBackButton}
             onPress={() => router.back()}
           >
             <Ionicons name="arrow-back" size={24} color="#5F4436" />
+          </TouchableOpacity>
+
+          {/* Heart Button on Image */}
+          <TouchableOpacity
+            style={styles.heartButton}
+            onPress={toggleFavorite}
+          >
+            <Ionicons 
+              name={isFavorite ? "heart" : "heart-outline"} 
+              size={28} 
+              color={isFavorite ? "#e74c3c" : "#5F4436"} 
+            />
           </TouchableOpacity>
         </View>
 
@@ -146,6 +199,19 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 50,
     left: 20,
+    backgroundColor: "rgba(255,255,255,0.9)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  // NEW: Heart button on details page
+  heartButton: {
+    position: "absolute",
+    top: 50,
+    right: 20,
     backgroundColor: "rgba(255,255,255,0.9)",
     width: 40,
     height: 40,
