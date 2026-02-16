@@ -10,19 +10,19 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
-  ScrollView, 
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useCallback } from "react";
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
 
-// --- Get Dynamic IP for API calls ---
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
@@ -57,26 +57,42 @@ const dietOptions = [
 
 const MyRecipesPage = () => {
   const router = useRouter();
+  const { selectedCategory, selectedDate } = useLocalSearchParams();
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [meal, setMeal] = useState("All");
+
+  const [meal, setMeal] = useState((selectedCategory as string) || "All");
   const [cuisine, setCuisine] = useState("All");
   const [diet, setDiet] = useState("All");
-  const [time, setTime] = useState("All"); 
-
-  // State to store the list of favorite recipe IDs
+  const [time, setTime] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  // Load favorites from phone storage when app starts
   useEffect(() => {
     loadFavorites();
   }, []);
 
+  useEffect(() => {
+    if (selectedCategory) {
+      setMeal(selectedCategory as string);
+    } else {
+      setMeal("All");
+    }
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    return () => {
+      router.setParams({
+        selectedCategory: undefined,
+        selectedDate: undefined,
+      });
+    };
+  }, []);
+
   const loadFavorites = async () => {
     try {
-      const storedFavs = await AsyncStorage.getItem('userFavorites');
+      const storedFavs = await AsyncStorage.getItem("userFavorites");
       if (storedFavs) setFavorites(JSON.parse(storedFavs));
     } catch (error) {
       console.log("Error loading favorites", error);
@@ -86,15 +102,12 @@ const MyRecipesPage = () => {
   const toggleFavorite = async (id: string) => {
     let newFavorites;
     if (favorites.includes(id)) {
-      // Remove from favorites
-      newFavorites = favorites.filter(favId => favId !== id);
+      newFavorites = favorites.filter((favId) => favId !== id);
     } else {
-      // Add to favorites
       newFavorites = [...favorites, id];
     }
     setFavorites(newFavorites);
-    // Save to phone storage
-    await AsyncStorage.setItem('userFavorites', JSON.stringify(newFavorites));
+    await AsyncStorage.setItem("userFavorites", JSON.stringify(newFavorites));
   };
 
   const fetchRecipes = async () => {
@@ -120,35 +133,39 @@ const MyRecipesPage = () => {
     fetchRecipes();
   }, [searchQuery, meal, diet, cuisine, time]);
 
+  const handleBackToPlanner = () => {
+    const dateToPass = selectedDate;
+    setSelectedRecipeId(null);
+    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
+    router.push({
+      pathname: "/menuPlanerPage",
+      params: { openModalWithDate: dateToPass },
+    });
+  };
+
   const renderRecipeItem = ({ item }: { item: any }) => {
-    // Check if this specific recipe is in our favorites list
     const isFavorite = favorites.includes(item.id);
+    const isSelected = selectedRecipeId === item.id;
 
     return (
       <View style={styles.card}>
-        <Image 
-          source={{ uri: item.image }} 
-          style={styles.cardImage} 
-        />
+        <Image source={{ uri: item.image }} style={styles.cardImage} />
         <View style={styles.cardContent}>
-          {/* Title and Heart Row */}
           <View style={styles.titleRow}>
-            <Text style={styles.recipeTitle} numberOfLines={2}>{item.name}</Text>
-            
-            {/* THE HEART BUTTON */}
+            <Text style={styles.recipeTitle} numberOfLines={2}>
+              {item.name}
+            </Text>
             <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
-              <Ionicons 
-                name={isFavorite ? "heart" : "heart-outline"} 
-                size={24} 
-                color={isFavorite ? "#e74c3c" : "#5F4436"} // Red if liked, Brown if not
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={24}
+                color={isFavorite ? "#e74c3c" : "#5F4436"}
               />
             </TouchableOpacity>
           </View>
-
           <Text style={styles.recipeDescription} numberOfLines={2}>
             {item.description}
           </Text>
-          
           <TouchableOpacity
             style={styles.viewButton}
             onPress={() => router.push(`/recipe/${item.id}` as any)}
@@ -156,6 +173,21 @@ const MyRecipesPage = () => {
             <Text style={styles.viewButtonText}>View Recipe</Text>
           </TouchableOpacity>
         </View>
+        {selectedCategory && (
+          <TouchableOpacity
+            style={styles.checkContainer}
+            onPress={() => setSelectedRecipeId(item.id)}
+          >
+            <View
+              style={[
+                styles.outerCircle,
+                isSelected && styles.outerCircleSelected,
+              ]}
+            >
+              {isSelected && <View style={styles.innerCircle} />}
+            </View>
+          </TouchableOpacity>
+        )}
       </View>
     );
   };
@@ -163,31 +195,46 @@ const MyRecipesPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-  <View style={styles.searchBar}>
-    <TextInput
-      style={styles.searchInput}
-      placeholder="Search recipes"
-      value={searchQuery}
-      onChangeText={setSearchQuery}
-    />
-    <Ionicons name="search" size={20} color="#8a6666" />
-  </View>
-</View>
+        {selectedCategory && (
+          <TouchableOpacity
+            style={styles.backCircle}
+            onPress={handleBackToPlanner}
+          >
+            <Ionicons name="arrow-back" size={20} color="#5F4436" />
+          </TouchableOpacity>
+        )}
+
+        <View style={styles.searchBar}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search recipes"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <Ionicons name="search" size={20} color="#8a6666" />
+        </View>
+        {selectedCategory && (
+          <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+            <Text style={styles.addLetters}>Add</Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
       <View style={styles.filterWrapper}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           <Dropdown
-            style={styles.dropdown}
+            style={[styles.dropdown, selectedCategory && { opacity: 0.6 }]}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
             data={mealOptions}
             labelField="label"
             valueField="value"
             value={meal}
+            disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
           />
           <Dropdown
@@ -232,7 +279,7 @@ const MyRecipesPage = () => {
       ) : (
         <FlatList
           data={recipes}
-          keyExtractor={(item) => item.id} 
+          keyExtractor={(item) => item.id}
           renderItem={renderRecipeItem}
           contentContainerStyle={styles.listContent}
         />
@@ -249,15 +296,60 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 15,
     marginBottom: 10,
+    gap: 12,
   },
   backCircle: {
     width: 40,
     height: 40,
-    backgroundColor: "#e0d6c8",
+    backgroundColor: "#ebe8e4",
+    elevation: 5,
     borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#ddd1cb",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
+  },
+  addButton: {
+    width: 70,
+    height: 40,
+    backgroundColor: "#ebe8e4",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#ddd1cb",
+  },
+  addLetters: {
+    letterSpacing: 1,
+    fontSize: 15,
+    fontWeight: "500",
+  },
+  checkContainer: {
+    paddingLeft: 10,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  outerCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 13,
+    borderWidth: 1,
+    borderColor: "rgba(95, 68, 54, 0.3)",
+    backgroundColor: "rgba(255, 255, 255, 0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  outerCircleSelected: {
+    borderColor: "#63aaf1",
+    backgroundColor: "rgba(255, 255, 255, 0.8)",
+  },
+  innerCircle: {
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: "#63aaf1",
   },
   searchBar: {
     flexDirection: "row",
@@ -267,26 +359,25 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 18,
     elevation: 2,
-    width: "100%",
+    flex: 1,
   },
   searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
-  filterWrapper: {
-    height: 50,
-    marginBottom: 10,
-  },
-  scrollContent: {
-    paddingHorizontal: 15,
-    alignItems: 'center',
-  },
+  filterWrapper: { height: 50, marginBottom: 10 },
+  scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
-    width: 120, 
+    width: 120,
     height: 36,
     backgroundColor: "#c6a484",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
   },
-  dropText: { color: "white", fontSize: 12, fontWeight: "bold", textAlign: 'center' },
+  dropText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
@@ -303,14 +394,11 @@ const styles = StyleSheet.create({
     borderRadius: IMAGE_SIZE / 2,
     marginRight: 15,
   },
-  cardContent: { 
-    flex: 1,
-  },
-  // NEW STYLE: Title row for recipe name + heart button
+  cardContent: { flex: 1 },
   titleRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 4,
   },
   recipeTitle: {
