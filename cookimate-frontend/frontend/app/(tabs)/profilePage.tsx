@@ -278,17 +278,17 @@ const styles = StyleSheet.create({
   },
   sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#5D4037', marginBottom: 15 },
   
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 10 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 5 },
   statCard: {
    width: '48%',
   flexDirection: 'row',
   alignItems: 'center',
   backgroundColor: '#eee8dd', // Your requested color
-  padding: 16,
+  padding: 12,
   borderRadius: 18,
   borderWidth: 1.5,
-  borderBottomWidth: 5, // ✅ This creates the 3D "thickness" effect
-  gap: 10,
+  borderBottomWidth: 5, 
+  gap: 0,
   
   // Shadow for iOS
   shadowColor: "#000",
