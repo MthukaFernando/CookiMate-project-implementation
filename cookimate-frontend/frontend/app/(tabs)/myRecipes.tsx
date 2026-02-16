@@ -163,22 +163,16 @@ const MyRecipesPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        <TouchableOpacity
-          style={styles.backCircle}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={22} color="#5F4436" />
-        </TouchableOpacity>
-        <View style={styles.searchBar}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search recipes"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          <Ionicons name="search" size={20} color="#8a6666" />
-        </View>
-      </View>
+  <View style={styles.searchBar}>
+    <TextInput
+      style={styles.searchInput}
+      placeholder="Search recipes"
+      value={searchQuery}
+      onChangeText={setSearchQuery}
+    />
+    <Ionicons name="search" size={20} color="#8a6666" />
+  </View>
+</View>
 
       <View style={styles.filterWrapper}>
         <ScrollView 
@@ -266,7 +260,6 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
@@ -274,6 +267,7 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 18,
     elevation: 2,
+    width: "100%",
   },
   searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
   filterWrapper: {
