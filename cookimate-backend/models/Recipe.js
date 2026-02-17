@@ -12,14 +12,7 @@ const RecipeSchema = new mongoose.Schema({
   meal_type: [String],
   steps: [String],
   search_terms: [String],
-  image: String,
-  //The following fields are specific for the seasonal recipes
-  season: String,
-  start_month: Number,
-  start_day: Number,
-  end_month: Number,
-  end_day: Number
-
+  image: String
 }, {collection: 'recipes'});
 
 export default mongoose.model('Recipe', RecipeSchema);
