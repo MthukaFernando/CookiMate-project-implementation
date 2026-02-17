@@ -1,438 +1,429 @@
-import React, { useState, useRef, useCallback } from "react";
-import { BlurView } from "expo-blur";
-import { useFocusEffect } from "@react-navigation/native";
-import { globalStyle } from "../globalStyleSheet.style";
+import React, { useState, useRef } from "react";
 import {
-  Image,
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
-  Dimensions,
-  Modal,
+  useWindowDimensions,
   TextInput,
   KeyboardAvoidingView,
   Platform,
   ImageBackground,
   Animated,
+  TouchableOpacity,
+  ScrollView,
+  PanResponder,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 
-const { width, height } = Dimensions.get("window");
+// --- Global Style Import ---
+import { globalStyle } from "../globalStyleSheet.style";
 
-// --- Types ---
-type RecipeCardProps = {
-  title: string;
-  image: any;
-};
+const TAB_BAR_HEIGHT = 65;
+const PEEK_HEIGHT = 85;
 
-const RecipeCard = ({ title, image }: RecipeCardProps) => (
-  <View style={styles.recipeCard}>
-    <Image source={image} style={styles.recipeImage} />
-    <View style={styles.recipeLabelContainer}>
-      <Text style={styles.recipeLabelText}>{title}</Text>
-    </View>
-  </View>
-);
+const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic"];
+const CUISINES = ["Asian", "American", "Mediterranean", "Indian"];
+const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
+const TIMES = ["< 15m", "< 30m", "< 45m", "1h+"];
+const SERVINGS = ["1", "2", "4", "6+"];
 
-function GenerateRecipesPage() {
-  const [isModalVisible, setIsModalVisible] = useState(false);
+export default function GenerateRecipesPage() {
+  const { height } = useWindowDimensions();
+
+  // The resting position (collapsed) is the screen height minus the peek bar and tab bar
+  const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
+  const EXPANDED_Y = 0;
+
   const [isExpanded, setIsExpanded] = useState(false);
   const [ingredientInput, setIngredientInput] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
 
-  // Animation value: starts at 2/3 down the screen (showing bottom 1/3)
-  const slideAnim = useRef(new Animated.Value(height * 0.66)).current;
+  const [cuisine, setCuisine] = useState<string | null>(null);
+  const [mealType, setMealType] = useState<string | null>(null);
+  const [prepTime, setPrepTime] = useState<string | null>(null);
+  const [servings, setServings] = useState<string | null>(null);
 
-  // --- Reset Logic on Leave ---
-  useFocusEffect(
-    useCallback(() => {
-      // Optional: Logic when screen comes into focus
-      return () => {
-        // This runs when the user navigates AWAY from the screen
-        Animated.timing(slideAnim, {
-          toValue: height * 0.66,
-          duration: 400,
-          useNativeDriver: false,
-        }).start();
-        setIsExpanded(false);
-      };
-    }, [slideAnim]),
-  );
+  const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
-  const togglePanel = () => {
-    if (!isExpanded) {
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 500,
-        useNativeDriver: false,
-      }).start();
-      setIsExpanded(true);
-    }
+  // --- Reset Function: Clears everything ---
+  const handleReset = () => {
+    setSelectedIngredients([]);
+    setCuisine(null);
+    setMealType(null);
+    setPrepTime(null);
+    setServings(null);
+    setIngredientInput("");
   };
 
-  const closePanel = () => {
-    Animated.timing(slideAnim, {
-      toValue: height * 0.66,
-      duration: 400,
-      useNativeDriver: false,
+  const togglePanel = (open: boolean) => {
+    setIsExpanded(open);
+    Animated.spring(slideAnim, {
+      toValue: open ? EXPANDED_Y : COLLAPSED_Y,
+      useNativeDriver: true,
+      tension: 40,
+      friction: 8,
     }).start();
-    setIsExpanded(false);
   };
 
-  const suggestedIngredients = ["Tomato", "Carrot", "Chicken"];
+  // --- PanResponder: This handles the swipe down ---
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        // Detects if the user is swiping down specifically
+        return Math.abs(gestureState.dy) > 10 && gestureState.dy > 0;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        if (gestureState.dy > 0) {
+          slideAnim.setValue(gestureState.dy);
+        }
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        // If swiped down more than 100px, snap to the bottom button
+        if (gestureState.dy > 100) {
+          togglePanel(false);
+        } else {
+          togglePanel(true);
+        }
+      },
+    }),
+  ).current;
 
-  const handleAddInput = () => {
-    if (ingredientInput.trim().length > 0) {
-      if (!selectedIngredients.includes(ingredientInput.trim())) {
-        setSelectedIngredients([
-          ...selectedIngredients,
-          ingredientInput.trim(),
-        ]);
-      }
-      setIngredientInput("");
+  const addIngredient = (name: string) => {
+    if (!name.trim()) return;
+    const formatted =
+      name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+    if (!selectedIngredients.includes(formatted)) {
+      setSelectedIngredients([...selectedIngredients, formatted]);
     }
-  };
-
-  const handleQuickAdd = (item: string) => {
-    if (!selectedIngredients.includes(item)) {
-      setSelectedIngredients([...selectedIngredients, item]);
-    }
-  };
-
-  const removeIngredient = (index: number) => {
-    setSelectedIngredients(selectedIngredients.filter((_, i) => i !== index));
+    setIngredientInput("");
   };
 
   return (
-    <View style={styles.container}>
-      {/* 1. BACKGROUND IMAGE */}
+    <View style={[styles.container, globalStyle?.container]}>
       <ImageBackground
         source={require("../../assets/images/generate.jpg")}
-        style={styles.backgroundImage}
+        style={StyleSheet.absoluteFill}
         resizeMode="cover"
+      />
+
+      <Animated.View
+        style={[
+          styles.slidingPanel,
+          { height: height, transform: [{ translateY: slideAnim }] },
+        ]}
       >
-        {/* 2. THE SLIDING PANEL */}
-        <Animated.View style={[styles.slidingPanel, { top: slideAnim }]}>
+        {/* --- 1. THE "PEEK" BUTTON (Visible when minimized) --- */}
+        {!isExpanded && (
+          <TouchableOpacity
+            style={styles.peekButtonContainer}
+            onPress={() => togglePanel(true)}
+            activeOpacity={0.9}
+          >
+            <View style={styles.peekButton}>
+              <View style={styles.flexRow}>
+                <Ionicons name="sparkles" size={20} color="#4A3B2C" />
+                <Text style={styles.peekTitle}>Ready to cook?</Text>
+              </View>
+              <Ionicons name="chevron-up" size={20} color="#4A3B2C" />
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* --- 2. THE EXPANDED VIEW --- */}
+        <View style={{ flex: 1, opacity: isExpanded ? 1 : 0 }}>
+          {/* Draggable Header with Reset Button */}
+          <View {...panResponder.panHandlers} style={styles.headerArea}>
+            <View style={styles.dragHandle} />
+            <View style={styles.headerRow}>
+              <TouchableOpacity onPress={() => togglePanel(false)}>
+                <Ionicons name="close" size={24} color="#9CA3AF" />
+              </TouchableOpacity>
+
+              <Text style={styles.headerTitle}>Recipe Builder</Text>
+
+              <TouchableOpacity
+                onPress={handleReset}
+                style={styles.resetContainer}
+              >
+                <Text style={styles.resetText}>Reset</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={{ flex: 1 }}
           >
-            {!isExpanded ? (
-              /* THE "PREVIEW" STATE (Bottom 1/3) */
-              <View style={styles.previewContainer}>
-                <Text style={styles.previewTitle}>Ready to Cook?</Text>
-                <Pressable
-                  style={styles.initialExpandBtn}
-                  onPress={togglePanel}
-                >
-                  <Text style={styles.generateBtnText}>Generate Recipes</Text>
-                </Pressable>
-              </View>
-            ) : (
-              /* THE "FULL SCREEN" STATE */
-              <ScrollView
-                contentContainerStyle={styles.scrollContent}
-                showsVerticalScrollIndicator={false}
-              >
-                <Pressable onPress={closePanel} style={styles.backArrow}>
-                  <Text style={styles.backArrowText}>↓ Minimize</Text>
-                </Pressable>
-
-                <Text style={styles.headerTitle}>
-                  What ingredients do you have?
-                </Text>
-
-                {/* SEARCH BAR (Chips + Input) */}
-                <View style={styles.searchContainer}>
-                  {selectedIngredients.map((tag, index) => (
-                    <Pressable
-                      key={index}
-                      onPress={() => removeIngredient(index)}
+            <ScrollView
+              contentContainerStyle={styles.scrollBody}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {/* Search Bar - Repositioned further down */}
+              <View style={styles.searchSection}>
+                <Ionicons
+                  name="search"
+                  size={20}
+                  color="#9CA3AF"
+                  style={{ marginRight: 10 }}
+                />
+                <View style={styles.chipContainer}>
+                  {selectedIngredients.map((item) => (
+                    <TouchableOpacity
+                      key={item}
                       style={styles.chip}
+                      onPress={() =>
+                        setSelectedIngredients(
+                          selectedIngredients.filter((i) => i !== item),
+                        )
+                      }
                     >
-                      <Text style={styles.chipText}>{tag} ✕</Text>
-                    </Pressable>
+                      <Text style={styles.chipText}>{item} ✕</Text>
+                    </TouchableOpacity>
                   ))}
                   <TextInput
                     style={styles.textInput}
-                    placeholder={
-                      selectedIngredients.length === 0
-                        ? "Type an ingredient..."
-                        : "Add more..."
-                    }
-                    placeholderTextColor="#999"
+                    placeholder="Add ingredients..."
                     value={ingredientInput}
                     onChangeText={setIngredientInput}
-                    onSubmitEditing={handleAddInput}
-                    blurOnSubmit={false}
+                    onSubmitEditing={() => addIngredient(ingredientInput)}
                   />
                 </View>
-
-                {/* SUGGESTION BUTTONS */}
-                <View style={styles.suggestionRow}>
-                  {suggestedIngredients.map((item) => (
-                    <Pressable
-                      key={item}
-                      style={styles.suggestionBtn}
-                      onPress={() => handleQuickAdd(item)}
-                    >
-                      <Text style={styles.suggestionText}>+ {item}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-
-                {/* MASCOT */}
-                <View style={styles.mascotSection}>
-                  <View style={styles.chatBubble}>
-                    <Text style={styles.chatText}>I'm here to guide you!</Text>
-                  </View>
-                </View>
-
-                {/* GENERATE BUTTON */}
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.mainGenerateBtn,
-                    pressed && styles.btnPressed,
-                  ]}
-                  onPress={() => setIsModalVisible(true)}
-                >
-                  <Text style={styles.generateBtnText}>Get Recipes Now</Text>
-                </Pressable>
-              </ScrollView>
-            )}
-          </KeyboardAvoidingView>
-        </Animated.View>
-      </ImageBackground>
-
-      {/* 3. MODAL POP-UP */}
-      <Modal animationType="fade" transparent={true} visible={isModalVisible}>
-        <BlurView intensity={40} tint="dark" style={styles.absoluteFill}>
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={() => setIsModalVisible(false)}
-          >
-            <Pressable
-              style={styles.popupCard}
-              onPress={(e) => e.stopPropagation()}
-            >
-              <View style={styles.popupHeader}>
-                <Text style={styles.expandedTitle}>Generated Recipes</Text>
-                <Pressable
-                  onPress={() => setIsModalVisible(false)}
-                  style={styles.closeX}
-                >
-                  <Text style={{ fontSize: 20, color: "#999" }}>✕</Text>
-                </Pressable>
               </View>
+
+              <Text style={styles.label}>Quick Add</Text>
               <ScrollView
-                showsVerticalScrollIndicator={false}
-                style={{ width: "100%" }}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.quickAddScroll}
               >
-                <RecipeCard
-                  title="Corn & Parmesan Pasta"
-                  image={require("../../assets/images/Home-page-Mascot.jpg")}
-                />
-                <RecipeCard
-                  title="Garlic Herb Chicken"
-                  image={require("../../assets/images/Home-page-Mascot.jpg")}
-                />
-                <Pressable
-                  style={styles.closeBtn}
-                  onPress={() => setIsModalVisible(false)}
-                >
-                  <Text style={styles.closeBtnText}>Done</Text>
-                </Pressable>
+                {QUICK_ADDS.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={styles.quickAddBtn}
+                    onPress={() => addIngredient(item)}
+                  >
+                    <Ionicons name="add" size={14} color="#4A3B2C" />
+                    <Text style={styles.quickAddText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
               </ScrollView>
-            </Pressable>
-          </Pressable>
-        </BlurView>
-      </Modal>
+
+              <View style={styles.divider} />
+
+              {/* Filters */}
+              <FilterRow
+                title="Cuisine"
+                icon="restaurant-outline"
+                data={CUISINES}
+                selected={cuisine}
+                onSelect={setCuisine}
+              />
+              <FilterRow
+                title="Meal Type"
+                icon="cafe-outline"
+                data={MEAL_TYPES}
+                selected={mealType}
+                onSelect={setMealType}
+              />
+              <FilterRow
+                title="Prep Time"
+                icon="timer-outline"
+                data={TIMES}
+                selected={prepTime}
+                onSelect={setPrepTime}
+              />
+              <FilterRow
+                title="Servings"
+                icon="people-outline"
+                data={SERVINGS}
+                selected={servings}
+                onSelect={setServings}
+              />
+
+              <TouchableOpacity style={styles.generateBtn} activeOpacity={0.8}>
+                <Ionicons
+                  name="flash"
+                  size={18}
+                  color="#4A3B2C"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.generateBtnText}>Generate Recipes</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </KeyboardAvoidingView>
+        </View>
+      </Animated.View>
     </View>
   );
 }
 
+// Sub-component for filters
+const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
+  <View style={styles.filterRowContainer}>
+    <View style={styles.filterHeader}>
+      <Ionicons name={icon} size={16} color="#4A3B2C" />
+      <Text style={styles.filterTitle}>{title}</Text>
+    </View>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      contentContainerStyle={{ gap: 10, paddingRight: 20 }}
+    >
+      {data.map((item: string) => (
+        <TouchableOpacity
+          key={item}
+          onPress={() => onSelect(selected === item ? null : item)}
+          style={[
+            styles.filterTag,
+            selected === item && styles.filterTagActive,
+          ]}
+        >
+          <Text
+            style={[
+              styles.filterTagText,
+              selected === item && styles.filterTagTextActive,
+            ]}
+          >
+            {item}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  </View>
+);
+
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  backgroundImage: {
-    flex: 1,
-    width: width,
-    height: height,
-  },
+  container: { flex: 1 },
   slidingPanel: {
     position: "absolute",
+    bottom: 0,
     left: 0,
     right: 0,
-    bottom: 0,
-    backgroundColor: "#F5EFE6",
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: -5 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 20,
+    backgroundColor: "#F8F4EF",
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+    zIndex: 9999,
   },
-  previewContainer: {
-    flex: 1,
-    padding: 20,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  previewTitle: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#4A3B2C",
-    marginBottom: 20,
-  },
-  initialExpandBtn: {
+
+  // Peek Bar Styles
+  peekButtonContainer: { paddingHorizontal: 20, paddingTop: 15 },
+  peekButton: {
     backgroundColor: "#EBC390",
-    paddingVertical: 18,
-    paddingHorizontal: 40,
-    borderRadius: 30,
-    borderWidth: 1,
-    borderColor: "#CCA370",
-  },
-  backArrow: {
-    alignSelf: "center",
-    marginBottom: 10,
-    padding: 10,
-    backgroundColor: "#E0D7CC",
-    borderRadius: 20,
-  },
-  backArrowText: {
-    color: "#7D6E5D",
-    fontWeight: "600",
-  },
-  scrollContent: {
-    padding: 25,
-    paddingTop: 40,
-    alignItems: "center",
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "bold",
-    textAlign: "center",
-    color: "#3E3E3E",
-    marginBottom: 20,
-  },
-  searchContainer: {
     flexDirection: "row",
-    flexWrap: "wrap",
-    backgroundColor: "#fff",
-    width: "100%",
-    minHeight: 50,
-    padding: 8,
-    borderRadius: 25,
+    justifyContent: "space-between",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#E0E0E0",
+    paddingVertical: 15,
+    paddingHorizontal: 25,
+    borderRadius: 50,
+  },
+  flexRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+  peekTitle: { fontSize: 16, fontWeight: "bold", color: "#4A3B2C" },
+
+  // Header Styles
+  headerArea: {
+    paddingTop: 20,
+    paddingBottom: 15,
+    alignItems: "center",
+    backgroundColor: "#F8F4EF",
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
+  },
+  dragHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: "#E5E7EB",
+    borderRadius: 10,
     marginBottom: 15,
   },
-  chip: {
-    backgroundColor: "#E0E0E0",
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginRight: 6,
-    marginVertical: 4,
-  },
-  chipText: { color: "#333", fontSize: 14, fontWeight: "500" },
-  textInput: {
-    flex: 1,
-    minWidth: 100,
-    fontSize: 16,
-    color: "#333",
-    paddingVertical: 5,
-    marginLeft: 5,
-  },
-  suggestionRow: {
+  headerRow: {
     flexDirection: "row",
-    gap: 10,
-    marginBottom: 20,
+    justifyContent: "space-between",
+    alignItems: "center",
     width: "100%",
-    justifyContent: "center",
+    paddingHorizontal: 20,
   },
-  suggestionBtn: {
-    backgroundColor: "#EFE5DA",
+  headerTitle: { fontSize: 22, fontWeight: "900", color: "#4A3B2C" },
+  resetContainer: { padding: 5 },
+  resetText: { color: "#B45309", fontWeight: "800", fontSize: 14 },
+
+  scrollBody: { paddingHorizontal: 20, paddingBottom: 40 },
+
+  // Search Section
+  searchSection: {
+    backgroundColor: "#FFF",
+    borderRadius: 20,
+    padding: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 20, // Moves the search bar down
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 6 },
+  chip: {
+    backgroundColor: "#F3D8B6",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+  },
+  chipText: { fontSize: 12, fontWeight: "700", color: "#4A3B2C" },
+  textInput: { flex: 1, minWidth: 100, fontSize: 16 },
+
+  label: {
+    fontSize: 11,
+    fontWeight: "800",
+    color: "#9CA3AF",
+    textTransform: "uppercase",
+    marginBottom: 10,
+    paddingLeft: 5,
+  },
+  quickAddScroll: { marginBottom: 25 },
+  quickAddBtn: {
+    backgroundColor: "#FFF",
+    flexDirection: "row",
+    alignItems: "center",
     paddingVertical: 10,
     paddingHorizontal: 15,
-    borderRadius: 12,
+    borderRadius: 15,
+    marginRight: 8,
     borderWidth: 1,
-    borderColor: "#DBCFB0",
+    borderColor: "#E5E7EB",
   },
-  suggestionText: { color: "#5D4037", fontWeight: "600", fontSize: 14 },
-  mascotSection: { alignItems: "center", marginVertical: 10 },
-  chatBubble: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 20,
-    marginBottom: 5,
-    borderBottomLeftRadius: 0,
-  },
-  chatText: { textAlign: "center", color: "#5D4037", fontSize: 15 },
-  mainGenerateBtn: {
-    backgroundColor: "#EBC390",
-    paddingVertical: 18,
-    paddingHorizontal: 50,
-    borderRadius: 30,
-    marginTop: 20,
-    width: "90%",
-    alignItems: "center",
-  },
-  generateBtnText: { color: "#4A3B2C", fontSize: 18, fontWeight: "bold" },
-  btnPressed: { opacity: 0.9, transform: [{ scale: 0.98 }] },
-  absoluteFill: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    bottom: 0,
-    right: 0,
-    zIndex: 10,
-  },
-  modalOverlay: { flex: 1, justifyContent: "center", alignItems: "center" },
-  popupCard: {
-    width: width * 0.85,
-    maxHeight: height * 0.7,
-    backgroundColor: "#fff",
-    borderRadius: 30,
-    padding: 20,
-    alignItems: "center",
-  },
-  popupHeader: {
+  quickAddText: { fontWeight: "600", color: "#4A3B2C" },
+
+  divider: { height: 1, backgroundColor: "#E5E7EB", marginBottom: 25 },
+
+  // Filter Styles
+  filterRowContainer: { marginBottom: 25 },
+  filterHeader: {
     flexDirection: "row",
-    width: "100%",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 12,
+  },
+  filterTitle: { fontSize: 16, fontWeight: "800", color: "#4A3B2C" },
+  filterTag: {
+    backgroundColor: "#FFF",
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: "#F3F4F6",
+  },
+  filterTagActive: { backgroundColor: "#4A3B2C", borderColor: "#4A3B2C" },
+  filterTagText: { color: "#6B7280", fontWeight: "700", fontSize: 14 },
+  filterTagTextActive: { color: "#FFF" },
+
+  generateBtn: {
+    backgroundColor: "#EBC390",
+    flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 15,
-  },
-  closeX: { position: "absolute", right: 0, padding: 5 },
-  expandedTitle: { fontSize: 20, fontWeight: "bold", color: "#333" },
-  recipeCard: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    overflow: "hidden",
-    marginBottom: 15,
-    width: "100%",
-  },
-  recipeImage: { width: "100%", height: 120, backgroundColor: "#eee" },
-  recipeLabelContainer: {
-    backgroundColor: "#C4734D",
-    padding: 10,
-    alignItems: "center",
-  },
-  recipeLabelText: { color: "#fff", fontWeight: "bold", fontSize: 15 },
-  closeBtn: {
-    backgroundColor: "#2D8A4E",
-    padding: 15,
-    borderRadius: 25,
-    alignItems: "center",
-    width: "100%",
+    paddingVertical: 18,
+    borderRadius: 22,
     marginTop: 10,
   },
-  closeBtnText: { color: "#FFF", fontWeight: "bold", fontSize: 16 },
+  generateBtnText: { color: "#4A3B2C", fontSize: 18, fontWeight: "900" },
 });
-
-export default GenerateRecipesPage;
