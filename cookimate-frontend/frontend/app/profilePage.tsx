@@ -9,7 +9,6 @@ import {
 import React from 'react';
 import { globalStyle } from './globalStyleSheet.style';
 import { Ionicons, Feather, MaterialCommunityIcons } from '@expo/vector-icons';
-import { router } from 'expo-router'; // ✅ ADDED
 
 /* ---------------- TYPES ---------------- */
 type StatCardProps = {
@@ -47,11 +46,9 @@ const ProfilePage = () => {
               >
                 <Text style={styles.smallBtnText}>Edit Profile</Text>
               </TouchableOpacity>
-
-              {/* ✅ SETTINGS NAVIGATION FIXED */}
               <TouchableOpacity
                 style={styles.smallBtn}
-                onPress={() => router.push('/settingsPage')}
+                onPress={() => alert('Settings clicked')}
               >
                 <Text style={styles.smallBtnText}>Settings</Text>
               </TouchableOpacity>
@@ -138,6 +135,16 @@ const Badge = ({ icon, text, onPress }: BadgeProps) => (
 
 /* ---------------- STYLES ---------------- */
 const styles = StyleSheet.create({
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#E6C3A0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    margin: 20,
+  },
+
   profileCard: {
     flexDirection: 'row',
     backgroundColor: '#dfb389',
@@ -145,7 +152,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 18,
     gap: 15,
-    minHeight: 150,
+    minHeight: 150, // increased height
     alignItems: 'center',
   },
 
@@ -219,10 +226,10 @@ const styles = StyleSheet.create({
     width: '47%',
     backgroundColor: '#dfb389',
     borderRadius: 20,
-    padding: 25,
+    padding: 25, // increased padding for taller card
     alignItems: 'center',
     gap: 12,
-    minHeight: 120,
+    minHeight: 120, // minimum height increased
   },
 
   statText: {
@@ -257,7 +264,7 @@ const styles = StyleSheet.create({
     width: '30%',
     alignItems: 'center',
     gap: 8,
-    minHeight: 90,
+    minHeight: 90, // increased height
   },
 
   badgeText: {
