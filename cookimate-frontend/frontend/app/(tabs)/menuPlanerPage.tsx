@@ -1,39 +1,92 @@
-import { Image, View, StyleSheet, Modal, Text, TouchableOpacity, Dimensions, FlatList } from 'react-native'; 
-import React, { useState, useRef, useEffect } from 'react'; 
-import { Calendar } from 'react-native-calendars';
-import { Dropdown } from 'react-native-element-dropdown';
-import { globalStyle } from '../globalStyleSheet.style';
+import {
+  Image,
+  View,
+  StyleSheet,
+  Modal,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+  FlatList,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  SafeAreaView,
+  ScrollView,
+} from "react-native";
+import React, { useState, useRef, useEffect } from "react";
+import { Calendar } from "react-native-calendars";
+import Constants from "expo-constants";
+import { globalStyle } from "../globalStyleSheet.style";
+import { useRouter, useLocalSearchParams } from "expo-router";
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
+const CAROUSEL_WIDTH = width * 0.9;
 
-const mealOptions = [
-  { label: 'Breakfast 🍳', value: 'breakfast' },
-  { label: 'Lunch 🍛', value: 'lunch' },
-  { label: 'Dinner 🥡', value: 'dinner' },
-  { label: 'Snack 🥨', value: 'snack' },
+const mealCategories = [
+  { label: "Breakfast     🍳🥞", color: "#f8e5ba" },
+  { label: "Lunch     🥗🌮", color: "#c3d7ae" },
+  { label: "Dinner     🥡🍕", color: "#ceb6b0" },
+  { label: "Appetizer     🫒🥟", color: "#c3d8ce" },
+  { label: "Dessert     🍰🥮", color: "#e5d1bb" },
+  { label: "Drink     🥤☕️", color: "#d7f2fa" },
+  { label: "Snack     🍿🥨", color: "#ffe3e0" },
 ];
 
-// Circular arrayof images for the scrolling animation
-const carouselImages = [
-  require('../../assets/images/planner_img1.png'),
-  require('../../assets/images/planner_img2.png'),
-  require('../../assets/images/planner_img3.png'),
-  require('../../assets/images/planner_img1.png'), 
+const defaultImages = [
+  require("../../assets/images/planner_img1.png"),
+  require("../../assets/images/planner_img2.png"),
+  require("../../assets/images/planner_img3.png"),
 ];
 
 const Page = () => {
+  const [isSeasonal, setIsSeasonal] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [selectedDate, setSelectedDate] = useState('');
-  const [mealType, setMealType] = useState(null);
-  
+  const [selectedDate, setSelectedDate] = useState("");
+  const [isAddingMeal, setIsAddingMeal] = useState(false);
+  const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  const router = useRouter();
+  const { openModalWithDate } = useLocalSearchParams();
 
-  // 1. Auto scroll timer
   useEffect(() => {
+    if (openModalWithDate) {
+      setSelectedDate(openModalWithDate as string);
+      setIsAddingMeal(true);
+      setIsModalVisible(true);
+      router.setParams({ openModalWithDate: undefined });
+    }
+  }, [openModalWithDate]);
+
+  useEffect(() => {
+    const fetchSeasonalContent = async () => {
+      try {
+        const debuggerHost = Constants.expoConfig?.hostUri;
+        const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+        const baseUrl = `http://${address}:5000/api`;
+        const response = await fetch(`${baseUrl}/recipes/seasonal`);
+        const data = await response.json();
+        if (data && data.length > 0) {
+          setIsSeasonal(true);
+          const remoteImages = data.map((recipe: any) => ({
+            uri: recipe.image,
+          }));
+          setCarouselImages([...remoteImages, remoteImages[0]]);
+        } else {
+          setIsSeasonal(false);
+          setCarouselImages([...defaultImages, defaultImages[0]]);
+        }
+      } catch (error) {
+        setIsSeasonal(false);
+        setCarouselImages([...defaultImages, defaultImages[0]]);
+      }
+    };
+    fetchSeasonalContent();
+  }, []);
+
+  useEffect(() => {
+    if (carouselImages.length === 0) return;
     const timer = setInterval(() => {
       const nextIndex = currentIndex + 1;
-
       if (nextIndex < carouselImages.length) {
         flatListRef.current?.scrollToIndex({
           index: nextIndex,
@@ -41,202 +94,245 @@ const Page = () => {
         });
         setCurrentIndex(nextIndex);
       }
-    }, 4000); //The time duration per image
-
+    }, 4000);
     return () => clearInterval(timer);
-  }, [currentIndex]);
+  }, [currentIndex, carouselImages]);
 
-  
-  const handleScroll = (event: any) => {
+  const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
-    
-    const scrollValue = contentOffsetX / width;
-    
-    
+    const scrollValue = contentOffsetX / CAROUSEL_WIDTH;
     if (scrollValue >= carouselImages.length - 1) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       setCurrentIndex(0);
     }
   };
 
+  const handleCloseModal = () => {
+    setIsModalVisible(false);
+    setIsAddingMeal(false);
+  };
+
+  const renderItem = ({ item }: { item: any }) => (
+    <Image
+      source={item.uri ? { uri: item.uri } : item}
+      style={styles.festivalsImage}
+    />
+  );
+
   return (
-    <View style={globalStyle.container}>
-      <Calendar
-        theme={calendarStyles}
-        onDayPress={(day) => {
-          setSelectedDate(day.dateString);
-          setIsModalVisible(true);
-        }}
-      />
+    <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
+      <View style={styles.mainContent}>
+        <View style={styles.calendarContainer}>
+          <Calendar
+            theme={calendarStyles}
+            onDayPress={(day) => {
+              setSelectedDate(day.dateString);
+              setIsAddingMeal(false);
+              setIsModalVisible(true);
+            }}
+          />
+        </View>
+        <View style={styles.carouselShadowContainer}>
+          <View style={styles.carouselWrapper}>
+            <FlatList
+              ref={flatListRef}
+              data={carouselImages}
+              horizontal
+              pagingEnabled
+              snapToInterval={CAROUSEL_WIDTH}
+              decelerationRate="fast"
+              showsHorizontalScrollIndicator={false}
+              keyExtractor={(_, index) => index.toString()}
+              onScroll={handleScroll}
+              scrollEventThrottle={16}
+              renderItem={renderItem}
+            />
+          </View>
+          {isSeasonal && (
+            <TouchableOpacity style={styles.seasonalButton}>
+              <Text style={styles.seasonalButtonText}>View Recipe</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
 
       <Modal
-        animationType="fade"
+        animationType="slide"
         transparent={true}
         visible={isModalVisible}
-        onRequestClose={() => setIsModalVisible(false)}
+        onRequestClose={handleCloseModal}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>🍽️ Plan Meal for {selectedDate}</Text>
-            <View style={{ marginVertical: 20 }}>
-              <Dropdown
-                style={styles.dropdown}
-                placeholderStyle={styles.placeholderStyle}
-                selectedTextStyle={styles.selectedTextStyle}
-                data={mealOptions}
-                labelField="label"
-                valueField="value"
-                placeholder="Select meal type 🍔"
-                value={mealType}
-                onChange={item => setMealType(item.value)}
-              />
-            </View>
-
-            <TouchableOpacity style={styles.selectMenuButton}>
-              <Text style={styles.selectedButtonText}>Select a recipe 📖</Text>
-            </TouchableOpacity>
-           
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity 
-                style={styles.styledButton}
-                onPress={() => setIsModalVisible(false)} 
-              >
-                <Text style={styles.buttonText}>Close</Text>
-              </TouchableOpacity>
-        
-              <TouchableOpacity
-                style={styles.styledButton}
-                onPress={() => setIsModalVisible(false)}
-              >
-                <Text style={styles.buttonText}>Plan</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={handleCloseModal}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.formContainer}>
+            {!isAddingMeal ? (
+              <View style={styles.initialContent}>
+                <TouchableOpacity
+                  style={styles.addButton}
+                  onPress={() => setIsAddingMeal(true)}
+                >
+                  <Text style={styles.addButtonText}>+</Text>
+                </TouchableOpacity>
+                <View style={styles.dateContainer}>
+                  <Text style={styles.popupBoxDate}>{selectedDate}</Text>
+                </View>
+              </View>
+            ) : (
+              <View style={styles.addMealContainer}>
+                <Text style={styles.addMealHeader}>Select Category</Text>
+                <ScrollView
+                  style={styles.categoryScrollView}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {mealCategories.map((item) => (
+                    <TouchableOpacity
+                      key={item.label}
+                      style={[
+                        styles.categoryButton,
+                        { backgroundColor: item.color },
+                      ]}
+                      onPress={() => {
+                        setIsModalVisible(false);
+                        const categoryType = item.label.split(" ")[0].trim();
+                        router.push({
+                          pathname: "/myRecipes",
+                          params: { 
+                            selectedCategory: categoryType,
+                            selectedDate: selectedDate 
+                          },
+                        });
+                      }}
+                    >
+                      <Text style={styles.categoryButtonText}>
+                        {item.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              </View>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
-
-      <View style={styles.carouselWrapper}>
-        <FlatList
-          ref={flatListRef}
-          data={carouselImages}
-          horizontal
-          pagingEnabled
-          showsHorizontalScrollIndicator={false}
-          onScrollToIndexFailed={() => {}} 
-          keyExtractor={(_, index) => index.toString()}
-          onScroll={handleScroll}
-          scrollEventThrottle={16} 
-          onMomentumScrollEnd={(event) => {
-            const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
-            if (newIndex < carouselImages.length - 1) {
-              setCurrentIndex(newIndex);
-            }
-          }}
-          renderItem={({ item }) => (
-            <Image source={item} style={styles.festivalsImage} />
-          )}
-        />
-      </View>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export const calendarStyles: any = {
-    calendarBackground: '#f2ece2',
-    dayTextColor: 'black',
-    textDayFontWeight: 'bold',
-    textMonthFontWeight: 'bold',
-    monthTextColor: 'black',
-    textSectionTitleColor: 'black',
-    todayBackgroundColor: '#c6a484',
-    todayTextColor: 'white',
-    arrowColor: '#8a6666',
-}
+  calendarBackground: "#f2ece2",
+  dayTextColor: "black",
+  textDayFontWeight: "bold",
+  textMonthFontWeight: "bold",
+  monthTextColor: "black",
+  textSectionTitleColor: "black",
+  todayBackgroundColor: "#c6a484",
+  todayTextColor: "white",
+  arrowColor: "#8a6666",
+};
 
 export const styles = StyleSheet.create({
-  modalOverlay: {
+  mainContent: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)', 
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "space-between",
+    paddingBottom: 20,
   },
-  formContainer: {
-    width: '80%',
-    backgroundColor: '#f2ece2',
-    padding: 20,
-    borderRadius: 15,
-    elevation: 5,
-    shadowColor: '#000',
-    borderColor: '#522F2F',
-    borderWidth: 1.5,
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 15,
-    textAlign: 'center',
-  },
-  dropdown: {
-    height: 50,
-    borderColor: 'black',
-    borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    marginBottom: 20,
-  },
-  placeholderStyle: {
-    fontSize: 16,
-    color: '#8a6666',
-  },
-  selectedTextStyle: {
-    fontSize: 16,
-  },
-  buttonContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 15,
-    borderRadius: 25,
-  },
-  styledButton: {
-    backgroundColor: '#522F2F', 
-    paddingVertical: 12,
-    borderRadius: 25,          
-    minWidth: 100,
-    alignItems: 'center',      
-    justifyContent: 'center',  
-  },
-  buttonText: {
-    color: '#f2ece2',          
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  selectMenuButton: {
-    backgroundColor: '#c6a484', 
-    alignItems: 'flex-start',
-    justifyContent: 'center',
-    marginTop: -20,
-    minHeight: 50,
-    marginBottom: 40,
-    borderRadius: 10,
-  },
-  selectedButtonText: {
-    color: '#f2ece2',          
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
+  calendarContainer: { marginTop: 10 },
+  carouselShadowContainer: {
+    alignSelf: "center",
+    width: CAROUSEL_WIDTH,
+    height: "40%",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 12,
   },
   carouselWrapper: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: '54%', 
+    flex: 1,
+    borderRadius: 25,
+    backgroundColor: "#fff",
+    overflow: "hidden",
   },
   festivalsImage: {
-    width: width,
-    height: '100%',
-    resizeMode: 'cover',
+    width: CAROUSEL_WIDTH,
+    height: "100%",
+    resizeMode: "cover",
   },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
+  },
+  formContainer: {
+    width: "100%",
+    height: height * 0.6,
+    backgroundColor: "#f2ece2",
+    padding: 20,
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    borderTopWidth: 1.5,
+    borderLeftWidth: 1.5,
+    borderRightWidth: 1.5,
+    borderBottomWidth: 0,
+    borderColor: "#522F2F",
+    elevation: 20,
+  },
+  initialContent: { flex: 1, position: "relative" },
+  dateContainer: { width: "100%", alignItems: "center", marginTop: 10 },
+  addButton: {
+    position: "absolute",
+    top: 5,
+    left: 5,
+    backgroundColor: "#522F2F",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  addButtonText: {
+    color: "#f2ece2",
+    fontSize: 24,
+    fontWeight: "bold",
+    lineHeight: 28,
+  },
+  popupBoxDate: { fontSize: 22, fontWeight: "bold", color: "#000000" },
+  addMealContainer: { flex: 1, width: "100%", marginTop: 5 },
+  addMealHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#522F2F",
+    textAlign: "center",
+    marginBottom: 15,
+  },
+  categoryScrollView: { flex: 1 },
+  categoryButton: {
+    minHeight: 90,
+    marginTop: 30,
+    paddingHorizontal: 20,
+    borderRadius: 10,
+    justifyContent: "center",
+    borderWidth: 4,
+    borderColor: "rgba(0,0,0,0.05)",
+    elevation: 3,
+  },
+  categoryButtonText: { fontSize: 16, fontWeight: "bold", color: "#000" },
+  seasonalButton: {
+    position: "absolute",
+    bottom: 15,
+    alignSelf: "center",
+    backgroundColor: "#522F2F",
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    borderColor: "white",
+    borderWidth: 1,
+  },
+  seasonalButtonText: { color: "#f2ece2", fontSize: 14, fontWeight: "bold" },
 });
 
 export default Page;
