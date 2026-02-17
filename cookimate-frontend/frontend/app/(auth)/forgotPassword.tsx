@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, A
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '../config/firebase'; 
+import { auth } from '../../config/firebase'; 
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
@@ -32,7 +32,7 @@ export default function ForgotPasswordPage() {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background.jpeg')}
+      source={require('../../assets/images/background.jpeg')}
       style={styles.container}
       resizeMode="cover"
     >

@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
-import { globalStyle } from "./globalStyleSheet.style";
+import { globalStyle } from "../globalStyleSheet.style";
 import {
   Image,
   Pressable,
@@ -62,7 +62,7 @@ function HomePage() {
         <Text style={styles.welcomemsg}>Welcome Back!!</Text>
         <View style={styles.mascotCircle}>
           <Image
-            source={require("../assets/images/Home-page-Mascot.jpg")}
+            source={require("../../assets/images/Home-page-Mascot.jpg")}
             style={styles.mascotImg}
           />
         </View>
@@ -76,7 +76,7 @@ function HomePage() {
         <NavCard
           title="Find Recipes"
           icon="🔍"
-          href="/loginPage"
+           href="/menuPlanerPage"
           description="Tell me what's in your kitchen"
           bColor= "#E8C28E"
           
@@ -84,14 +84,14 @@ function HomePage() {
         <NavCard
           title="Generate Custom"
           icon="✨"
-          href="/loginPage"
+           href="/menuPlanerPage"
           description="AI will create a recipe for you"
          bColor= "#B86D2A"
         ></NavCard>
         <NavCard
           title="Community"
           icon="👥"
-          href="/loginPage"
+          href="/menuPlanerPage"
           description="See what others are cooking"
           bColor= "#612D25"
         ></NavCard>

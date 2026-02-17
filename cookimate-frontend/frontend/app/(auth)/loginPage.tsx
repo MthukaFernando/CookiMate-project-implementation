@@ -2,7 +2,7 @@ import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, K
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { auth } from '../config/firebase'; 
+import { auth } from '../../config/firebase'; 
 import { Ionicons } from '@expo/vector-icons'; // Import Icons
 
 export default function LoginPage() {
@@ -54,7 +54,7 @@ export default function LoginPage() {
 
       // If verified, proceed to the home page
       setLoading(false);
-      router.replace('/'); 
+      router.replace('/');
       
     } catch (error: any) {
       setLoading(false);
@@ -75,7 +75,7 @@ export default function LoginPage() {
 
   return (
     <ImageBackground
-      source={require('../assets/images/background.jpeg')}
+      source={require('../../assets/images/background.jpeg')}
       style={styles.container}
       resizeMode="cover" 
     >
