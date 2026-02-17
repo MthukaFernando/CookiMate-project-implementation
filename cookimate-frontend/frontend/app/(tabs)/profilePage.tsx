@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   editBtnText: { fontSize: 12, fontWeight: 'bold', color: '#5D4037' },
   settingsBtn: { 
-    backgroundColor: '#fff', 
+    backgroundColor: '#000000', 
     width: 35, 
     height: 35, 
     borderRadius: 12, 
