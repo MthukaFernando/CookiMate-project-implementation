@@ -19,9 +19,42 @@ import { globalStyle } from "../globalStyleSheet.style";
 const TAB_BAR_HEIGHT = 65;
 const PEEK_HEIGHT = 85;
 
-const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic"];
-const CUISINES = ["Asian", "American", "Mediterranean", "Indian"];
-const MEAL_TYPES = ["Breakfast", "Lunch", "Dinner", "Snack"];
+// Updated from final_recipes.json
+const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic", "Chicken", "Shrimp"];
+
+// All unique cuisines found in the file
+const CUISINES = [
+  "American",
+  "Asian",
+  "British",
+  "Caribbean",
+  "French",
+  "Indian",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Louisiana",
+  "Mediterranean",
+  "Mexican",
+  "New-Orleans",
+  "South-American",
+  "Sri Lankan",
+  "Swiss",
+  "Texan",
+  "Western",
+];
+
+// All unique meal types found in the file
+const MEAL_TYPES = [
+  "Appetizer",
+  "Breakfast",
+  "Dessert",
+  "Dinner",
+  "Drink",
+  "Lunch",
+  "Snack",
+];
+
 const TIMES = ["< 15m", "< 30m", "< 45m", "1h+"];
 const SERVINGS = ["1", "2", "4", "6+"];
 
@@ -105,7 +138,6 @@ export default function GenerateRecipesPage() {
           { height: height, transform: [{ translateY: slideAnim }] },
         ]}
       >
-        {/* --- 1. CENTERED "GENERATE RECIPES" PEEK BUTTON --- */}
         {!isExpanded && (
           <View style={styles.peekButtonWrapper}>
             <TouchableOpacity
@@ -122,7 +154,6 @@ export default function GenerateRecipesPage() {
           </View>
         )}
 
-        {/* --- 2. THE EXPANDED VIEW --- */}
         <View style={{ flex: 1, opacity: isExpanded ? 1 : 0 }}>
           <View {...panResponder.panHandlers} style={styles.headerArea}>
             <View style={styles.dragHandle} />
@@ -149,7 +180,6 @@ export default function GenerateRecipesPage() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Search Bar - Increased top padding */}
               <View style={styles.searchSection}>
                 <Ionicons
                   name="search"
@@ -201,7 +231,6 @@ export default function GenerateRecipesPage() {
 
               <View style={styles.divider} />
 
-              {/* Filters with increased spacing to fill screen */}
               <FilterRow
                 title="Cuisine"
                 icon="restaurant-outline"
@@ -295,8 +324,6 @@ const styles = StyleSheet.create({
     paddingTop: 35,
     zIndex: 9999,
   },
-
-  // Centered Peek Button Logic
   peekButtonWrapper: {
     width: "100%",
     alignItems: "center",
@@ -310,9 +337,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 15,
     paddingHorizontal: 25,
-    paddingBottom:20,
+    paddingBottom: 20,
     borderRadius: 50,
-    width: "85%", // Centered pill shape
+    width: "85%",
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -321,7 +348,6 @@ const styles = StyleSheet.create({
   },
   flexRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   peekTitle: { fontSize: 16, fontWeight: "bold", color: "#4A3B2C" },
-
   headerArea: {
     paddingTop: 20,
     paddingBottom: 15,
@@ -347,30 +373,27 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: "900", color: "#4A3B2C" },
   resetContainer: { padding: 5 },
   resetText: { color: "#B45309", fontWeight: "800", fontSize: 14 },
-
   scrollBody: { paddingHorizontal: 20, paddingBottom: 60 },
-
   searchSection: {
     backgroundColor: "#FFF",
     borderRadius: 20,
     padding: 14,
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 60, // Added significant padding at top of search bar
+    marginTop: 20,
     marginBottom: 35,
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
-  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 6 },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 5 },
   chip: {
     backgroundColor: "#F3D8B6",
-    paddingVertical: 5,
+    paddingVertical: 10,
     paddingHorizontal: 10,
     borderRadius: 10,
   },
   chipText: { fontSize: 12, fontWeight: "700", color: "#4A3B2C" },
   textInput: { flex: 1, minWidth: 100, fontSize: 16 },
-
   label: {
     fontSize: 11,
     fontWeight: "800",
@@ -392,11 +415,8 @@ const styles = StyleSheet.create({
     borderColor: "#E5E7EB",
   },
   quickAddText: { fontWeight: "600", color: "#4A3B2C" },
-
   divider: { height: 1, backgroundColor: "#E5E7EB", marginBottom: 35 },
-
-  // Spacing between filters increased to fill screen
-  filterRowContainer: { marginBottom: 45 },
+  filterRowContainer: { marginBottom: 35 },
   filterHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -406,8 +426,8 @@ const styles = StyleSheet.create({
   filterTitle: { fontSize: 16, fontWeight: "800", color: "#4A3B2C" },
   filterTag: {
     backgroundColor: "#FFF",
-    paddingVertical: 12,
-    paddingHorizontal: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: "#F3F4F6",
@@ -415,7 +435,6 @@ const styles = StyleSheet.create({
   filterTagActive: { backgroundColor: "#4A3B2C", borderColor: "#4A3B2C" },
   filterTagText: { color: "#6B7280", fontWeight: "700", fontSize: 14 },
   filterTagTextActive: { color: "#FFF" },
-
   generateBtn: {
     backgroundColor: "#EBC390",
     flexDirection: "row",
