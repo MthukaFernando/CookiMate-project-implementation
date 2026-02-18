@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   editBtnText: { fontSize: 12, fontWeight: 'bold', color: '#5D4037' },
   settingsBtn: { 
-    backgroundColor: '#000000', 
+    backgroundColor: '#fff', 
     width: 35, 
     height: 35, 
     borderRadius: 12, 
@@ -290,7 +290,7 @@ const styles = StyleSheet.create({
   borderBottomWidth: 5, 
   gap: 0,
   
-  // Shadow for iOS
+  
   shadowColor: "#000",
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.15,
