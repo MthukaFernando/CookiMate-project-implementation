@@ -69,9 +69,11 @@ const MyRecipesPage = () => {
   const [time, setTime] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
 
-  useEffect(() => {
-    loadFavorites();
-  }, []);
+useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+    }, [])
+  );
 
   useEffect(() => {
     if (selectedCategory) {
@@ -208,6 +210,7 @@ const MyRecipesPage = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search recipes"
+            placeholderTextColor="#999999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
