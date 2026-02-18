@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -9,12 +9,14 @@ import {
   ActivityIndicator,
   Modal,
   SafeAreaView,
+  Animated        
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import ConfettiCannon from 'react-native-confetti-cannon';
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -206,7 +208,9 @@ export default function RecipeDetails() {
           )}
         </View>
       </ScrollView>
-      //Cooking Mode Modal
+      
+
+      {/* 4. Cooking Mode Modal */}
       <Modal
         visible={cookingMode}
         animationType="slide"
@@ -214,58 +218,71 @@ export default function RecipeDetails() {
         onRequestClose={closeCookingMode}
       >
         <SafeAreaView style={styles.modalContainer}>
+          {/* Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity
-              onPress={closeCookingMode}
-              style={styles.closeButton}
-            >
+            <TouchableOpacity onPress={closeCookingMode} style={styles.closeButton}>
               <Ionicons name="close" size={28} color="#5F4436" />
             </TouchableOpacity>
-
+            
+            {/* Only show progress if NOT finished */}
             {recipe?.steps && currentStepIndex < recipe.steps.length && (
-              <Text style={styles.stepProgress}>
-                Step {currentStepIndex + 1} of {recipe.steps.length}
-              </Text>
+               <Text style={styles.stepProgress}>
+                 Step {currentStepIndex + 1} of {recipe.steps.length}
+               </Text>
             )}
           </View>
 
           <View style={styles.modalContent}>
             {recipe?.steps && currentStepIndex < recipe.steps.length ? (
+              /* --- ACTIVE STEP CARD --- */
               <View style={styles.stepCard}>
+                 {/* Watermark Number (Fixed Overlap) */}
                 <Text style={styles.stepBigNumber}>{currentStepIndex + 1}</Text>
-                <ScrollView showsVerticalScrollIndicator={false}>
+                
+                <ScrollView 
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.stepScrollContent}
+                >
                   <Text style={styles.stepText}>
                     {recipe.steps[currentStepIndex]}
                   </Text>
                 </ScrollView>
-
-                <TouchableOpacity
-                  style={styles.nextStepButton}
-                  onPress={handleNextStep}
-                >
+                
+                <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
                   <Text style={styles.nextStepText}>
-                    {currentStepIndex === recipe.steps.length - 1
-                      ? "Finish Cooking"
-                      : "Next Step"}
+                     {currentStepIndex === recipe.steps.length - 1 ? "Finish Cooking" : "Next Step"}
                   </Text>
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </TouchableOpacity>
               </View>
             ) : (
+              /* --- FUN COMPLETION SCREEN --- */
               <View style={styles.completedContainer}>
-                <View style={styles.checkCircle}>
-                  <Ionicons name="checkmark" size={50} color="#fff" />
-                </View>
-                <Text style={styles.completedTitle}>Bon Appétit!</Text>
-                <Text style={styles.completedSub}>
-                  You have finished cooking {recipe?.name}.
-                </Text>
+                {/* Fireworks Explosion! */}
+                <ConfettiCannon 
+                  count={200} 
+                  origin={{x: -10, y: 0}} 
+                  fallSpeed={2500}
+                  fadeOut={true}
+                />
 
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={closeCookingMode}
-                >
-                  <Text style={styles.doneButtonText}>Done</Text>
+                {/* Mascot Image */}
+                <View style={styles.mascotContainer}>
+                   {/* Make sure mascot.png is in your assets folder! */}
+                   <Image 
+                     source={require('../../assets/images/mascot.png')}
+                     style={styles.mascotImage}
+                     resizeMode="contain"
+                   />
+                </View>
+
+                <Text style={styles.completedTitle}>Yum!</Text>
+                <Text style={styles.completedSub}>
+                  You just cooked <Text style={{fontWeight: 'bold'}}>{recipe?.name}</Text>!
+                </Text>
+                
+                <TouchableOpacity style={styles.doneButton} onPress={closeCookingMode}>
+                  <Text style={styles.doneButtonText}>Complete Recipe</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -399,45 +416,52 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-  completedContainer: {
+completedContainer: {
     flex: 1,
-    width: "100%",
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: "transparent",
+    backgroundColor: 'transparent',
   },
-  checkCircle: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
-    backgroundColor: "#4caf50",
-    justifyContent: "center",
-    alignItems: "center",
+  mascotContainer: {
+    width: 250,
+    height: 250,
     marginBottom: 20,
-    elevation: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mascotImage: {
+    width: "100%",
+    height: "100%",
   },
   completedTitle: {
-    fontSize: 28,
-    fontWeight: "bold",
+    fontSize: 36,
+    fontWeight: "900", // Extra bold
     color: "#5F4436",
     marginBottom: 10,
+    letterSpacing: 1,
   },
   completedSub: {
-    fontSize: 16,
+    fontSize: 18,
     color: "#8a6666",
     textAlign: "center",
     marginBottom: 40,
-    paddingHorizontal: 20,
+    paddingHorizontal: 30,
+    lineHeight: 24,
   },
   doneButton: {
     backgroundColor: "#4caf50",
-    paddingVertical: 15,
-    paddingHorizontal: 50,
-    borderRadius: 25,
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: "#4caf50",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   doneButtonText: {
     color: "#fff",
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "bold",
   },
 
