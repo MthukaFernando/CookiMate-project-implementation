@@ -72,6 +72,15 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
+  // --- NEW: Animate Border Radius ---
+  // When at TOP (Expanded): Radius is 0 (Square)
+  // When at BOTTOM (Collapsed): Radius is 35 (Rounded)
+  const panelBorderRadius = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, COLLAPSED_Y],
+    outputRange: [0, 35],
+    extrapolate: "clamp",
+  });
+
   // Fade out content as we collapse
   const contentOpacity = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, EXPANDED_Y + 150],
@@ -90,7 +99,7 @@ export default function GenerateRecipesPage() {
     setIsExpanded(open);
     Animated.spring(slideAnim, {
       toValue: open ? EXPANDED_Y : COLLAPSED_Y,
-      useNativeDriver: true,
+      useNativeDriver: false, // Must be false to animate layout properties like borderRadius
       tension: 40,
       friction: 8,
     }).start();
@@ -148,6 +157,9 @@ export default function GenerateRecipesPage() {
           {
             height: height - TOP_MARGIN,
             transform: [{ translateY: slideAnim }],
+            // Apply the animated border radius here
+            borderTopLeftRadius: panelBorderRadius,
+            borderTopRightRadius: panelBorderRadius,
           },
         ]}
       >
@@ -357,6 +369,8 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     height: PEEK_HEIGHT,
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
