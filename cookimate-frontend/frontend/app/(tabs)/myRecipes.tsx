@@ -149,23 +149,25 @@ const MyRecipesPage = () => {
   };
 
   const fetchRecipes = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(`${API_URL}/api/recipes`, {
-        params: {
-          searchQuery: searchQuery,
-          meal: meal !== "All" ? meal : undefined,
-          diet: diet !== "All" ? diet : undefined,
-          cuisine: cuisine !== "All" ? cuisine : undefined,
-        },
-      });
-      setRecipes(response.data);
-    } catch (error) {
-      console.error("Backend error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  setLoading(true);
+  try {
+    const response = await axios.get(`${API_URL}/api/recipes`, {
+      params: {
+        searchQuery: searchQuery,
+        // Send 'undefined' if 'All' so the backend doesn't try to filter it
+        meal: meal !== "All" ? meal : undefined,
+        diet: diet !== "All" ? diet : undefined,
+        cuisine: cuisine !== "All" ? cuisine : undefined,
+        time: time !== "All" ? time : undefined, 
+      },
+    });
+    setRecipes(response.data);
+  } catch (error) {
+    console.error("Backend error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useEffect(() => {
     fetchRecipes();

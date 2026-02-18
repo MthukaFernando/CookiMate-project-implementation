@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   View,
   Text,
@@ -7,14 +7,17 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  SafeAreaView,
+  Animated        
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import ConfettiCannon from 'react-native-confetti-cannon';
 
-// Dynamic IP detection
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
@@ -26,12 +29,29 @@ export default function RecipeDetails() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [cookingMode, setCookingMode] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
-  // Check if this recipe is a favorite
+  const handleStartCooking = () => {
+    setCurrentStepIndex(0);
+    setCookingMode(true);
+  };
+
+  const handleNextStep = () => {
+    if (recipe && recipe.steps && currentStepIndex < recipe.steps.length) {
+      setCurrentStepIndex(currentStepIndex + 1);
+    }
+  };
+
+  const closeCookingMode = () => {
+    setCookingMode(false);
+    setCurrentStepIndex(0);
+  };
+
   useEffect(() => {
     const checkFavorite = async () => {
       try {
-        const storedFavs = await AsyncStorage.getItem('userFavorites');
+        const storedFavs = await AsyncStorage.getItem("userFavorites");
         if (storedFavs) {
           const favorites = JSON.parse(storedFavs);
           setIsFavorite(favorites.includes(id));
@@ -40,25 +60,22 @@ export default function RecipeDetails() {
         console.log("Error checking favorite", error);
       }
     };
-    
+
     if (id) checkFavorite();
   }, [id]);
 
-  // Toggle favorite status
   const toggleFavorite = async () => {
     try {
-      const storedFavs = await AsyncStorage.getItem('userFavorites');
+      const storedFavs = await AsyncStorage.getItem("userFavorites");
       let favorites = storedFavs ? JSON.parse(storedFavs) : [];
-      
+
       if (isFavorite) {
-        // Remove from favorites
         favorites = favorites.filter((favId: string) => favId !== id);
       } else {
-        // Add to favorites
         favorites.push(id);
       }
-      
-      await AsyncStorage.setItem('userFavorites', JSON.stringify(favorites));
+
+      await AsyncStorage.setItem("userFavorites", JSON.stringify(favorites));
       setIsFavorite(!isFavorite);
     } catch (error) {
       console.log("Error toggling favorite", error);
@@ -113,7 +130,6 @@ export default function RecipeDetails() {
             <View style={[styles.headerImage, { backgroundColor: "#ddd" }]} />
           )}
 
-          {/* Back Button */}
           <TouchableOpacity
             style={styles.roundBackButton}
             onPress={() => router.back()}
@@ -121,15 +137,11 @@ export default function RecipeDetails() {
             <Ionicons name="arrow-back" size={24} color="#5F4436" />
           </TouchableOpacity>
 
-          {/* Heart Button on Image */}
-          <TouchableOpacity
-            style={styles.heartButton}
-            onPress={toggleFavorite}
-          >
-            <Ionicons 
-              name={isFavorite ? "heart" : "heart-outline"} 
-              size={28} 
-              color={isFavorite ? "#e74c3c" : "#5F4436"} 
+          <TouchableOpacity style={styles.heartButton} onPress={toggleFavorite}>
+            <Ionicons
+              name={isFavorite ? "heart" : "heart-outline"}
+              size={28}
+              color={isFavorite ? "#e74c3c" : "#5F4436"}
             />
           </TouchableOpacity>
         </View>
@@ -149,6 +161,21 @@ export default function RecipeDetails() {
               </Text>
             </View>
           </View>
+
+          <View style={styles.divider} />
+
+          <TouchableOpacity
+            style={styles.startCookingButton}
+            onPress={handleStartCooking}
+          >
+            <Ionicons
+              name="play-circle"
+              size={24}
+              color="#fff"
+              style={{ marginRight: 8 }}
+            />
+            <Text style={styles.startCookingText}>Start Cooking</Text>
+          </TouchableOpacity>
 
           <View style={styles.divider} />
 
@@ -181,6 +208,87 @@ export default function RecipeDetails() {
           )}
         </View>
       </ScrollView>
+      
+
+      {/* 4. Cooking Mode Modal */}
+      <Modal
+        visible={cookingMode}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={closeCookingMode}
+      >
+        <SafeAreaView style={styles.modalContainer}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={closeCookingMode} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#5F4436" />
+            </TouchableOpacity>
+            
+            {/* Only show progress if NOT finished */}
+            {recipe?.steps && currentStepIndex < recipe.steps.length && (
+               <Text style={styles.stepProgress}>
+                 Step {currentStepIndex + 1} of {recipe.steps.length}
+               </Text>
+            )}
+          </View>
+
+          <View style={styles.modalContent}>
+            {recipe?.steps && currentStepIndex < recipe.steps.length ? (
+              /* --- ACTIVE STEP CARD --- */
+              <View style={styles.stepCard}>
+                 {/* Watermark Number (Fixed Overlap) */}
+                <Text style={styles.stepBigNumber}>{currentStepIndex + 1}</Text>
+                
+                <ScrollView 
+                  showsVerticalScrollIndicator={false}
+                  contentContainerStyle={styles.stepScrollContent}
+                >
+                  <Text style={styles.stepText}>
+                    {recipe.steps[currentStepIndex]}
+                  </Text>
+                </ScrollView>
+                
+                <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
+                  <Text style={styles.nextStepText}>
+                     {currentStepIndex === recipe.steps.length - 1 ? "Finish Cooking" : "Next Step"}
+                  </Text>
+                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              /* --- FUN COMPLETION SCREEN --- */
+              <View style={styles.completedContainer}>
+                {/* Fireworks Explosion! */}
+                <ConfettiCannon 
+                  count={200} 
+                  origin={{x: -10, y: 0}} 
+                  fallSpeed={2500}
+                  fadeOut={true}
+                />
+
+                {/* Mascot Image */}
+                <View style={styles.mascotContainer}>
+                   {/* Make sure mascot.png is in your assets folder! */}
+                   <Image 
+                     source={require('../../assets/images/mascot.png')}
+                     style={styles.mascotImage}
+                     resizeMode="contain"
+                   />
+                </View>
+
+                <Text style={styles.completedTitle}>Yum!</Text>
+                <Text style={styles.completedSub}>
+                  You just cooked <Text style={{fontWeight: 'bold'}}>{recipe?.name}</Text>!
+                </Text>
+                
+                <TouchableOpacity style={styles.doneButton} onPress={closeCookingMode}>
+                  <Text style={styles.doneButtonText}>Complete Recipe</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </SafeAreaView>
+      </Modal>
     </View>
   );
 }
@@ -207,7 +315,156 @@ const styles = StyleSheet.create({
     alignItems: "center",
     elevation: 5,
   },
-  // NEW: Heart button on details page
+
+  startCookingButton: {
+    backgroundColor: "#cbaacb",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    elevation: 3,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+  },
+  startCookingText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+
+  modalContainer: {
+    flex: 1,
+    backgroundColor: "#f2ece2",
+  },
+  modalHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
+  },
+  closeButton: {
+    padding: 10,
+  },
+  stepProgress: {
+    fontSize: 16,
+    fontWeight: "600",
+    color: "#8a6666",
+  },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    justifyContent: "center",
+  },
+
+  stepCard: {
+    backgroundColor: "#fff",
+    borderRadius: 30,
+    padding: 30,
+    height: "80%",
+    justifyContent: "space-between",
+    alignItems: "center",
+    elevation: 5,
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
+    overflow: "hidden",
+    position: "relative",
+  },
+  stepBigNumber: {
+    fontSize: 240,
+    fontWeight: "bold",
+    color: "rgba(203, 170, 203, 0.15)",
+    position: "absolute",
+    top: 80,
+    zIndex: -1,
+  },
+  stepScrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+  },
+  stepText: {
+    fontSize: 24,
+    color: "#4a4a4a",
+    textAlign: "center",
+    lineHeight: 36,
+    fontWeight: "500",
+    marginBottom: 20,
+  },
+  nextStepButton: {
+    backgroundColor: "#5F4436",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    width: "100%",
+    justifyContent: "center",
+    zIndex: 1,
+  },
+  nextStepText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginRight: 10,
+  },
+
+completedContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: 'transparent',
+  },
+  mascotContainer: {
+    width: 250,
+    height: 250,
+    marginBottom: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  mascotImage: {
+    width: "100%",
+    height: "100%",
+  },
+  completedTitle: {
+    fontSize: 36,
+    fontWeight: "900", // Extra bold
+    color: "#5F4436",
+    marginBottom: 10,
+    letterSpacing: 1,
+  },
+  completedSub: {
+    fontSize: 18,
+    color: "#8a6666",
+    textAlign: "center",
+    marginBottom: 40,
+    paddingHorizontal: 30,
+    lineHeight: 24,
+  },
+  doneButton: {
+    backgroundColor: "#4caf50",
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 30,
+    elevation: 5,
+    shadowColor: "#4caf50",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+  },
+  doneButtonText: {
+    color: "#fff",
+    fontSize: 20,
+    fontWeight: "bold",
+  },
+
   heartButton: {
     position: "absolute",
     top: 50,
