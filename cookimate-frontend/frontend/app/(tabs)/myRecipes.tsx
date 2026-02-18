@@ -93,10 +93,12 @@ const MyRecipesPage = () => {
   const [time, setTime] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
 
-useFocusEffect(
+  const [activeFilterCount, setActiveFilterCount] = useState(0);
+
+  useFocusEffect(
     useCallback(() => {
       loadFavorites();
-    }, [])
+    }, []),
   );
 
   useEffect(() => {
@@ -115,6 +117,16 @@ useFocusEffect(
       });
     };
   }, []);
+
+  useEffect(() => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (cuisine !== "All") count++;
+    if (meal !== "All" && meal !== selectedCategory) count++;
+    if (diet !== "All") count++;
+    if (time !== "All") count++;
+    setActiveFilterCount(count);
+  }, [searchQuery, cuisine, meal, diet, time, selectedCategory]);
 
   const loadFavorites = async () => {
     try {
@@ -167,6 +179,16 @@ useFocusEffect(
       pathname: "/menuPlanerPage",
       params: { openModalWithDate: dateToPass },
     });
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setCuisine("All");
+    setDiet("All");
+    setTime("All");
+    if (!selectedCategory) {
+      setMeal("All");
+    }
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
@@ -240,6 +262,16 @@ useFocusEffect(
           />
           <Ionicons name="search" size={20} color="#8a6666" />
         </View>
+
+        <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
+          <Text style={styles.clearButtonText}>Clear</Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
         {selectedCategory && (
           <TouchableOpacity style={styles.addButton} onPress={() => {}}>
             <Text style={styles.addLetters}>Add</Text>
@@ -303,6 +335,20 @@ useFocusEffect(
           color="#5F4436"
           style={{ marginTop: 50 }}
         />
+      ) : recipes.length === 0 ? (
+        <View style={styles.noResultsContainer}>
+          <Ionicons name="sad-outline" size={60} color="#c6a484" />
+          <Text style={styles.noResultsText}>No recipes found</Text>
+          <Text style={styles.noResultsSubText}>
+            Try adjusting your filters
+          </Text>
+          <TouchableOpacity
+            style={styles.resetFiltersButton}
+            onPress={clearAllFilters}
+          >
+            <Text style={styles.resetFiltersText}>Reset Filters</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={recipes}
@@ -449,6 +495,72 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   viewButtonText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+
+  // Replace the clearButton style and add clearButtonText
+  clearButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#ebe8e4",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd1cb",
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    color: "#5F4436",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#e74c3c",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  noResultsText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#5F4436",
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  noResultsSubText: {
+    fontSize: 14,
+    color: "#8a6666",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  resetFiltersButton: {
+    backgroundColor: "#c6a484",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    elevation: 3,
+  },
+  resetFiltersText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });
 
 export default MyRecipesPage;
