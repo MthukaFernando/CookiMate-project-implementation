@@ -29,30 +29,54 @@ const API_URL = `http://${address}:5000`;
 
 const cuisineOptions = [
   { label: "All Cuisines", value: "All" },
+  { label: "American 🍔", value: "American" },
   { label: "Italian 🍝", value: "Italian" },
-  { label: "Chinese 🥡", value: "Chinese" },
   { label: "Mexican 🌮", value: "Mexican" },
   { label: "Indian 🍛", value: "Indian" },
-  { label: "American 🍔", value: "American" },
-  { label: "Thai 🍜", value: "Thai" },
   { label: "Japanese 🍣", value: "Japanese" },
+  { label: "Chinese 🥡", value: "Chinese" },
+  { label: "French 🥖", value: "French" },
+  { label: "Mediterranean 🫒", value: "Mediterranean" },
+  { label: "Caribbean 🌴", value: "Caribbean" },
+  { label: "Sri Lankan 🥥", value: "Sri Lankan" },
+  { label: "Moroccan 🐪", value: "Moroccan" },
+  { label: "Korean 🇰🇷", value: "Korean" },
+  { label: "British 🇬🇧", value: "British" },
+  { label: "Swiss 🧀", value: "Swiss" },
+  { label: "Algerian", value: "Algerian" },
+  { label: "Texan 🤠", value: "Texan" },
+  { label: "Cajun/Creole ⚜️", value: "Louisiana" },
 ];
 
 const mealOptions = [
   { label: "All Meals", value: "All" },
-  { label: "Breakfast", value: "Breakfast" },
-  { label: "Lunch", value: "Lunch" },
-  { label: "Dinner", value: "Dinner" },
+  { label: "Breakfast", value: "breakfast" },
+  { label: "Lunch", value: "lunch" },
+  { label: "Dinner", value: "dinner" },
+  { label: "Snacks 🍿", value: "snack" },
+  { label: "Appetizer 🥗", value: "appetizer" },
+  { label: "Dessert 🍰", value: "dessert" },
+  { label: "Drinks 🍹", value: "drink" },
 ];
+
 const timeOptions = [
   { label: "Any Time", value: "All" },
   { label: "Under 15 min", value: "15" },
   { label: "15-30 min", value: "30" },
+  { label: "30-60 min", value: "60" },
 ];
+
 const dietOptions = [
   { label: "All Diets", value: "All" },
-  { label: "Vegetarian", value: "Vegetarian" },
-  { label: "Vegan", value: "Vegan" },
+  { label: "Vegetarian 🌱", value: "vegetarian" },
+  { label: "Vegan 🌿", value: "vegan" },
+  { label: "Gluten-Free 🌾", value: "gluten-free" },
+  { label: "Low-Carb 🥩", value: "low-carb" },
+  { label: "Low-Calorie 🔥", value: "low-calorie" },
+  { label: "Low-Fat 💪", value: "low-fat" },
+  { label: "Low-Sodium 🧂", value: "low-sodium" },
+  { label: "Diabetic-Friendly 💉", value: "diabetic" },
+  { label: "Healthy 🥗", value: "healthy" },
 ];
 
 const MyRecipesPage = () => {
