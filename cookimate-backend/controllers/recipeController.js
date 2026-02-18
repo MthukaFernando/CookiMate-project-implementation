@@ -6,38 +6,38 @@ export const getAllRecipes = async (req, res) => {
     const { searchQuery, cuisine, meal, diet, time } = req.query;
     let query = {};
 
-    // Search by name
-    if (searchQuery) {
+    // 1. Search Query Logic
+    if (searchQuery && searchQuery.trim() !== "") {
       query.name = { $regex: searchQuery, $options: 'i' };
     }
 
-    // Filter by Meal Type
+    // 2. Meal Filter
     if (meal && meal !== 'All') {
       query.meal_type = meal.toLowerCase();
     }
 
-    // Filter by Cuisine
+    // 3. Cuisine Filter
     if (cuisine && cuisine !== 'All') {
-      query.cuisine = cuisine;
+      query.cuisine = cuisine; 
     }
 
-    // Filter by Diet
+    // 4. Diet Filter
     if (diet && diet !== 'All') {
       query.search_terms = diet.toLowerCase();
     }
 
-    // Filter by Time 
+    // 5. Time Filter Logic
     if (time && time !== 'All') {
       if (time === "15") {
-        // Under 15: Matches 1-9 OR 10-14 OR exactly 15
+        // Strict range: 1 to 15
         query.totalTime = { $regex: /^([1-9]|1[0-4]|15)\s*minutes/i };
       } 
       else if (time === "30") {
-        // 15-30: Matches 15-19 OR 2[0-9] OR 30
+        // Strict range: 15 to 30
         query.totalTime = { $regex: /^(1[5-9]|2[0-9]|30)\s*minutes/i };
       } 
       else if (time === "60") {
-        // 30-60: Matches 3[0-9] OR 4[0-9] OR 5[0-9] OR 60
+        // Strict range: 30 to 60
         query.totalTime = { $regex: /^(3[1-9]|[4-5][0-9]|60)\s*minutes/i };
       }
     }
