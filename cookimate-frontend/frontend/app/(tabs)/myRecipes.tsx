@@ -13,12 +13,11 @@ import {
   ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useCallback } from "react";
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
@@ -59,6 +58,7 @@ const MyRecipesPage = () => {
   const router = useRouter();
   const { selectedCategory, selectedDate } = useLocalSearchParams();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -143,12 +143,38 @@ const MyRecipesPage = () => {
     });
   };
 
+  const handleAddRecipeToPlanner = () => {
+    if (!selectedRecipeData) return;
+    router.push({
+      pathname: "/menuPlanerPage",
+      params: { 
+        openModalWithDate: selectedDate,
+        newRecipeId: selectedRecipeData.id,
+        newRecipeName: selectedRecipeData.name,
+        newRecipeImage: selectedRecipeData.image,
+        newRecipeCategory: selectedCategory
+      },
+    });
+  };
+
   const renderRecipeItem = ({ item }: { item: any }) => {
     const isFavorite = favorites.includes(item.id);
     const isSelected = selectedRecipeId === item.id;
 
     return (
-      <View style={styles.card}>
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          if (selectedCategory) {
+            setSelectedRecipeId(item.id);
+            setSelectedRecipeData(item);
+          }
+        }}
+        style={[
+          styles.card,
+          isSelected && styles.cardSelected,
+        ]}
+      >
         <Image source={{ uri: item.image }} style={styles.cardImage} />
         <View style={styles.cardContent}>
           <View style={styles.titleRow}>
@@ -173,22 +199,7 @@ const MyRecipesPage = () => {
             <Text style={styles.viewButtonText}>View Recipe</Text>
           </TouchableOpacity>
         </View>
-        {selectedCategory && (
-          <TouchableOpacity
-            style={styles.checkContainer}
-            onPress={() => setSelectedRecipeId(item.id)}
-          >
-            <View
-              style={[
-                styles.outerCircle,
-                isSelected && styles.outerCircleSelected,
-              ]}
-            >
-              {isSelected && <View style={styles.innerCircle} />}
-            </View>
-          </TouchableOpacity>
-        )}
-      </View>
+      </TouchableOpacity>
     );
   };
 
@@ -200,7 +211,7 @@ const MyRecipesPage = () => {
             style={styles.backCircle}
             onPress={handleBackToPlanner}
           >
-            <Ionicons name="arrow-back" size={20} color="#5F4436" />
+            <Ionicons name="arrow-back" size={20} color="#437d9e" />
           </TouchableOpacity>
         )}
 
@@ -214,7 +225,11 @@ const MyRecipesPage = () => {
           <Ionicons name="search" size={20} color="#8a6666" />
         </View>
         {selectedCategory && (
-          <TouchableOpacity style={styles.addButton} onPress={() => {}}>
+          <TouchableOpacity 
+            style={[styles.addButton, !selectedRecipeId && { opacity: 0.4 }]} 
+            onPress={handleAddRecipeToPlanner}
+            disabled={!selectedRecipeId}
+          >
             <Text style={styles.addLetters}>Add</Text>
           </TouchableOpacity>
         )}
@@ -301,11 +316,11 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 40,
     height: 40,
-    backgroundColor: "#ebe8e4",
+    backgroundColor: "#dce8ef",
     elevation: 5,
     borderRadius: 20,
     borderWidth: 2,
-    borderColor: "#ddd1cb",
+    borderColor: "#5bacdc",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -313,43 +328,19 @@ const styles = StyleSheet.create({
   addButton: {
     width: 70,
     height: 40,
-    backgroundColor: "#ebe8e4",
+    backgroundColor: "#dce8ef",
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     elevation: 5,
-    borderWidth: 1,
-    borderColor: "#ddd1cb",
+    borderWidth: 2,
+    borderColor: "#5bacdc",
   },
   addLetters: {
     letterSpacing: 1,
     fontSize: 15,
     fontWeight: "500",
-  },
-  checkContainer: {
-    paddingLeft: 10,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  outerCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 13,
-    borderWidth: 1,
-    borderColor: "rgba(95, 68, 54, 0.3)",
-    backgroundColor: "rgba(255, 255, 255, 0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  outerCircleSelected: {
-    borderColor: "#63aaf1",
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
-  },
-  innerCircle: {
-    width: 14,
-    height: 14,
-    borderRadius: 7,
-    backgroundColor: "#63aaf1",
+    color: "#437d9e",
   },
   searchBar: {
     flexDirection: "row",
@@ -387,6 +378,12 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: "center",
     elevation: 3,
+    borderWidth: 2,
+    borderColor: "transparent", 
+  },
+  cardSelected: {
+    borderColor: "#63aaf1", 
+    backgroundColor: "#f0f7ff", 
   },
   cardImage: {
     width: IMAGE_SIZE,
