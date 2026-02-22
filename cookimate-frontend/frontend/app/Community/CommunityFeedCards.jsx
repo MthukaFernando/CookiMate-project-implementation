@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -7,20 +8,16 @@ const CommunityFeedCards = () => {
 
   return (
     <View style={styles.container}>
-      <TouchableOpacity
+     
+        <TouchableOpacity
         style={styles.profileLink}
-        onPress={() => router.push('/Community/CommunityUserProfile')}
+        onPress={() => router.push('/Community/DevUser')}
       >
-        <Text style={styles.profileLinkText}>Go to Community User Profile</Text>
+        <Text style={styles.profileLinkText}>Go to Community User</Text>
       </TouchableOpacity>
 
       
-      <View style={styles.card}>
-        <Text style={styles.cardTitle}>Community Post</Text>
-        <Text style={styles.cardDesc}>
-          This is where your feed content would live.
-        </Text>
-      </View>
+      
     </View>
   );
 };
