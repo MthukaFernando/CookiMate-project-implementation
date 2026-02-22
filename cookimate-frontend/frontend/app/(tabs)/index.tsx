@@ -91,7 +91,7 @@ function HomePage() {
         <NavCard
           title="Community"
           icon="👥"
-          href="/menuPlanerPage"
+          href="/Community/CommunityFeedCards"
           description="See what others are cooking"
           bColor= "#612D25"
         ></NavCard>
