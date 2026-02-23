@@ -72,21 +72,35 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
-  // Animate Border Radius based on slide position
+  // --- INTERPOLATIONS ---
+
+  // 1. Glassy to Solid Background
+  const panelBgColor = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, COLLAPSED_Y],
+    outputRange: ["rgba(248, 244, 239, 1)", "rgba(255, 255, 255, 0.4)"],
+    extrapolate: "clamp",
+  });
+
+  // 2. Animate Border Radius
   const panelBorderRadius = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
     outputRange: [0, 35],
     extrapolate: "clamp",
   });
 
-  // Fade out content as we collapse
+  // 3. Subtle Glass Border (fade out when expanded)
+  const panelBorderWidth = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, EXPANDED_Y + 50],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
   const contentOpacity = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, EXPANDED_Y + 150],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
 
-  // Fade in peek button as we collapse
   const peekOpacity = slideAnim.interpolate({
     inputRange: [COLLAPSED_Y - 100, COLLAPSED_Y],
     outputRange: [0, 1],
@@ -139,7 +153,6 @@ export default function GenerateRecipesPage() {
 
   return (
     <View style={[styles.container, globalStyle?.container]}>
-      {/* --- VIDEO BACKGROUND --- */}
       <Video
         source={require("../../assets/videos/generate.mp4")}
         style={StyleSheet.absoluteFill}
@@ -149,11 +162,10 @@ export default function GenerateRecipesPage() {
         isMuted
       />
 
-      {/* Optional: Dark Overlay for better contrast */}
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(0,0,0,0.2)" },
+          { backgroundColor: "rgba(0,0,0,0.15)" },
         ]}
       />
 
@@ -169,6 +181,9 @@ export default function GenerateRecipesPage() {
             transform: [{ translateY: slideAnim }],
             borderTopLeftRadius: panelBorderRadius,
             borderTopRightRadius: panelBorderRadius,
+            backgroundColor: panelBgColor, // Animated Background
+            borderWidth: panelBorderWidth, // Subtle glass edge
+            borderColor: "rgba(255, 255, 255, 0.3)",
           },
         ]}
       >
@@ -371,8 +386,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F8F4EF",
     zIndex: 9999,
+    // Note: BackgroundColor and BorderRadius are handled by Animated.View styles
   },
   peekButtonWrapper: {
     position: "absolute",
@@ -401,11 +416,7 @@ const styles = StyleSheet.create({
   },
   flexRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   peekTitle: { fontSize: 17, fontWeight: "bold", color: "#4A3B2C" },
-  headerArea: {
-    paddingTop: 15,
-    paddingBottom: 15,
-    alignItems: "center",
-  },
+  headerArea: { paddingTop: 15, paddingBottom: 15, alignItems: "center" },
   dragHandle: {
     width: 45,
     height: 5,
