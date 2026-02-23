@@ -9,6 +9,7 @@ import {
   View,
   Image
 } from "react-native";
+import { globalStyle } from "../globalStyleSheet.style";
 
 //fake data to test the front-end
 const COMMUNITY_FEED = [
@@ -135,7 +136,7 @@ const CommunityFeedCards = () => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[globalStyle.container,styles.container]}>
       {/* --- NEW PARENT VIEW --- */}
       <View style={styles.searchAndAddContainer}>
         {/* Search Section (Flex 5) */}
@@ -175,7 +176,7 @@ const CommunityFeedCards = () => {
           )}
         </View>
 
-        {/* Add Post Button (Flex 1) */}
+        
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => alert("Add Post Clicked!")}
@@ -183,7 +184,7 @@ const CommunityFeedCards = () => {
           <Text style={styles.addButtonText}>+</Text>
         </TouchableOpacity>
       </View>
-      {/* ------------------------ */}
+      
     </View>
   );
 };
@@ -192,7 +193,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 15,
-    marginTop: 50,
+    marginTop: 15,
     backgroundColor: "#f5f5f5",
   },
   // NEW STYLES
@@ -203,13 +204,13 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   searchSection: {
-    flex: 3, // Takes up 5 parts
+    flex: 3, 
     position: "relative",
   },
   addButton: {
-    flex: 1, // Takes up 1 part
+    flex: 1, 
     height: 50,
-    backgroundColor: "#FF6347", // Tomato color
+    backgroundColor: "#9ada3b", 
     borderRadius: 10,
     justifyContent: "center",
     alignItems: "center",
@@ -220,7 +221,7 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
   },
-  // ORIGINAL STYLES
+  
   searchInput: {
     height: 50,
     backgroundColor: "#fff",
