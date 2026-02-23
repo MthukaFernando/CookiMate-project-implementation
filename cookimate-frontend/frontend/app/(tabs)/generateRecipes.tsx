@@ -7,13 +7,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   Animated,
   TouchableOpacity,
   ScrollView,
   PanResponder,
   Pressable,
 } from "react-native";
+import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 
@@ -72,9 +72,7 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
-  // --- NEW: Animate Border Radius ---
-  // When at TOP (Expanded): Radius is 0 (Square)
-  // When at BOTTOM (Collapsed): Radius is 35 (Rounded)
+  // Animate Border Radius based on slide position
   const panelBorderRadius = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
     outputRange: [0, 35],
@@ -99,7 +97,7 @@ export default function GenerateRecipesPage() {
     setIsExpanded(open);
     Animated.spring(slideAnim, {
       toValue: open ? EXPANDED_Y : COLLAPSED_Y,
-      useNativeDriver: false, // Must be false to animate layout properties like borderRadius
+      useNativeDriver: false,
       tension: 40,
       friction: 8,
     }).start();
@@ -141,10 +139,22 @@ export default function GenerateRecipesPage() {
 
   return (
     <View style={[styles.container, globalStyle?.container]}>
-      <ImageBackground
-        source={require("../../assets/images/generate.jpg")}
+      {/* --- VIDEO BACKGROUND --- */}
+      <Video
+        source={require("../../assets/videos/generate.mp4")}
         style={StyleSheet.absoluteFill}
-        resizeMode="cover"
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
+
+      {/* Optional: Dark Overlay for better contrast */}
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: "rgba(0,0,0,0.2)" },
+        ]}
       />
 
       {isExpanded && (
@@ -157,7 +167,6 @@ export default function GenerateRecipesPage() {
           {
             height: height - TOP_MARGIN,
             transform: [{ translateY: slideAnim }],
-            // Apply the animated border radius here
             borderTopLeftRadius: panelBorderRadius,
             borderTopRightRadius: panelBorderRadius,
           },
@@ -369,8 +378,6 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     height: PEEK_HEIGHT,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
