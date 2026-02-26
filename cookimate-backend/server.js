@@ -1,29 +1,36 @@
-const express = require('express');
-const cors = require('cors');
+import 'dotenv/config';
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js'; // Ensure the path is correct
+import recipeRoutes from './routes/recipeRoutes.js';
+
+console.log("Current Directory:", process.cwd());
+console.log("Mongo URI is:", process.env.MONGO_URI);
+
+import userRoutes from "./routes/userRoutes.js";
+// Initialize Express
 const app = express();
 
-app.use(cors());
-app.use(express.json());
+// --- 1. CONNECT TO DATABASE ---
+// We call the function from your db.js file
+connectDB();
 
-// --- IMPORT ROUTES ---
-// This links the files together
-const feedRoutes = require('./routes/feed');
-// const userRoutes = require('./routes/users'); // Example for teammate
-// const authRoutes = require('./routes/auth');   // Example for teammate
+// --- 2. MIDDLEWARE ---
+app.use(cors()); // Allows your React/Mobile app to talk to this server
+app.use(express.json()); // Allows the server to accept JSON data (like profile pics)
 
-// --- USE ROUTES ---
-// This says: "Any URL that starts with /feed, go look in the feed.js file"
-app.use('/feed', feedRoutes); 
-
-// app.use('/users', userRoutes); // Teammate's route
-// app.use('/auth', authRoutes);  // Teammate's route
-
-// Health check
+// --- 3. ROUTES ---
 app.get('/', (req, res) => {
-  res.send('CookiMate Backend is Running!');
+  res.send("Cookimate API is running! ");
 });
 
-const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+
+
+app.use("/api/users", userRoutes);
+app.use('/api/recipes', recipeRoutes);
+
+// --- 4. START SERVER ---
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(` Server humming along on port ${PORT}`);
 });
