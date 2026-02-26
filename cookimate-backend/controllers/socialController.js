@@ -5,8 +5,6 @@ export const createPost = async (req, res) => {
     try {
         const newPost = new Post(req.body);
         const savedPost = await newPost.save();
-
-        // DEV 2 TASK: Award 10 points for sharing a "cooking journey"
         // This uses the 'points' field in the existing User model
         await User.findByIdAndUpdate(req.body.user, { $inc: { points: 10 } });
 
@@ -17,7 +15,7 @@ export const createPost = async (req, res) => {
 };
 
 export const getFeed = async (req, res) => {
-    // Get the page number from the request (e.g., /api/posts?page=2)
+    // Get the page number from the request
     const page = parseInt(req.query.page) || 1; 
     const limit = 10; // Only send 10 posts per "set"
     const skip = (page - 1) * limit;
@@ -44,7 +42,6 @@ export const likePost = async (req, res) => {
             // Add the like
             await post.updateOne({ $push: { likes: userId } });
             
-            // DEV 2 TASK: Reward the creator for good content
             await User.findByIdAndUpdate(post.user, { $inc: { points: 5 } });
 
             res.status(200).json("Post liked! +5 points to the chef.");
