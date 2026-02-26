@@ -1,24 +1,25 @@
 import Post from "../models/Post.js";
 import User from "../models/User.js";
 
-//Create Post + Award Points
 export const createPost = async (req, res) => {
     try {
         const newPost = new Post(req.body);
         const savedPost = await newPost.save();
 
+        // DEV 2 TASK: Award 10 points for sharing a "cooking journey"
+        // This uses the 'points' field in the existing User model
         await User.findByIdAndUpdate(req.body.user, { $inc: { points: 10 } });
 
         res.status(201).json(savedPost);
     } catch (err) {
-        res.status(500).json({ message: "Error creating post", error: err });
+        res.status(500).json({ message: "Post creation failed", error: err });
     }
 };
 
-//Get Feed with Pagination (Incremental Loading)
 export const getFeed = async (req, res) => {
-    const page = parseInt(req.query.page) || 1;
-    const limit = 10; // Only 10 posts at a time
+    // Get the page number from the request (e.g., /api/posts?page=2)
+    const page = parseInt(req.query.page) || 1; 
+    const limit = 10; // Only send 10 posts per "set"
     const skip = (page - 1) * limit;
 
     try {
@@ -26,9 +27,32 @@ export const getFeed = async (req, res) => {
             .sort({ createdAt: -1 }) // Show newest posts first
             .skip(skip)
             .limit(limit)
-            .populate("user", "username profilePic"); // Show author info
+            .populate("user", "username profilePic"); // This shows the author's name/pic
 
         res.status(200).json(posts);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};
+
+export const likePost = async (req, res) => {
+    try {
+        const post = await Post.findById(req.params.id);
+        const { userId } = req.body;
+
+        if (!post.likes.includes(userId)) {
+            // Add the like
+            await post.updateOne({ $push: { likes: userId } });
+            
+            // DEV 2 TASK: Reward the creator for good content
+            await User.findByIdAndUpdate(post.user, { $inc: { points: 5 } });
+
+            res.status(200).json("Post liked! +5 points to the chef.");
+        } else {
+            // Unlike logic
+            await post.updateOne({ $pull: { likes: userId } });
+            res.status(200).json("Post unliked.");
+        }
     } catch (err) {
         res.status(500).json(err);
     }
