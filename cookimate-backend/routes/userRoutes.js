@@ -22,7 +22,9 @@ router.put("/update/:uid" ,updateUser)
 router.put("/favorites/:uid" , addToFavorites)
 
 
+router.put("/follow", toggleFollow);
 
+router.get("/search", searchUsers);
 
 
 
