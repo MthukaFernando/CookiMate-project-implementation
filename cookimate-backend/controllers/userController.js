@@ -83,36 +83,47 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// API that will let the user add recipes to the fav (the id of the recipes will be stored in the user collection under favorites array)
-export const addToFavorites = async (req, res) => {
+// TOGGLE FAVORITE - Add/remove recipe from favorites (works like a toggle)
+export const toggleFavorite = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
 
-    // Check if the frontend had sent a valid id that is in the recipes collection
+    // Check if the recipe exists
     const recipe = await Recipe.findById(recipeId);
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
-    
-    // Get the logged in user object from the user collection
+
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if the recipe id is already there - important for user feedback
-    if (user.favorites.includes(recipeId)) {
-      return res.status(400).json({ message: "Recipe already in favorites" });
-    }
+    // Check if it's already a favorite
+    const isFavorited = user.favorites.includes(recipeId);
 
-    // Add the recipe _id to the favorites array
-    user.favorites.push(recipeId);
-    await user.save();
-    
-    res.status(200).json({
-      message: "Recipe added to favorites",
-    });
+    if (isFavorited) {
+      // REMOVE logic
+      await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $pull: { favorites: recipeId } }
+      );
+      res.status(200).json({ 
+        message: "Removed from favorites", 
+        isFavorite: false 
+      });
+    } else {
+      // ADD logic
+      await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $push: { favorites: recipeId } }
+      );
+      res.status(200).json({ 
+        message: "Added to favorites", 
+        isFavorite: true 
+      });
+    }
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
