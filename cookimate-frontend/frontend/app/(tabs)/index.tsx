@@ -1,6 +1,8 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
+import Svg, { Path } from "react-native-svg";
 import {
   Image,
   Pressable,
@@ -8,31 +10,64 @@ import {
   StyleSheet,
   Text,
   View,
+  ImageSourcePropType,
+  Dimensions,
+  SafeAreaView,
+  StatusBar,
 } from "react-native";
+
+//The sizing for the curved border
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
+const CARD_WIDTH = SCREEN_WIDTH * 0.7;
+const SPACING = 12;
+
+const HEADER_HEIGHT = SCREEN_HEIGHT * 0.3;
 
 type NavCardProps = {
   title: string;
-  icon: string;
-  bColor : string,
-  description: string;
+  imageSource: ImageSourcePropType;
+  bColor: string;
   href: string;
+  badgeText: string;
+  iconName: string;
 };
-const NavCard = ({ title, icon, description, href,bColor }: NavCardProps) => {
-  return (
-    <Pressable
-      onPress={() => router.push(href as any)}
-      style={({ pressed }) => [styles.card,{ borderColor: bColor },  pressed && styles.cardPressed]}
-    >
-      <View style={styles.iconCircle}>
-        <Text>{icon}</Text>
+
+const NavCard = ({
+  title,
+  imageSource,
+  href,
+  bColor,
+  badgeText,
+  iconName,
+}: NavCardProps) => (
+  <Pressable
+    onPress={() => router.push(href as any)}
+    style={({ pressed }) => [
+      styles.navCard,
+      {
+        backgroundColor:
+          bColor === "none" ? "rgba(253, 247, 233, 0.94)" : bColor,
+      },
+      pressed && styles.cardPressed,
+    ]}
+  >
+    <View style={styles.navImageWrapper}>
+      <Image source={imageSource} style={styles.navImage} resizeMode="cover" />
+      <View style={styles.orangeBadge}>
+        <Text style={styles.orangeBadgeText}>{badgeText}</Text>
       </View>
-      <View style={styles.cardTextContainer}>
-        <Text style={styles.cardTitle}>{title}</Text>
-        <Text style={styles.cardDescription}>{description}</Text>
+    </View>
+    <View style={styles.navTextContainer}>
+      <View style={styles.titleRow}>
+        <MaterialCommunityIcons name={iconName as any} size={20} color="#333" />
+        <Text style={styles.navTitle}>{title}</Text>
       </View>
-    </Pressable>
-  );
-};
+      <View style={styles.navSubtitleContainer}>
+        <Text style={styles.navSubtitle}>Tap to explore</Text>
+      </View>
+    </View>
+  </Pressable>
+);
 
 function HomePage() {
   const [message, setMessage] = useState(
@@ -43,170 +78,216 @@ function HomePage() {
     const messages = [
       "Hi! Are you feeling hungry?",
       "Let's make something tasty!",
-      "I'm ready to help you find recipes!",
+      "I'm ready to help find recipes!",
     ];
-
     const interval = setInterval(() => {
-      const randomIndex = Math.floor(Math.random() * messages.length);
-      setMessage(messages[randomIndex]);
+      setMessage(messages[Math.floor(Math.random() * messages.length)]);
     }, 10000);
-
     return () => clearInterval(interval);
   }, []);
 
   return (
+    <View style={styles.Container}>
+      <StatusBar barStyle="dark-content" />
 
-    
-    <ScrollView style={[styles.mainContainer , globalStyle.container]}>
-      <View style={styles.topSubContainer}>
-        <Text style={styles.welcomemsg}>Welcome Back!!</Text>
-        <View style={styles.mascotCircle}>
-          <Image
-            source={require("../../assets/images/Home-page-Mascot.jpg")}
-            style={styles.mascotImg}
+      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
+        <View style={{ height: HEADER_HEIGHT, width: SCREEN_WIDTH }}>
+          <View style={StyleSheet.absoluteFill}>
+            {/*The code for the curved border*/}
+            <Svg
+              height={HEADER_HEIGHT}
+              width={SCREEN_WIDTH}
+              viewBox={`0 0 ${SCREEN_WIDTH} ${HEADER_HEIGHT}`}
+            >
+              <Path
+                d={`M0 0 H${SCREEN_WIDTH} V${HEADER_HEIGHT - 40} Q${SCREEN_WIDTH / 2} ${HEADER_HEIGHT + 20} 0 ${HEADER_HEIGHT - 40} Z`}
+                fill="rgba(240, 217, 170, 0.8)"
+              />
+            </Svg>
+          </View>
+
+          <SafeAreaView>
+            <View style={styles.headerContent}>
+              <Text style={styles.welcomemsg}>Welcome Back!!</Text>
+              <View style={styles.mascotRow}>
+                <View style={styles.mascotCircle}>
+                  <Image
+                    source={require("../../assets/images/Home-page-Mascot.png")}
+                    style={styles.mascotImg}
+                  />
+                </View>
+                <View style={styles.bubble}>
+                  <View style={styles.bubbleTail} />
+                  <Text style={styles.bubbleText}>{message}</Text>
+                </View>
+              </View>
+            </View>
+          </SafeAreaView>
+        </View>
+
+        <Text style={styles.sectionHeading}>Featured Categories</Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          snapToInterval={CARD_WIDTH + SPACING * 2}
+          decelerationRate="fast"
+          contentContainerStyle={styles.horizontalScrollPadding}
+        >
+          <NavCard
+            title="Find Recipes"
+            imageSource={require("../../assets/images/recipes.png")}
+            href="/menuPlanerPage"
+            bColor="none"
+            badgeText="100+ recipes"
+            iconName="silverware-fork-knife" //The icon that appears next to the headings of the cards
           />
-        </View>
-        <View style={styles.bubble}>
-          <Text style={styles.bubbleText}>{message}</Text>
-
-          <View style={styles.bubbleTail} />
-        </View>
-      </View>
-      <View style={styles.bottomSubContainer}>
-        <NavCard
-          title="Find Recipes"
-          icon="🔍"
-           href="/menuPlanerPage"
-          description="Tell me what's in your kitchen"
-          bColor= "#E8C28E"
-          
-        />
-        <NavCard
-          title="Generate Custom"
-          icon="✨"
-           href="/menuPlanerPage"
-          description="AI will create a recipe for you"
-         bColor= "#B86D2A"
-        ></NavCard>
-        <NavCard
-          title="Community"
-          icon="👥"
-          href="/Community/CommunityFeedCards"
-          description="See what others are cooking"
-          bColor= "#612D25"
-        ></NavCard>
-      
-      </View>
-    </ScrollView>
-    
+          <NavCard
+            title="Generate Recipes"
+            imageSource={require("../../assets/images/ai.png")}
+            href="/menuPlanerPage"
+            bColor="none"
+            badgeText="fast responses"
+            iconName="robot" 
+          />
+          <NavCard
+            title="Community"
+            imageSource={require("../../assets/images/community.png")}
+            href="/menuPlanerPage"
+            bColor="none"
+            badgeText="share journey"
+            iconName="account-group"
+          />
+        </ScrollView>
+        <View style={{ height: 50 }} />
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  card: {
+  Container: { flex: 1, backgroundColor: "#f2ece2" },
+
+  headerContent: { paddingHorizontal: 25, paddingTop: 5 },
+
+  mascotRow: {
     flexDirection: "row",
-    backgroundColor: "#fff",
-    padding: 15,
-     borderWidth: 2,
-    borderColor:'red',
-    borderRadius: 20,
-    marginTop: 10,
-    marginBottom: 10,
     alignItems: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    marginTop: 10,
+    gap: 15,
   },
+
+  sectionHeading: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginLeft: 25,
+    marginTop: 25,
+    marginBottom: 15,
+    color: "#333",
+  },
+
+  horizontalScrollPadding: { paddingHorizontal: 15, paddingBottom: 20 },
+
+  navCard: {
+    width: CARD_WIDTH,
+    height: 380,
+    marginHorizontal: SPACING,
+    borderRadius: 35,
+    padding: 20,
+    justifyContent: "space-between",
+    borderWidth: 2,
+    borderColor: "rgba(254, 252, 243, 0.3)",
+    overflow: "hidden",
+  },
+
+  navImageWrapper: {
+    flex: 1,
+    width: "100%",
+    borderRadius: 30,
+    overflow: "hidden",
+    marginBottom: 10,
+    backgroundColor: "rgba(255, 255, 255, 0.2)",
+  },
+
+  navImage: { width: "100%", height: "100%" },
+
+  orangeBadge: {
+    position: "absolute",
+    top: 12,
+    left: 12,
+    backgroundColor: "#FF8C42",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+  },
+  
+  orangeBadgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
+
+  navTextContainer: { backgroundColor: "transparent", paddingVertical: 10 },
+
+  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
+
+  navSubtitleContainer: {
+    backgroundColor: "rgba(178, 219, 91, 0.9)",
+    alignSelf: "flex-start",
+    paddingHorizontal: 15,
+    height: 30,
+    justifyContent: "center",
+    borderRadius: 15,
+    marginTop: 8,
+  },
+  
+  navTitle: { fontSize: 22, fontWeight: "800", color: "#333" },
+
+  navSubtitle: { fontSize: 12, fontWeight: "700", color: "#445c16" },
+
   cardPressed: {
     transform: [{ scale: 0.98 }],
-    backgroundColor: "#f9f9f9cb",
+    backgroundColor: "rgba(249, 246, 231, 0.6)",
   },
-  iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: "#F5F5F5",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 15,
-  },
-  cardTextContainer: { flex: 1 },
-  cardTitle: { fontSize: 18, fontWeight: "bold", color: "#1a1919be" },
 
-  cardDescription: { fontSize: 14, color: "#777", marginTop: 2 },
-
-  mainContainer: {
-    paddingInline: 25,
-    
-    
-    borderStyle: "solid",
-  },
-  bottomSubContainer: {
-   
-    padding: 20,
-   
-    marginBottom:20,
-    borderRadius: 20,
-   
-  },
-  topSubContainer: {
-    borderWidth: 1,
-    borderColor: "#f0871f45",
-    borderStyle: "solid",
-    padding: 15,
-    alignItems: "center",
-    
-    borderRadius: 20,
-    backgroundColor: '#E0C2A0',
-  },
   mascotCircle: {
-    width: 225,
-    height: 225,
-    borderWidth: 3,
-    borderColor: '#EBEBEB',
-    borderStyle: "solid",
-    padding: 25,
-
-    borderRadius: 150,
+    width: 180,
+    height: 180,
+    borderRadius: 40,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "none",
   },
-  mascotImg: { width: "100%", height: "100%" },
-  welcomemsg: {
-    marginRight: "auto",
 
-    marginBottom: 10,
+  mascotImg: { width: "100%", height: "100%" },
+
+  welcomemsg: {
     fontSize: 22,
-    padding: 0,
-  },
-  bubble: {
-    backgroundColor: "#ffffff",
-    paddingTop: 10,
-    paddingInline: 10,
-    paddingBottom: 10,
-    borderRadius: 20,
+    fontWeight: "800",
+    color: "#3f5a05",
     marginTop: 10,
-    maxWidth: "90%",
-    position: "relative",
-    elevation: 3,
+  },
+
+  bubble: {
+    height: 80,
+    flex: 1,
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    borderRadius: 20,
+    elevation: 2,
     shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.4,
+    position: "relative",
+    marginLeft: 10,
   },
-  bubbleText: {
-    fontSize: 16,
-    color: "#5D4037",
-    textAlign: "center",
-  },
+
+  bubbleText: { fontSize: 16, color: "#5D4037", fontWeight: "600" },
+
   bubbleTail: {
     position: "absolute",
-    top: -8,
-    left: "20%",
-    marginLeft: -10,
-    width: 20,
-    height: 20,
-    backgroundColor: "#fff",
+    left: -8,
+    top: "50%",
+    marginTop: -8,
+    width: 16,
+    height: 16,
+    backgroundColor: "#ffffff",
     transform: [{ rotate: "45deg" }],
     zIndex: -1,
   },

@@ -59,22 +59,30 @@ export const getSeasonalRecipes = async (req, res) => {
     const currentMonth = today.getUTCMonth() + 1; 
     const currentDay = today.getUTCDate();
 
-    console.log(`Filtering for: Month ${currentMonth}, Day ${currentDay}`);
-
-    // This looks for recipes where today's date falls within the start/end range
     const recipes = await SeasonalRecipe.find({
-      $and: [
-        { start_month: { $lte: currentMonth } },
-        { end_month: { $gte: currentMonth } },
-        { start_day: { $lte: currentDay } },
-        { end_day: { $gte: currentDay } }
+      $or: [
+        {  //Checks if the current month is between the start month and end month
+          start_month: { $lt: currentMonth }, 
+          end_month: { $gt: currentMonth } 
+        },
+        { // If the current month is the start month, it verifies if the current day is less than or equal to the start day and verifiex if the end date is in the current month or different month
+          start_month: currentMonth, 
+          start_day: { $lte: currentDay },
+          $or: [
+            { end_month: { $gt: currentMonth } },
+            { end_month: currentMonth, end_day: { $gte: currentDay } }
+          ]
+        },
+        { //If the current month is the end month, verifies if the current date end date is greater than the current day
+          end_month: currentMonth, 
+          end_day: { $gte: currentDay },
+          start_month: { $lt: currentMonth }
+        }
       ]
     });
 
-    console.log("Filtered Seasonal Recipes found:", recipes.length);
     res.json(recipes);
   } catch (error) {
-    console.error("Seasonal Fetch Error:", error.message);
     res.status(500).json({ message: "Seasonal Fetch Error: " + error.message });
   }
 };
