@@ -34,10 +34,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
-    followers: {
-      type: Number,
-      default: 0,
-    },
+    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
+    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+
     unlockedAchievements: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -56,10 +56,12 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, 
-     versionKey: false
+    timestamps: true,
+    versionKey: false,
   },
 );
+
+userSchema.index({ username: 'text' });
 
 const User = mongoose.model("User", userSchema);
 export default User;
