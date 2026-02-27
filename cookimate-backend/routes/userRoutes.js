@@ -25,7 +25,7 @@ router.put("/update/:uid", updateUser);
 
 //user add recips in to the fav array (pass the _id --> we will be uisng findbyId so must pass the built in id for the recipe objcet from the fronted )
 
-router.put("/favorites/toggle", toggleFavorite);
+router.put("/favorites/toggle/:uid", toggleFavorite);
 
 router.put("/follow", toggleFollow);
 
