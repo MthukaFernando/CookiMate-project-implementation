@@ -1,9 +1,8 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
-
+import Recipe from "../models/recipe.js"; 
 
 // create a user
-
 export const createUser = async (req, res) => {
   try {
     const { firebaseUid, username, name } = req.body;
@@ -52,8 +51,7 @@ export const getLevels = async (req, res) => {
   }
 };
 
-// Edit user with , (username, name , profilepic)
-
+// Edit user with (username, name, profilepic)
 export const updateUser = async (req, res) => {
   try {
     const { username, name, profilePic } = req.body;
@@ -85,43 +83,85 @@ export const updateUser = async (req, res) => {
   }
 };
 
-
-//the api that will let the user add recips to the fav (the id of the recips will be stored in the user collection under favorites array )
-
+// API that will let the user add recipes to the fav (the id of the recipes will be stored in the user collection under favorites array)
 export const addToFavorites = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
 
-    //check if the fronend had sent a valid id that is in the recips collection
+    // Check if the frontend had sent a valid id that is in the recipes collection
     const recipe = await Recipe.findById(recipeId);
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
-    //get the logged in user object from the user collection
-    // Find user
+    
+    // Get the logged in user object from the user collection
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
-
-
     }
-    //check if the recips id is already there this is importat as we can give the user a feedbcak msg
 
+    // Check if the recipe id is already there - important for user feedback
     if (user.favorites.includes(recipeId)) {
       return res.status(400).json({ message: "Recipe already in favorites" });
     }
 
-
-    //this will add the recipe _id (built in mongodb) end of the faverecipe array
+    // Add the recipe _id to the favorites array
     user.favorites.push(recipeId);
     await user.save();
+    
     res.status(200).json({
       message: "Recipe added to favorites",
-      
     });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: error.message });
+  }
+};
+
+// FOLLOW / UNFOLLOW USER
+export const toggleFollow = async (req, res) => {
+  try {
+    const { targetUserId, currentUserId } = req.body; // IDs from MongoDB (_id)
+
+    const targetUser = await User.findById(targetUserId);
+    const currentUser = await User.findById(currentUserId);
+
+    if (!targetUser || !currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (!currentUser.following.includes(targetUserId)) {
+      // FOLLOW LOGIC
+      await currentUser.updateOne({ $push: { following: targetUserId } });
+      await targetUser.updateOne({ $push: { followers: currentUserId } });
+      res.status(200).json({ message: "Followed successfully" });
+    } else {
+      // UNFOLLOW LOGIC
+      await currentUser.updateOne({ $pull: { following: targetUserId } });
+      await targetUser.updateOne({ $pull: { followers: currentUserId } });
+      res.status(200).json({ message: "Unfollowed successfully" });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// SEARCH USERS
+export const searchUsers = async (req, res) => {
+  const query = req.query.username;
+  
+  if (!query) {
+    return res.status(400).json({ message: "Username query parameter is required" });
+  }
+  
+  try {
+    const users = await User.find({
+      username: { $regex: query, $options: "i" }, // Case-insensitive search
+    }).select("username profilePic name"); // Only return necessary info
+    
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
