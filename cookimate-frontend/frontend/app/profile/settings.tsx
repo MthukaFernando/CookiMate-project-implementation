@@ -10,6 +10,7 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -55,74 +56,20 @@ const ALLERGY_OPTIONS = [
   { id: 'a10', name: 'Sulfites', icon: 'alert-triangle', color: '#F44336' },
 ];
 
-// Notification settings options
-const NOTIFICATION_OPTIONS = [
-  {
-    id: 'n1',
-    title: 'Recipe Recommendations',
-    description: 'Get personalized recipe suggestions based on your preferences',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-  {
-    id: 'n2',
-    title: 'New Recipes',
-    description: 'Notifications when new recipes are added',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-  {
-    id: 'n3',
-    title: 'Cooking Reminders',
-    description: 'Reminders for meal planning and cooking times',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-  {
-    id: 'n4',
-    title: 'Community Activity',
-    description: 'Updates on likes, comments, and followers',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-  {
-    id: 'n5',
-    title: 'Achievement Alerts',
-    description: 'Get notified when you unlock new achievements',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-  {
-    id: 'n6',
-    title: 'Marketing & Promotions',
-    description: 'Special offers, tips, and newsletter',
-    icon: 'bell',
-    color: '#923d0a',
-  },
-];
-
 const Settings = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
   const [allergyModalVisible, setAllergyModalVisible] = useState(false);
   const [customPreferenceModal, setCustomPreferenceModal] = useState(false);
-  const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [customPreferences, setCustomPreferences] = useState<string[]>([]);
   const [newCustomPreference, setNewCustomPreference] = useState('');
   
-  // Notification settings state
-  const [notificationSettings, setNotificationSettings] = useState<{[key: string]: boolean}>({
-    n1: true,
-    n2: true,
-    n3: false,
-    n4: true,
-    n5: true,
-    n6: false,
-  });
+  // Simple notification toggle
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
@@ -141,21 +88,21 @@ const Settings = () => {
     }
   };
 
-  // Fetch notification settings
-  const fetchNotificationSettings = async () => {
+  // Fetch notification setting
+  const fetchNotificationSetting = async () => {
     try {
       const response = await axios.get(`${API_URL}/api/users/${uid}/notifications`);
       if (response.data) {
-        setNotificationSettings(response.data);
+        setNotificationsEnabled(response.data.enabled ?? true);
       }
     } catch (err) {
-      console.error("Error fetching notification settings:", err);
+      console.error("Error fetching notification setting:", err);
     }
   };
 
   useEffect(() => {
     fetchDietaryPreferences();
-    fetchNotificationSettings();
+    fetchNotificationSetting();
   }, []);
 
   // Save dietary preferences
@@ -176,26 +123,19 @@ const Settings = () => {
     }
   };
 
-  // Save notification settings
-  const saveNotificationSettings = async () => {
+  // Save notification setting
+  const saveNotificationSetting = async (enabled: boolean) => {
     try {
-      setLoading(true);
-      await axios.put(`${API_URL}/api/users/${uid}/notifications`, notificationSettings);
-      Alert.alert("Success", "Notification settings updated!");
+      await axios.put(`${API_URL}/api/users/${uid}/notifications`, { enabled });
     } catch (err) {
-      console.error("Error saving notification settings:", err);
-      Alert.alert("Error", "Failed to save notification settings");
-    } finally {
-      setLoading(false);
+      console.error("Error saving notification setting:", err);
     }
   };
 
-  // Toggle notification setting
-  const toggleNotification = (id: string) => {
-    setNotificationSettings(prev => ({
-      ...prev,
-      [id]: !prev[id]
-    }));
+  // Toggle notification
+  const toggleNotifications = (value: boolean) => {
+    setNotificationsEnabled(value);
+    saveNotificationSetting(value);
   };
 
   // Toggle selection functions
@@ -221,10 +161,6 @@ const Settings = () => {
       setNewCustomPreference('');
       setCustomPreferenceModal(false);
     }
-  };
-
-  const removeCustomPreference = (preference: string) => {
-    setCustomPreferences(prev => prev.filter(item => item !== preference));
   };
 
   const handleLogout = async () => {
@@ -276,68 +212,6 @@ const Settings = () => {
       ]
     );
   };
-
-  // Notifications Modal
-  const NotificationsModal = () => (
-    <Modal
-      animationType="slide"
-      transparent={true}
-      visible={notificationsModalVisible}
-      onRequestClose={() => setNotificationsModalVisible(false)}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Notification Settings</Text>
-            <TouchableOpacity onPress={() => setNotificationsModalVisible(false)}>
-              <Feather name="x" size={24} color="#5D4037" />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.modalSubtitle}>Customize your notification preferences:</Text>
-          
-          <FlatList
-            data={NOTIFICATION_OPTIONS}
-            keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <TouchableOpacity
-                style={styles.notificationItem}
-                onPress={() => toggleNotification(item.id)}
-              >
-                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
-                  <Feather name={item.icon as any} size={20} color={item.color} />
-                </View>
-                <View style={styles.notificationTextContainer}>
-                  <Text style={styles.notificationTitle}>{item.title}</Text>
-                  <Text style={styles.notificationDescription}>{item.description}</Text>
-                </View>
-                <View style={[
-                  styles.toggleSwitch,
-                  notificationSettings[item.id] && styles.toggleSwitchActive
-                ]}>
-                  <View style={[
-                    styles.toggleDot,
-                    notificationSettings[item.id] && styles.toggleDotActive
-                  ]} />
-                </View>
-              </TouchableOpacity>
-            )}
-            style={styles.optionsList}
-          />
-
-          <TouchableOpacity
-            style={styles.saveButton}
-            onPress={() => {
-              saveNotificationSettings();
-              setNotificationsModalVisible(false);
-            }}
-          >
-            <Text style={styles.saveButtonText}>Save Settings</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
-  );
 
   // Dietary Preferences Modal
   const DietaryPreferencesModal = () => (
@@ -504,22 +378,25 @@ const Settings = () => {
         {/* Settings Title */}
         <Text style={styles.settingsTitle}>Settings</Text>
 
-        {/* Notifications Card */}
-        <TouchableOpacity 
-          style={styles.settingCard}
-          onPress={() => setNotificationsModalVisible(true)}
-        >
+        {/* Notifications Card with Toggle */}
+        <View style={styles.settingCard}>
           <View style={styles.cardContent}>
             <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
               <Ionicons name="notifications-outline" size={24} color="#923d0a" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Notifications</Text>
-              <Text style={styles.cardSubtitle}>Manage your notification preferences</Text>
+              <Text style={styles.cardSubtitle}>Enable or disable all notifications</Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={24} color="#5D4037" />
-        </TouchableOpacity>
+          <Switch
+            trackColor={{ false: "#E0E0E0", true: "#4CAF50" }}
+            thumbColor={"#fff"}
+            ios_backgroundColor="#E0E0E0"
+            onValueChange={toggleNotifications}
+            value={notificationsEnabled}
+          />
+        </View>
 
         {/* Dietary Preferences Card */}
         <TouchableOpacity 
@@ -638,7 +515,6 @@ const Settings = () => {
       </ScrollView>
 
       {/* Modals */}
-      <NotificationsModal />
       <DietaryPreferencesModal />
       <AllergiesModal />
       <CustomPreferenceModal />
@@ -816,48 +692,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
-  },
-  // Notification item styles
-  notificationItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 8,
-    backgroundColor: '#F8F4ED',
-  },
-  notificationTextContainer: {
-    flex: 1,
-    marginRight: 10,
-  },
-  notificationTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#5D4037',
-    marginBottom: 2,
-  },
-  notificationDescription: {
-    fontSize: 11,
-    color: '#8B6B5C',
-  },
-  toggleSwitch: {
-    width: 44,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E0E0E0',
-    padding: 2,
-  },
-  toggleSwitchActive: {
-    backgroundColor: '#4CAF50',
-  },
-  toggleDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#fff',
-  },
-  toggleDotActive: {
-    alignSelf: 'flex-end',
   },
   loadingOverlay: {
     position: 'absolute',
