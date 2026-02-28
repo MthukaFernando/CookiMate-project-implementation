@@ -13,7 +13,7 @@ import {
   Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5, AntDesign } from "@expo/vector-icons";
 import { auth } from "../../config/firebase";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -23,37 +23,37 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
-// Predefined dietary preferences options with food-related icons
+// Predefined dietary preferences options - ALL WITH SAME ICON
 const DIETARY_OPTIONS = [
-  { id: '1', name: 'Vegetarian', icon: 'carrot', iconFamily: 'FontAwesome5', color: '#4CAF50' },
-  { id: '2', name: 'Vegan', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#8BC34A' },
-  { id: '3', name: 'Gluten-Free', icon: 'bread-slice', iconFamily: 'FontAwesome5', color: '#FF9800' },
-  { id: '4', name: 'Dairy-Free', icon: 'cheese', iconFamily: 'FontAwesome5', color: '#2196F3' },
-  { id: '5', name: 'Nut-Free', icon: 'peanuts', iconFamily: 'MaterialCommunityIcons', color: '#9C27B0' },
-  { id: '6', name: 'Egg-Free', icon: 'egg', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: '7', name: 'Soy-Free', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#3F51B5' },
-  { id: '8', name: 'Fish-Free', icon: 'fish', iconFamily: 'FontAwesome5', color: '#00BCD4' },
-  { id: '9', name: 'Shellfish-Free', icon: 'shrimp', iconFamily: 'FontAwesome5', color: '#009688' },
-  { id: '10', name: 'Keto', icon: 'bacon', iconFamily: 'FontAwesome5', color: '#FF5722' },
-  { id: '11', name: 'Paleo', icon: 'drumstick-bite', iconFamily: 'FontAwesome5', color: '#795548' },
-  { id: '12', name: 'Low-Carb', icon: 'candy-cane', iconFamily: 'FontAwesome5', color: '#607D8B' },
-  { id: '13', name: 'Low-Fat', icon: 'lemon', iconFamily: 'FontAwesome5', color: '#FFC107' },
-  { id: '14', name: 'Halal', icon: 'mosque', iconFamily: 'FontAwesome5', color: '#4A5568' },
-  { id: '15', name: 'Kosher', icon: 'star-of-david', iconFamily: 'FontAwesome5', color: '#2D3748' },
+  { id: '1', name: 'Vegetarian', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#4CAF50' },
+  { id: '2', name: 'Vegan', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#8BC34A' },
+  { id: '3', name: 'Gluten-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FF9800' },
+  { id: '4', name: 'Dairy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#2196F3' },
+  { id: '5', name: 'Nut-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#9C27B0' },
+  { id: '6', name: 'Egg-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: '7', name: 'Soy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#3F51B5' },
+  { id: '8', name: 'Fish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#00BCD4' },
+  { id: '9', name: 'Shellfish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#009688' },
+  { id: '10', name: 'Keto', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FF5722' },
+  { id: '11', name: 'Paleo', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#795548' },
+  { id: '12', name: 'Low-Carb', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#607D8B' },
+  { id: '13', name: 'Low-Fat', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FFC107' },
+  { id: '14', name: 'Halal', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#4A5568' },
+  { id: '15', name: 'Kosher', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#2D3748' },
 ];
 
-// Common allergies options with food-related icons
+// Common allergies options - ALL WITH SAME ICON (food-off)
 const ALLERGY_OPTIONS = [
-  { id: 'a1', name: 'Peanuts', icon: 'peanuts', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a2', name: 'Tree Nuts', icon: 'tree', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a3', name: 'Milk', icon: 'cow', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a4', name: 'Eggs', icon: 'egg', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a5', name: 'Wheat', icon: 'wheat', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a6', name: 'Soy', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a7', name: 'Fish', icon: 'fish', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a8', name: 'Shellfish', icon: 'shrimp', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a9', name: 'Sesame', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#F44336' },
-  { id: 'a10', name: 'Sulfites', icon: 'flask', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
 ];
 
 const Settings = () => {
@@ -224,6 +224,8 @@ const Settings = () => {
       return <FontAwesome5 name={item.icon} {...iconProps} />;
     } else if (item.iconFamily === 'MaterialCommunityIcons') {
       return <MaterialCommunityIcons name={item.icon} {...iconProps} />;
+    } else if (item.iconFamily === 'AntDesign') {
+      return <AntDesign name={item.icon} {...iconProps} />;
     } else {
       return <Feather name={item.icon} {...iconProps} />;
     }
