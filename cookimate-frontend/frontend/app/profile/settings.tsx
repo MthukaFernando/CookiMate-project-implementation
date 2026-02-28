@@ -40,6 +40,20 @@ const DIETARY_OPTIONS = [
   { id: '15', name: 'Kosher', icon: 'leaf', color: '#2D3748' },
 ];
 
+// Common allergies options
+const ALLERGY_OPTIONS = [
+  { id: 'a1', name: 'Peanuts', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a3', name: 'Milk', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a4', name: 'Eggs', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a5', name: 'Wheat', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a6', name: 'Soy', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a7', name: 'Fish', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a8', name: 'Shellfish', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a9', name: 'Sesame', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a10', name: 'Sulfites', icon: 'alert-triangle', color: '#F44336' },
+];
+
 // Notification settings options
 const NOTIFICATION_OPTIONS = [
   {
@@ -90,9 +104,11 @@ const Settings = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
+  const [allergyModalVisible, setAllergyModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
+  const [allergies, setAllergies] = useState<string[]>([]);
   
   // Notification settings state
   const [notificationSettings, setNotificationSettings] = useState<{[key: string]: boolean}>({
@@ -113,6 +129,7 @@ const Settings = () => {
       const response = await axios.get(`${API_URL}/api/users/${uid}/dietary`);
       if (response.data) {
         setDietaryPreferences(response.data.dietaryPreferences || []);
+        setAllergies(response.data.allergies || []);
       }
     } catch (err) {
       console.error("Error fetching dietary preferences:", err);
@@ -142,6 +159,7 @@ const Settings = () => {
       setLoading(true);
       await axios.put(`${API_URL}/api/users/${uid}/dietary`, {
         dietaryPreferences,
+        allergies,
       });
       Alert.alert("Success", "Dietary preferences updated successfully!");
     } catch (err) {
@@ -180,6 +198,15 @@ const Settings = () => {
       prev.includes(optionName)
         ? prev.filter(item => item !== optionName)
         : [...prev, optionName]
+    );
+  };
+
+  // Toggle allergy
+  const toggleAllergy = (allergyName: string) => {
+    setAllergies(prev =>
+      prev.includes(allergyName)
+        ? prev.filter(item => item !== allergyName)
+        : [...prev, allergyName]
     );
   };
 
@@ -351,6 +378,62 @@ const Settings = () => {
     </Modal>
   );
 
+  // Allergies Modal
+  const AllergiesModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={allergyModalVisible}
+      onRequestClose={() => setAllergyModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Allergies & Intolerances</Text>
+            <TouchableOpacity onPress={() => setAllergyModalVisible(false)}>
+              <Feather name="x" size={24} color="#5D4037" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Select any allergies or intolerances:</Text>
+          
+          <FlatList
+            data={ALLERGY_OPTIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  allergies.includes(item.name) && styles.optionItemSelected
+                ]}
+                onPress={() => toggleAllergy(item.name)}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
+                  <Feather name={item.icon as any} size={20} color={item.color} />
+                </View>
+                <Text style={styles.optionText}>{item.name}</Text>
+                {allergies.includes(item.name) && (
+                  <Feather name="check" size={20} color="#4CAF50" style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.optionsList}
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              saveDietaryPreferences();
+              setAllergyModalVisible(false);
+            }}
+          >
+            <Text style={styles.saveButtonText}>Save Allergies</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.mainContainer}>
       <ScrollView 
@@ -397,6 +480,27 @@ const Settings = () => {
                 {dietaryPreferences.length > 0 
                   ? dietaryPreferences.slice(0, 2).join(', ') + (dietaryPreferences.length > 2 ? '...' : '')
                   : "Set your dietary restrictions"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#5D4037" />
+        </TouchableOpacity>
+
+        {/* Allergies Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setAllergyModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
+              <MaterialCommunityIcons name="alert" size={24} color="#923d0a" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Allergies & Intolerances</Text>
+              <Text style={styles.cardSubtitle}>
+                {allergies.length > 0 
+                  ? allergies.slice(0, 2).join(', ') + (allergies.length > 2 ? '...' : '')
+                  : "Add your allergies"}
               </Text>
             </View>
           </View>
@@ -459,6 +563,7 @@ const Settings = () => {
       {/* Modals */}
       <NotificationsModal />
       <DietaryPreferencesModal />
+      <AllergiesModal />
 
       {loading && (
         <View style={styles.loadingOverlay}>
