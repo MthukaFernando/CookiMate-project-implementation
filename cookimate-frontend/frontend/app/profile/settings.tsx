@@ -21,6 +21,25 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
+// Predefined dietary preferences options
+const DIETARY_OPTIONS = [
+  { id: '1', name: 'Vegetarian', icon: 'leaf', color: '#4CAF50' },
+  { id: '2', name: 'Vegan', icon: 'leaf', color: '#8BC34A' },
+  { id: '3', name: 'Gluten-Free', icon: 'leaf', color: '#FF9800' },
+  { id: '4', name: 'Dairy-Free', icon: 'leaf', color: '#2196F3' },
+  { id: '5', name: 'Nut-Free', icon: 'leaf', color: '#9C27B0' },
+  { id: '6', name: 'Egg-Free', icon: 'leaf', color: '#F44336' },
+  { id: '7', name: 'Soy-Free', icon: 'leaf', color: '#3F51B5' },
+  { id: '8', name: 'Fish-Free', icon: 'leaf', color: '#00BCD4' },
+  { id: '9', name: 'Shellfish-Free', icon: 'leaf', color: '#009688' },
+  { id: '10', name: 'Keto', icon: 'leaf', color: '#FF5722' },
+  { id: '11', name: 'Paleo', icon: 'leaf', color: '#795548' },
+  { id: '12', name: 'Low-Carb', icon: 'leaf', color: '#607D8B' },
+  { id: '13', name: 'Low-Fat', icon: 'leaf', color: '#FFC107' },
+  { id: '14', name: 'Halal', icon: 'leaf', color: '#4A5568' },
+  { id: '15', name: 'Kosher', icon: 'leaf', color: '#2D3748' },
+];
+
 // Notification settings options
 const NOTIFICATION_OPTIONS = [
   {
@@ -70,7 +89,10 @@ const NOTIFICATION_OPTIONS = [
 const Settings = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+  
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   
   // Notification settings state
   const [notificationSettings, setNotificationSettings] = useState<{[key: string]: boolean}>({
@@ -85,6 +107,18 @@ const Settings = () => {
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
 
+  // Fetch dietary preferences
+  const fetchDietaryPreferences = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/${uid}/dietary`);
+      if (response.data) {
+        setDietaryPreferences(response.data.dietaryPreferences || []);
+      }
+    } catch (err) {
+      console.error("Error fetching dietary preferences:", err);
+    }
+  };
+
   // Fetch notification settings
   const fetchNotificationSettings = async () => {
     try {
@@ -98,8 +132,25 @@ const Settings = () => {
   };
 
   useEffect(() => {
+    fetchDietaryPreferences();
     fetchNotificationSettings();
   }, []);
+
+  // Save dietary preferences
+  const saveDietaryPreferences = async () => {
+    try {
+      setLoading(true);
+      await axios.put(`${API_URL}/api/users/${uid}/dietary`, {
+        dietaryPreferences,
+      });
+      Alert.alert("Success", "Dietary preferences updated successfully!");
+    } catch (err) {
+      console.error("Error saving dietary preferences:", err);
+      Alert.alert("Error", "Failed to save dietary preferences");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Save notification settings
   const saveNotificationSettings = async () => {
@@ -121,6 +172,15 @@ const Settings = () => {
       ...prev,
       [id]: !prev[id]
     }));
+  };
+
+  // Toggle dietary option
+  const toggleDietaryOption = (optionName: string) => {
+    setDietaryPreferences(prev =>
+      prev.includes(optionName)
+        ? prev.filter(item => item !== optionName)
+        : [...prev, optionName]
+    );
   };
 
   const handleLogout = async () => {
@@ -235,6 +295,62 @@ const Settings = () => {
     </Modal>
   );
 
+  // Dietary Preferences Modal
+  const DietaryPreferencesModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={dietaryModalVisible}
+      onRequestClose={() => setDietaryModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Dietary Preferences</Text>
+            <TouchableOpacity onPress={() => setDietaryModalVisible(false)}>
+              <Feather name="x" size={24} color="#5D4037" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Select your dietary preferences:</Text>
+          
+          <FlatList
+            data={DIETARY_OPTIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  dietaryPreferences.includes(item.name) && styles.optionItemSelected
+                ]}
+                onPress={() => toggleDietaryOption(item.name)}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
+                  <Feather name={item.icon as any} size={20} color={item.color} />
+                </View>
+                <Text style={styles.optionText}>{item.name}</Text>
+                {dietaryPreferences.includes(item.name) && (
+                  <Feather name="check" size={20} color="#4CAF50" style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.optionsList}
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              saveDietaryPreferences();
+              setDietaryModalVisible(false);
+            }}
+          >
+            <Text style={styles.saveButtonText}>Save Preferences</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.mainContainer}>
       <ScrollView 
@@ -261,6 +377,27 @@ const Settings = () => {
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Notifications</Text>
               <Text style={styles.cardSubtitle}>Manage your notification preferences</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#5D4037" />
+        </TouchableOpacity>
+
+        {/* Dietary Preferences Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setDietaryModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
+              <MaterialCommunityIcons name="food-apple" size={24} color="#923d0a" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Dietary Preferences</Text>
+              <Text style={styles.cardSubtitle}>
+                {dietaryPreferences.length > 0 
+                  ? dietaryPreferences.slice(0, 2).join(', ') + (dietaryPreferences.length > 2 ? '...' : '')
+                  : "Set your dietary restrictions"}
+              </Text>
             </View>
           </View>
           <Feather name="chevron-right" size={24} color="#5D4037" />
@@ -321,6 +458,7 @@ const Settings = () => {
 
       {/* Modals */}
       <NotificationsModal />
+      <DietaryPreferencesModal />
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -444,6 +582,19 @@ const styles = StyleSheet.create({
   optionsList: {
     maxHeight: 400,
   },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#F8F4ED',
+  },
+  optionItemSelected: {
+    backgroundColor: '#E8F5E9',
+    borderWidth: 1,
+    borderColor: '#4CAF50',
+  },
   optionIcon: {
     width: 40,
     height: 40,
@@ -451,6 +602,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#5D4037',
+    flex: 1,
+  },
+  checkIcon: {
+    marginLeft: 10,
   },
   saveButton: {
     backgroundColor: '#923d0a',
