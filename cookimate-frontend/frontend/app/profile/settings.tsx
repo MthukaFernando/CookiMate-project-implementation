@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  TextInput,
   Modal,
   FlatList,
   ActivityIndicator,
@@ -105,10 +106,13 @@ const Settings = () => {
   const [loading, setLoading] = useState(false);
   const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
   const [allergyModalVisible, setAllergyModalVisible] = useState(false);
+  const [customPreferenceModal, setCustomPreferenceModal] = useState(false);
   const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
   
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
+  const [customPreferences, setCustomPreferences] = useState<string[]>([]);
+  const [newCustomPreference, setNewCustomPreference] = useState('');
   
   // Notification settings state
   const [notificationSettings, setNotificationSettings] = useState<{[key: string]: boolean}>({
@@ -130,6 +134,7 @@ const Settings = () => {
       if (response.data) {
         setDietaryPreferences(response.data.dietaryPreferences || []);
         setAllergies(response.data.allergies || []);
+        setCustomPreferences(response.data.customPreferences || []);
       }
     } catch (err) {
       console.error("Error fetching dietary preferences:", err);
@@ -160,6 +165,7 @@ const Settings = () => {
       await axios.put(`${API_URL}/api/users/${uid}/dietary`, {
         dietaryPreferences,
         allergies,
+        customPreferences,
       });
       Alert.alert("Success", "Dietary preferences updated successfully!");
     } catch (err) {
@@ -192,7 +198,7 @@ const Settings = () => {
     }));
   };
 
-  // Toggle dietary option
+  // Toggle selection functions
   const toggleDietaryOption = (optionName: string) => {
     setDietaryPreferences(prev =>
       prev.includes(optionName)
@@ -201,13 +207,24 @@ const Settings = () => {
     );
   };
 
-  // Toggle allergy
   const toggleAllergy = (allergyName: string) => {
     setAllergies(prev =>
       prev.includes(allergyName)
         ? prev.filter(item => item !== allergyName)
         : [...prev, allergyName]
     );
+  };
+
+  const addCustomPreference = () => {
+    if (newCustomPreference.trim()) {
+      setCustomPreferences(prev => [...prev, newCustomPreference.trim()]);
+      setNewCustomPreference('');
+      setCustomPreferenceModal(false);
+    }
+  };
+
+  const removeCustomPreference = (preference: string) => {
+    setCustomPreferences(prev => prev.filter(item => item !== preference));
   };
 
   const handleLogout = async () => {
@@ -434,6 +451,45 @@ const Settings = () => {
     </Modal>
   );
 
+  // Custom Preference Modal
+  const CustomPreferenceModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={customPreferenceModal}
+      onRequestClose={() => setCustomPreferenceModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Custom Preference</Text>
+            <TouchableOpacity onPress={() => setCustomPreferenceModal(false)}>
+              <Feather name="x" size={24} color="#5D4037" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Enter your custom dietary preference:</Text>
+          
+          <TextInput
+            style={styles.customInput}
+            placeholder="e.g., No mushrooms, Low sodium, etc."
+            placeholderTextColor="#999"
+            value={newCustomPreference}
+            onChangeText={setNewCustomPreference}
+            multiline
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={addCustomPreference}
+          >
+            <Text style={styles.saveButtonText}>Add Preference</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.mainContainer}>
       <ScrollView 
@@ -507,6 +563,27 @@ const Settings = () => {
           <Feather name="chevron-right" size={24} color="#5D4037" />
         </TouchableOpacity>
 
+        {/* Custom Preferences Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setCustomPreferenceModal(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
+              <Feather name="edit" size={24} color="#923d0a" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Custom Preferences</Text>
+              <Text style={styles.cardSubtitle}>
+                {customPreferences.length > 0 
+                  ? `${customPreferences.length} custom preference(s) added`
+                  : "Add your own preferences"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#5D4037" />
+        </TouchableOpacity>
+
         {/* Change Password Card */}
         <TouchableOpacity 
           style={styles.settingCard}
@@ -564,6 +641,7 @@ const Settings = () => {
       <NotificationsModal />
       <DietaryPreferencesModal />
       <AllergiesModal />
+      <CustomPreferenceModal />
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -715,6 +793,17 @@ const styles = StyleSheet.create({
   },
   checkIcon: {
     marginLeft: 10,
+  },
+  customInput: {
+    borderWidth: 1,
+    borderColor: '#E8C28E',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: '#333',
+    marginBottom: 20,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   saveButton: {
     backgroundColor: '#923d0a',
