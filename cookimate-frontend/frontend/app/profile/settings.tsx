@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   TouchableOpacity,
   ScrollView,
   Alert,
+  Modal,
+  FlatList,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -19,11 +21,107 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
+// Notification settings options
+const NOTIFICATION_OPTIONS = [
+  {
+    id: 'n1',
+    title: 'Recipe Recommendations',
+    description: 'Get personalized recipe suggestions based on your preferences',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+  {
+    id: 'n2',
+    title: 'New Recipes',
+    description: 'Notifications when new recipes are added',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+  {
+    id: 'n3',
+    title: 'Cooking Reminders',
+    description: 'Reminders for meal planning and cooking times',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+  {
+    id: 'n4',
+    title: 'Community Activity',
+    description: 'Updates on likes, comments, and followers',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+  {
+    id: 'n5',
+    title: 'Achievement Alerts',
+    description: 'Get notified when you unlock new achievements',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+  {
+    id: 'n6',
+    title: 'Marketing & Promotions',
+    description: 'Special offers, tips, and newsletter',
+    icon: 'bell',
+    color: '#923d0a',
+  },
+];
+
 const Settings = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [notificationsModalVisible, setNotificationsModalVisible] = useState(false);
+  
+  // Notification settings state
+  const [notificationSettings, setNotificationSettings] = useState<{[key: string]: boolean}>({
+    n1: true,
+    n2: true,
+    n3: false,
+    n4: true,
+    n5: true,
+    n6: false,
+  });
+
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
+
+  // Fetch notification settings
+  const fetchNotificationSettings = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/${uid}/notifications`);
+      if (response.data) {
+        setNotificationSettings(response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching notification settings:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotificationSettings();
+  }, []);
+
+  // Save notification settings
+  const saveNotificationSettings = async () => {
+    try {
+      setLoading(true);
+      await axios.put(`${API_URL}/api/users/${uid}/notifications`, notificationSettings);
+      Alert.alert("Success", "Notification settings updated!");
+    } catch (err) {
+      console.error("Error saving notification settings:", err);
+      Alert.alert("Error", "Failed to save notification settings");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle notification setting
+  const toggleNotification = (id: string) => {
+    setNotificationSettings(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
 
   const handleLogout = async () => {
     Alert.alert(
@@ -75,6 +173,68 @@ const Settings = () => {
     );
   };
 
+  // Notifications Modal
+  const NotificationsModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={notificationsModalVisible}
+      onRequestClose={() => setNotificationsModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Notification Settings</Text>
+            <TouchableOpacity onPress={() => setNotificationsModalVisible(false)}>
+              <Feather name="x" size={24} color="#5D4037" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Customize your notification preferences:</Text>
+          
+          <FlatList
+            data={NOTIFICATION_OPTIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={styles.notificationItem}
+                onPress={() => toggleNotification(item.id)}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
+                  <Feather name={item.icon as any} size={20} color={item.color} />
+                </View>
+                <View style={styles.notificationTextContainer}>
+                  <Text style={styles.notificationTitle}>{item.title}</Text>
+                  <Text style={styles.notificationDescription}>{item.description}</Text>
+                </View>
+                <View style={[
+                  styles.toggleSwitch,
+                  notificationSettings[item.id] && styles.toggleSwitchActive
+                ]}>
+                  <View style={[
+                    styles.toggleDot,
+                    notificationSettings[item.id] && styles.toggleDotActive
+                  ]} />
+                </View>
+              </TouchableOpacity>
+            )}
+            style={styles.optionsList}
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              saveNotificationSettings();
+              setNotificationsModalVisible(false);
+            }}
+          >
+            <Text style={styles.saveButtonText}>Save Settings</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
   return (
     <View style={styles.mainContainer}>
       <ScrollView 
@@ -88,6 +248,23 @@ const Settings = () => {
 
         {/* Settings Title */}
         <Text style={styles.settingsTitle}>Settings</Text>
+
+        {/* Notifications Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setNotificationsModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
+              <Ionicons name="notifications-outline" size={24} color="#923d0a" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Notifications</Text>
+              <Text style={styles.cardSubtitle}>Manage your notification preferences</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#5D4037" />
+        </TouchableOpacity>
 
         {/* Change Password Card */}
         <TouchableOpacity 
@@ -141,6 +318,9 @@ const Settings = () => {
         {/* Extra bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
+
+      {/* Modals */}
+      <NotificationsModal />
 
       {loading && (
         <View style={styles.loadingOverlay}>
@@ -231,6 +411,100 @@ const styles = StyleSheet.create({
   },
   bottomSpacing: {
     height: 30,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#5D4037',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#8B6B5C',
+    marginBottom: 15,
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  saveButton: {
+    backgroundColor: '#923d0a',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Notification item styles
+  notificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#F8F4ED',
+  },
+  notificationTextContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  notificationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#5D4037',
+    marginBottom: 2,
+  },
+  notificationDescription: {
+    fontSize: 11,
+    color: '#8B6B5C',
+  },
+  toggleSwitch: {
+    width: 44,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#E0E0E0',
+    padding: 2,
+  },
+  toggleSwitchActive: {
+    backgroundColor: '#4CAF50',
+  },
+  toggleDot: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  toggleDotActive: {
+    alignSelf: 'flex-end',
   },
   loadingOverlay: {
     position: 'absolute',
