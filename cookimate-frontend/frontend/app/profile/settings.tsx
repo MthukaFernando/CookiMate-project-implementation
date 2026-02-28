@@ -13,7 +13,7 @@ import {
   Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { Feather, Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
+import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5 } from "@expo/vector-icons";
 import { auth } from "../../config/firebase";
 import axios from "axios";
 import Constants from "expo-constants";
@@ -23,37 +23,37 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
-// Predefined dietary preferences options
+// Predefined dietary preferences options with food-related icons
 const DIETARY_OPTIONS = [
-  { id: '1', name: 'Vegetarian', icon: 'leaf', color: '#4CAF50' },
-  { id: '2', name: 'Vegan', icon: 'leaf', color: '#8BC34A' },
-  { id: '3', name: 'Gluten-Free', icon: 'leaf', color: '#FF9800' },
-  { id: '4', name: 'Dairy-Free', icon: 'leaf', color: '#2196F3' },
-  { id: '5', name: 'Nut-Free', icon: 'leaf', color: '#9C27B0' },
-  { id: '6', name: 'Egg-Free', icon: 'leaf', color: '#F44336' },
-  { id: '7', name: 'Soy-Free', icon: 'leaf', color: '#3F51B5' },
-  { id: '8', name: 'Fish-Free', icon: 'leaf', color: '#00BCD4' },
-  { id: '9', name: 'Shellfish-Free', icon: 'leaf', color: '#009688' },
-  { id: '10', name: 'Keto', icon: 'leaf', color: '#FF5722' },
-  { id: '11', name: 'Paleo', icon: 'leaf', color: '#795548' },
-  { id: '12', name: 'Low-Carb', icon: 'leaf', color: '#607D8B' },
-  { id: '13', name: 'Low-Fat', icon: 'leaf', color: '#FFC107' },
-  { id: '14', name: 'Halal', icon: 'leaf', color: '#4A5568' },
-  { id: '15', name: 'Kosher', icon: 'leaf', color: '#2D3748' },
+  { id: '1', name: 'Vegetarian', icon: 'carrot', iconFamily: 'FontAwesome5', color: '#4CAF50' },
+  { id: '2', name: 'Vegan', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#8BC34A' },
+  { id: '3', name: 'Gluten-Free', icon: 'bread-slice', iconFamily: 'FontAwesome5', color: '#FF9800' },
+  { id: '4', name: 'Dairy-Free', icon: 'cheese', iconFamily: 'FontAwesome5', color: '#2196F3' },
+  { id: '5', name: 'Nut-Free', icon: 'peanuts', iconFamily: 'MaterialCommunityIcons', color: '#9C27B0' },
+  { id: '6', name: 'Egg-Free', icon: 'egg', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: '7', name: 'Soy-Free', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#3F51B5' },
+  { id: '8', name: 'Fish-Free', icon: 'fish', iconFamily: 'FontAwesome5', color: '#00BCD4' },
+  { id: '9', name: 'Shellfish-Free', icon: 'shrimp', iconFamily: 'FontAwesome5', color: '#009688' },
+  { id: '10', name: 'Keto', icon: 'bacon', iconFamily: 'FontAwesome5', color: '#FF5722' },
+  { id: '11', name: 'Paleo', icon: 'drumstick-bite', iconFamily: 'FontAwesome5', color: '#795548' },
+  { id: '12', name: 'Low-Carb', icon: 'candy-cane', iconFamily: 'FontAwesome5', color: '#607D8B' },
+  { id: '13', name: 'Low-Fat', icon: 'lemon', iconFamily: 'FontAwesome5', color: '#FFC107' },
+  { id: '14', name: 'Halal', icon: 'mosque', iconFamily: 'FontAwesome5', color: '#4A5568' },
+  { id: '15', name: 'Kosher', icon: 'star-of-david', iconFamily: 'FontAwesome5', color: '#2D3748' },
 ];
 
-// Common allergies options
+// Common allergies options with food-related icons
 const ALLERGY_OPTIONS = [
-  { id: 'a1', name: 'Peanuts', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a2', name: 'Tree Nuts', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a3', name: 'Milk', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a4', name: 'Eggs', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a5', name: 'Wheat', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a6', name: 'Soy', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a7', name: 'Fish', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a8', name: 'Shellfish', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a9', name: 'Sesame', icon: 'alert-triangle', color: '#F44336' },
-  { id: 'a10', name: 'Sulfites', icon: 'alert-triangle', color: '#F44336' },
+  { id: 'a1', name: 'Peanuts', icon: 'peanuts', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'tree', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a3', name: 'Milk', icon: 'cow', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a4', name: 'Eggs', icon: 'egg', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a5', name: 'Wheat', icon: 'wheat', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a6', name: 'Soy', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a7', name: 'Fish', icon: 'fish', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a8', name: 'Shellfish', icon: 'shrimp', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a9', name: 'Sesame', icon: 'seedling', iconFamily: 'FontAwesome5', color: '#F44336' },
+  { id: 'a10', name: 'Sulfites', icon: 'flask', iconFamily: 'FontAwesome5', color: '#F44336' },
 ];
 
 const Settings = () => {
@@ -213,6 +213,22 @@ const Settings = () => {
     );
   };
 
+  // Helper function to render icon based on family
+  const renderIcon = (item: any, size: number = 20) => {
+    const iconProps = {
+      size,
+      color: item.color,
+    };
+
+    if (item.iconFamily === 'FontAwesome5') {
+      return <FontAwesome5 name={item.icon} {...iconProps} />;
+    } else if (item.iconFamily === 'MaterialCommunityIcons') {
+      return <MaterialCommunityIcons name={item.icon} {...iconProps} />;
+    } else {
+      return <Feather name={item.icon} {...iconProps} />;
+    }
+  };
+
   // Dietary Preferences Modal
   const DietaryPreferencesModal = () => (
     <Modal
@@ -244,7 +260,7 @@ const Settings = () => {
                 onPress={() => toggleDietaryOption(item.name)}
               >
                 <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
-                  <Feather name={item.icon as any} size={20} color={item.color} />
+                  {renderIcon(item)}
                 </View>
                 <Text style={styles.optionText}>{item.name}</Text>
                 {dietaryPreferences.includes(item.name) && (
@@ -300,7 +316,7 @@ const Settings = () => {
                 onPress={() => toggleAllergy(item.name)}
               >
                 <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
-                  <Feather name={item.icon as any} size={20} color={item.color} />
+                  {renderIcon(item)}
                 </View>
                 <Text style={styles.optionText}>{item.name}</Text>
                 {allergies.includes(item.name) && (
@@ -426,7 +442,7 @@ const Settings = () => {
         >
           <View style={styles.cardContent}>
             <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <MaterialCommunityIcons name="alert" size={24} color="#923d0a" />
+              <MaterialCommunityIcons name="food-off" size={24} color="#923d0a" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Allergies & Intolerances</Text>
