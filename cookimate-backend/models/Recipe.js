@@ -15,4 +15,5 @@ const RecipeSchema = new mongoose.Schema({
   image: String
 }, {collection: 'recipes'});
 
-export default mongoose.model('Recipe', RecipeSchema);
+const Recipe = mongoose.models.Recipe || mongoose.model("Recipe", recipeSchema);
+export default Recipe;
