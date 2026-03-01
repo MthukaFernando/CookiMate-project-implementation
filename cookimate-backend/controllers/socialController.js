@@ -54,3 +54,23 @@ export const likePost = async (req, res) => {
         res.status(500).json(err);
     }
 };
+
+export const addComment = async (req, res) => {
+    try {
+        const { postId } = req.params;
+        const { userId, text } = req.body;
+
+        const updatedPost = await Post.findByIdAndUpdate(
+            postId,
+            { $push: { comments: { user: userId, text } } },
+            { new: true }
+        ).populate("comments.user", "username");
+
+        // Reward the commenter for engaging!
+        await User.findByIdAndUpdate(userId, { $inc: { points: 2 } });
+
+        res.status(200).json(updatedPost);
+    } catch (err) {
+        res.status(500).json(err);
+    }
+};

@@ -6,5 +6,6 @@ const router = express.Router();
 router.post("/", createPost);         // Create a post
 router.get("/feed", getFeed);         // Get the community feed
 router.put("/:id/like", likePost);    // Like a post
+router.post("/:postId/comment", addComment);
 
 export default router;
