@@ -1,6 +1,6 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
-import Recipe from "../models/recipe.js"; 
+import Recipe from "../models/Recipe.js"; 
 
 // create a user
 export const createUser = async (req, res) => {
