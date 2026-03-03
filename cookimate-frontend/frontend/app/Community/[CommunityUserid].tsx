@@ -19,36 +19,81 @@ const COLUMN_COUNT = 3;
 const GAP = 5;
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
+/* ============================
+   TYPES
+============================ */
+
+interface Post {
+  id: string;
+  uri: string;
+}
+
 export default function CommunityUserProfile() {
-  const { CommunityUserid, profilePic } = useLocalSearchParams();
   const router = useRouter();
-  const [selectedPost, setSelectedPost] = useState(null);
+
+  // ✅ Proper Expo Router param handling (no generics)
+  const params = useLocalSearchParams();
+
+  const CommunityUserid =
+    typeof params.CommunityUserid === "string"
+      ? params.CommunityUserid
+      : "Chef";
+
+  const profilePic =
+    typeof params.profilePic === "string"
+      ? params.profilePic
+      : "https://via.placeholder.com/150";
+
+  const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const user = {
-    name: CommunityUserid || "Chef",
-    handle: `@${CommunityUserid?.toString().toLowerCase().replace(/\s/g, "")}`,
+    name: CommunityUserid,
+    handle: `@${CommunityUserid.toLowerCase().replace(/\s/g, "")}`,
     bio: "Passionate home cook! 🍳 | Dessert Lover 🍰",
-    profilePic: profilePic || "https://via.placeholder.com/150",
+    profilePic: profilePic,
     stats: { recipes: 24, followers: "1.2k", following: 150 },
     posts: [
-      { id: '1', uri: 'https://www.halfbakedharvest.com/wp-content/uploads/2024/04/30-Minute-Honey-Garlic-Chicken-1.jpg' },
-      { id: '2', uri: 'https://www.eatingwell.com/thmb/S2NGMEcgm11dtdBJ6Hwprwq-nVk=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/eat-the-rainbow-chopped-salad-with-basil-mozzarella-beauty-185-278133-4000x2700-56879ac756cd46ea97944768847b7ea5.jpg' },
-      { id: '3', uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9TF3SqH4Bd9ubQzSBzTES6w1zoMH6-3nR9w&s' },
-      { id: '4', uri: 'https://hips.hearstapps.com/hmg-prod/images/chocolate-pie-cookies-lead-66fc19fe1abd1.jpg?crop=0.6666666666666667xw:1xh;center,top' },
-      { id: '5', uri: 'https://www.happyfoodstube.com/wp-content/uploads/2018/08/raspberry-oreo-no-bake-dessert-image-500x500.jpg' },
-      { id: '6', uri: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSM6wseYxMw4o2bGtI1H54AT903NIK3BgTMJQ&s' },
-    ],
+      {
+        id: "1",
+        uri: "https://www.halfbakedharvest.com/wp-content/uploads/2024/04/30-Minute-Honey-Garlic-Chicken-1.jpg",
+      },
+      {
+        id: "2",
+        uri: "https://www.eatingwell.com/thmb/S2NGMEcgm11dtdBJ6Hwprwq-nVk=/1500x0/filters:no_upscale():max_bytes(150000):strip_icc()/eat-the-rainbow-chopped-salad-with-basil-mozzarella-beauty-185-278133-4000x2700-56879ac756cd46ea97944768847b7ea5.jpg",
+      },
+      {
+        id: "3",
+        uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS9TF3SqH4Bd9ubQzSBzTES6w1zoMH6-3nR9w&s",
+      },
+      {
+        id: "4",
+        uri: "https://hips.hearstapps.com/hmg-prod/images/chocolate-pie-cookies-lead-66fc19fe1abd1.jpg?crop=0.6666666666666667xw:1xh;center,top",
+      },
+      {
+        id: "5",
+        uri: "https://www.happyfoodstube.com/wp-content/uploads/2018/08/raspberry-oreo-no-bake-dessert-image-500x500.jpg",
+      },
+      {
+        id: "6",
+        uri: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSM6wseYxMw4o2bGtI1H54AT903NIK3BgTMJQ&s",
+      },
+    ] as Post[],
   };
 
   const ProfileHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+      <TouchableOpacity
+        onPress={() => router.back()}
+        style={styles.backBtn}
+      >
         <Ionicons name="arrow-back" size={24} color="#5F4436" />
       </TouchableOpacity>
+
       <View style={styles.profileCard}>
         <Image source={{ uri: user.profilePic }} style={styles.avatar} />
         <Text style={styles.userName}>{user.name}</Text>
         <Text style={styles.handle}>{user.handle}</Text>
+
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Text style={styles.statNum}>{user.stats.recipes}</Text>
@@ -63,8 +108,9 @@ export default function CommunityUserProfile() {
             <Text style={styles.statLab}>Following</Text>
           </View>
         </View>
+
         <TouchableOpacity style={styles.followBtn}>
-          <Text style={styles.followBtnText}>Follow</Text>
+          <Text style={styles.followBtnText}>Follow </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -72,8 +118,9 @@ export default function CommunityUserProfile() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <FlatList
+      <FlatList<Post>
         data={user.posts}
+        keyExtractor={(item) => item.id}
         numColumns={COLUMN_COUNT}
         ListHeaderComponent={ProfileHeader}
         contentContainerStyle={{ paddingHorizontal: 20 }}
@@ -82,7 +129,11 @@ export default function CommunityUserProfile() {
           <TouchableOpacity onPress={() => setSelectedPost(item)}>
             <Image
               source={{ uri: item.uri }}
-              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8 }}
+              style={{
+                width: IMAGE_SIZE,
+                height: IMAGE_SIZE,
+                borderRadius: 8,
+              }}
             />
           </TouchableOpacity>
         )}
@@ -100,7 +151,9 @@ export default function CommunityUserProfile() {
                 source={{ uri: user.profilePic }}
                 style={styles.modalAvatar}
               />
-              <Text style={{ fontWeight: "bold" }}>{user.name}</Text>
+              <Text style={{ fontWeight: "bold" }}>
+                {user.name}
+              </Text>
               <TouchableOpacity
                 style={{ marginLeft: "auto" }}
                 onPress={() => setSelectedPost(null)}
@@ -108,6 +161,7 @@ export default function CommunityUserProfile() {
                 <Ionicons name="close" size={24} />
               </TouchableOpacity>
             </View>
+
             {selectedPost && (
               <Image
                 source={{ uri: selectedPost.uri }}
@@ -185,7 +239,16 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: "hidden",
   },
-  modalHeader: { flexDirection: "row", alignItems: "center", padding: 15 },
-  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    padding: 15,
+  },
+  modalAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+  },
   modalImg: { width: "100%", height: 350 },
 });

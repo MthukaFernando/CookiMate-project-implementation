@@ -62,6 +62,9 @@ const COMMUNITY_FEED: Post[] = [
     comments: [
       { commentId: "c_001", userName: "BakerJane", text: "Looks delicious!" },
       { commentId: "c_002", userName: "SpicySam", text: "Needs more garlic!" },
+       { commentId: "c_004", userName: "BakerJane", text: "Looks delicious!" },
+      { commentId: "c_007", userName: "SpicySam", text: "Needs more garlic!" },
+      
     ],
   },
   {
