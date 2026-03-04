@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
 import recipeRoutes from './routes/recipeRoutes.js';
+import gamificationRoutes from "./routes/gamificationRoutes.js"; // ONLY THIS LINE ADDED
 
 console.log("Current Directory:", process.cwd());
 console.log("Mongo URI is:", process.env.MONGO_URI);
@@ -24,10 +25,9 @@ app.get('/', (req, res) => {
   res.send("Cookimate API is running! ");
 });
 
-
-
 app.use("/api/users", userRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use("/api/gamification", gamificationRoutes); // ONLY THIS LINE ADDED
 
 // --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;
