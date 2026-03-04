@@ -146,35 +146,51 @@ const MyRecipesPage = () => {
       console.error("Error loading favorites from DB:", error);
     }
   };
-  const toggleFavorite = async (recipeId: string) => {
+
+  const handleRemoveFavorite = async (recipeId: string) => {
+    const uid = auth.currentUser?.uid;
     try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        Alert.alert("Error", "You must be logged in to save favorites");
-        return;
-      }
-
-      const isCurrentlyFavorite = favorites.includes(recipeId);
-
-      if (isCurrentlyFavorite) {
-        // Remove from Backend
-        await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
-          recipeId,
-        });
-        // Update local UI state
-        setFavorites((prev) => prev.filter((id) => id !== recipeId));
-      } else {
-        // Add to Backend
-        await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
-        // Update local UI state
-        setFavorites((prev) => [...prev, recipeId]);
-      }
+      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
+        recipeId,
+      });
+      setFavorites((prev) => prev.filter((id) => id !== recipeId));
     } catch (error) {
-      console.error("Error toggling favorite:", error);
+      console.error("Error removing favorite:", error);
+      Alert.alert("Error", "Could not remove from favorites.");
+    }
+  };
+
+  const toggleFavorite = async (recipeId: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      Alert.alert("Error", "You must be logged in to save favorites");
+      return;
+    }
+
+    const isCurrentlyFavorite = favorites.includes(recipeId);
+
+    if (isCurrentlyFavorite) {
+      // Show the confirmation alert before removing
       Alert.alert(
-        "Error",
-        "Could not update favorites. Check your internet/backend.",
+        "Remove Favorite",
+        "Are you sure you want to remove this recipe from your favorites?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => handleRemoveFavorite(recipeId),
+          },
+        ],
       );
+    } else {
+      // If not a favorite, add it
+      try {
+        await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
+        setFavorites((prev) => [...prev, recipeId]);
+      } catch (error) {
+        Alert.alert("Error", "Could not add to favorites.");
+      }
     }
   };
 

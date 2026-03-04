@@ -59,10 +59,6 @@ const mealOptions = [
   { label: "Drinks 🍹", value: "drink" },
 ];
 
-const sortOptions = [
-  { label: "Newest First", value: "newest" },
-  { label: "Oldest First", value: "oldest" },
-];
 
 const timeOptions = [
   { label: "Any Time", value: "All" },
@@ -94,7 +90,6 @@ const FavoritesPage = () => {
   const [cuisine, setCuisine] = useState("All");
   const [diet, setDiet] = useState("All");
   const [time, setTime] = useState("All");
-  const [sortBy, setSortBy] = useState("newest");
   const [activeFilterCount, setActiveFilterCount] = useState(0);
 
   useEffect(() => {
@@ -129,13 +124,6 @@ const FavoritesPage = () => {
         
         return matchesSearch && matchesMeal && matchesCuisine && matchesDiet && matchesTime;
       });
-
-      filtered.sort((a: any, b: any) => {
-        const dateA = new Date(a.createdAt).getTime();
-        const dateB = new Date(b.createdAt).getTime();
-        return sortBy === "newest" ? dateB - dateA : dateA - dateB;
-      });
-
       setRecipes(filtered);
     } catch (error) {
       console.error(error);
@@ -147,7 +135,7 @@ const FavoritesPage = () => {
   useFocusEffect(
     useCallback(() => {
       fetchFavorites();
-    }, [searchQuery, meal, diet, cuisine, time, sortBy])
+    }, [searchQuery, meal, diet, cuisine, time])
   );
 
   const confirmRemove = (recipeId: string) => {
@@ -176,7 +164,6 @@ const FavoritesPage = () => {
     setDiet("All");
     setTime("All");
     setMeal("All");
-    setSortBy("newest");
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
@@ -189,7 +176,7 @@ const FavoritesPage = () => {
               {item.name}
             </Text>
             <TouchableOpacity onPress={() => confirmRemove(item.id)}>
-              <Feather name="trash-2" size={22} color="#e74c3c" />
+              <Feather name="trash-2" size={20} color="#aa1e0f" />
             </TouchableOpacity>
           </View>
           <Text style={styles.recipeDescription} numberOfLines={2}>
@@ -209,8 +196,8 @@ const FavoritesPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        <TouchableOpacity style={styles.backCircle} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={20} color="#437d9e" />
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#5F4436" />
         </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
@@ -233,16 +220,7 @@ const FavoritesPage = () => {
       </View>
       <View style={styles.filterWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          <Dropdown
-            style={styles.dropdownSort}
-            placeholderStyle={styles.dropText}
-            selectedTextStyle={styles.dropText}
-            data={sortOptions}
-            labelField="label"
-            valueField="value"
-            value={sortBy}
-            onChange={(item) => setSortBy(item.value)}
-          />
+          
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
@@ -309,7 +287,7 @@ const FavoritesPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2ece2" },
+  container: { flex: 1, backgroundColor: "#f2ece2", paddingTop: Constants.statusBarHeight,},
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -318,18 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 12,
   },
-  backCircle: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#dce8ef",
-    elevation: 5,
-    borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#5bacdc",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 4,
-  },
+  
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
@@ -347,14 +314,6 @@ const styles = StyleSheet.create({
     width: 110,
     height: 36,
     backgroundColor: "#c6a484",
-    borderRadius: 18,
-    paddingHorizontal: 10,
-    marginRight: 8,
-  },
-  dropdownSort: {
-    width: 130,
-    height: 36,
-    backgroundColor: "#5F4436",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
@@ -402,7 +361,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   viewButton: {
-    backgroundColor: "#4E342E",
+    backgroundColor: "#698c1e",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
