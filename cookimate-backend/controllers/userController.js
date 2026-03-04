@@ -1,6 +1,6 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
-
+import Recipe from "../models/Recipe.js";
 
 // create a user
 
@@ -25,7 +25,7 @@ export const createUser = async (req, res) => {
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid });
+    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -34,6 +34,8 @@ export const getUserByUid = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 
 export const getLevels = async (req, res) => {
   try {
@@ -48,6 +50,35 @@ export const getLevels = async (req, res) => {
     res.status(200).json(levels);
   } catch (error) {
     console.error("Error fetching levels:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove favorites from the favorites array
+
+export const removeFromFavorites = async (req, res) => {
+  try {
+    const { recipeId } = req.body;
+    const { uid } = req.params;
+
+    const recipe = await Recipe.findOne({ id: recipeId });
+
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $pull: { favorites: recipe._id  } }, 
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Recipe removed from favorites" });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
@@ -68,7 +99,7 @@ export const updateUser = async (req, res) => {
       {
         returnDocument: "after", // ✅ updated way
         runValidators: true,
-      }
+      },
     );
 
     if (!updatedUser) {
@@ -85,7 +116,6 @@ export const updateUser = async (req, res) => {
   }
 };
 
-
 //the api that will let the user add recips to the fav (the id of the recips will be stored in the user collection under favorites array )
 
 export const addToFavorites = async (req, res) => {
@@ -94,7 +124,7 @@ export const addToFavorites = async (req, res) => {
     const { uid } = req.params;
 
     //check if the fronend had sent a valid id that is in the recips collection
-    const recipe = await Recipe.findById(recipeId);
+    const recipe = await Recipe.findOne({ id: recipeId });
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
@@ -103,22 +133,18 @@ export const addToFavorites = async (req, res) => {
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
-
-
     }
     //check if the recips id is already there this is importat as we can give the user a feedbcak msg
 
-    if (user.favorites.includes(recipeId)) {
+   if (user.favorites.includes(recipe._id)) {
       return res.status(400).json({ message: "Recipe already in favorites" });
     }
 
-
     //this will add the recipe _id (built in mongodb) end of the faverecipe array
-    user.favorites.push(recipeId);
+    user.favorites.push(recipe._id);
     await user.save();
     res.status(200).json({
       message: "Recipe added to favorites",
-      
     });
   } catch (error) {
     console.error(error);

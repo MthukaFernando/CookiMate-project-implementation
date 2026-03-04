@@ -13,12 +13,11 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
@@ -60,6 +59,11 @@ const mealOptions = [
   { label: "Drinks 🍹", value: "drink" },
 ];
 
+const sortOptions = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+];
+
 const timeOptions = [
   { label: "Any Time", value: "All" },
   { label: "Under 15 min", value: "15" },
@@ -80,153 +84,90 @@ const dietOptions = [
   { label: "Healthy 🥗", value: "healthy" },
 ];
 
-const MyRecipesPage = () => {
+const FavoritesPage = () => {
   const router = useRouter();
-  const { selectedCategory, selectedDate } = useLocalSearchParams();
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-  const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
+  const uid = auth.currentUser?.uid;
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [meal, setMeal] = useState((selectedCategory as string) || "All");
+  const [meal, setMeal] = useState("All");
   const [cuisine, setCuisine] = useState("All");
   const [diet, setDiet] = useState("All");
   const [time, setTime] = useState("All");
-  const [favorites, setFavorites] = useState<string[]>([]);
-
+  const [sortBy, setSortBy] = useState("newest");
   const [activeFilterCount, setActiveFilterCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadFavorites();
-    }, []),
-  );
-
-  useEffect(() => {
-    if (selectedCategory) {
-      setMeal(selectedCategory as string);
-    } else {
-      setMeal("All");
-    }
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    return () => {
-      router.setParams({
-        selectedCategory: undefined,
-        selectedDate: undefined,
-      });
-    };
-  }, []);
 
   useEffect(() => {
     let count = 0;
     if (searchQuery) count++;
     if (cuisine !== "All") count++;
-    if (meal !== "All" && meal !== selectedCategory) count++;
+    if (meal !== "All") count++;
     if (diet !== "All") count++;
     if (time !== "All") count++;
     setActiveFilterCount(count);
-  }, [searchQuery, cuisine, meal, diet, time, selectedCategory]);
+  }, [searchQuery, cuisine, meal, diet, time]);
 
-  const loadFavorites = async () => {
-    try {
-      const uid = auth.currentUser?.uid;
-      const response = await axios.get(`${API_URL}/api/users/${uid}`);
-      const favIds = response.data.favorites.map((f: any) => f._id || f.id);
-      setFavorites(favIds);
-    } catch (error) {
-      console.log("Error loading favorites from DB", error);
-    }
-  };
-  const toggleFavorite = async (recipeId: string) => {
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        Alert.alert("Error", "You must be logged in to save favorites");
-        return;
-      }
-
-      const isCurrentlyFavorite = favorites.includes(recipeId);
-
-      if (isCurrentlyFavorite) {
-        // Remove from Backend
-        await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
-          recipeId,
-        });
-        // Update local UI state
-        setFavorites((prev) => prev.filter((id) => id !== recipeId));
-      } else {
-        // Add to Backend
-        await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
-        // Update local UI state
-        setFavorites((prev) => [...prev, recipeId]);
-      }
-    } catch (error) {
-      console.error("Error toggling favorite:", error);
-      Alert.alert(
-        "Error",
-        "Could not update favorites. Check your internet/backend.",
-      );
-    }
-  };
-
-  const fetchRecipes = async () => {
+  const fetchFavorites = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/recipes`, {
-        params: {
-          searchQuery: searchQuery,
-          meal: meal !== "All" ? meal : undefined,
-          diet: diet !== "All" ? diet : undefined,
-          cuisine: cuisine !== "All" ? cuisine : undefined,
-          time: time !== "All" ? time : undefined,
-        },
+      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      let favoriteList = response.data.favorites || [];
+
+      let filtered = favoriteList.filter((item: any) => {
+        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesMeal = meal === "All" || item.meal_type?.includes(meal.toLowerCase());
+        const matchesCuisine = cuisine === "All" || item.cuisine?.includes(cuisine);
+        const matchesDiet = diet === "All" || item.search_terms?.includes(diet.toLowerCase());
+        
+        let matchesTime = true;
+        if (time !== "All" && item.totalTime) {
+          const cookTime = parseInt(item.totalTime);
+          if (time === "15") matchesTime = cookTime < 15;
+          else if (time === "30") matchesTime = cookTime >= 15 && cookTime <= 30;
+          else if (time === "60") matchesTime = cookTime > 30 && cookTime <= 60;
+        }
+        
+        return matchesSearch && matchesMeal && matchesCuisine && matchesDiet && matchesTime;
       });
-      setRecipes(response.data);
+
+      filtered.sort((a: any, b: any) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return sortBy === "newest" ? dateB - dateA : dateA - dateB;
+      });
+
+      setRecipes(filtered);
     } catch (error) {
-      console.error("Backend error:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [searchQuery, meal, diet, cuisine, time]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFavorites();
+    }, [searchQuery, meal, diet, cuisine, time, sortBy])
+  );
 
-  const handleBackToPlanner = () => {
-    const dateToPass = selectedDate;
-    setSelectedRecipeId(null);
-    setSelectedRecipeData(null);
-    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
-    router.push({
-      pathname: "/menuPlanerPage",
-      params: { openModalWithDate: dateToPass },
-    });
+  const confirmRemove = (recipeId: string) => {
+    Alert.alert(
+      "Remove Favorite",
+      "Are you sure you want to remove this recipe from favorites?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Remove", style: "destructive", onPress: () => handleRemove(recipeId) },
+      ]
+    );
   };
 
-  const handleAddRecipeToPlanner = () => {
-    if (!selectedRecipeData) return;
-    const dateToPass = selectedDate;
-    const recipeData = selectedRecipeData;
-    const category = selectedCategory;
-
-    setSelectedRecipeId(null);
-    setSelectedRecipeData(null);
-    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
-
-    router.push({
-      pathname: "/menuPlanerPage",
-      params: {
-        openModalWithDate: dateToPass,
-        newRecipeId: recipeData.id,
-        newRecipeName: recipeData.name,
-        newRecipeImage: recipeData.image,
-        newRecipeCategory: category,
-      },
-    });
+  const handleRemove = async (recipeId: string) => {
+    try {
+      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, { recipeId });
+      setRecipes((prev) => prev.filter((item: any) => item.id !== recipeId));
+    } catch (err) {
+      Alert.alert("Error", "Could not remove recipe.");
+    }
   };
 
   const clearAllFilters = () => {
@@ -234,38 +175,21 @@ const MyRecipesPage = () => {
     setCuisine("All");
     setDiet("All");
     setTime("All");
-    if (!selectedCategory) {
-      setMeal("All");
-    }
+    setMeal("All");
+    setSortBy("newest");
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
-    const isFavorite = favorites.includes(item.id);
-    const isSelected = selectedRecipeId === item.id;
-
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => {
-          if (selectedCategory) {
-            setSelectedRecipeId(item.id);
-            setSelectedRecipeData(item);
-          }
-        }}
-        style={[styles.card, isSelected && styles.cardSelected]}
-      >
+      <View style={styles.card}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
         <View style={styles.cardContent}>
           <View style={styles.titleRow}>
             <Text style={styles.recipeTitle} numberOfLines={2}>
               {item.name}
             </Text>
-            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
-              <Ionicons
-                name={favorites.includes(item.id) ? "heart" : "heart-outline"}
-                size={24}
-                color={favorites.includes(item.id) ? "#e74c3c" : "#5F4436"}
-              />
+            <TouchableOpacity onPress={() => confirmRemove(item.id)}>
+              <Feather name="trash-2" size={22} color="#e74c3c" />
             </TouchableOpacity>
           </View>
           <Text style={styles.recipeDescription} numberOfLines={2}>
@@ -278,33 +202,26 @@ const MyRecipesPage = () => {
             <Text style={styles.viewButtonText}>View Recipe</Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        {selectedCategory && (
-          <TouchableOpacity
-            style={styles.backCircle}
-            onPress={handleBackToPlanner}
-          >
-            <Ionicons name="arrow-back" size={20} color="#437d9e" />
-          </TouchableOpacity>
-        )}
-
+        <TouchableOpacity style={styles.backCircle} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={20} color="#437d9e" />
+        </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search recipes"
+            placeholder="Search favorites"
             placeholderTextColor="#999999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           <Ionicons name="search" size={20} color="#8a6666" />
         </View>
-
         <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
           <Text style={styles.clearButtonText}>Clear</Text>
           {activeFilterCount > 0 && (
@@ -313,33 +230,27 @@ const MyRecipesPage = () => {
             </View>
           )}
         </TouchableOpacity>
-
-        {selectedCategory && (
-          <TouchableOpacity
-            style={[styles.addButton, !selectedRecipeId && { opacity: 0.4 }]}
-            onPress={handleAddRecipeToPlanner}
-            disabled={!selectedRecipeId}
-          >
-            <Text style={styles.addLetters}>Add</Text>
-          </TouchableOpacity>
-        )}
       </View>
-
       <View style={styles.filterWrapper}>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
           <Dropdown
-            style={[styles.dropdown, selectedCategory && { opacity: 0.6 }]}
+            style={styles.dropdownSort}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            data={sortOptions}
+            labelField="label"
+            valueField="value"
+            value={sortBy}
+            onChange={(item) => setSortBy(item.value)}
+          />
+          <Dropdown
+            style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
             data={mealOptions}
             labelField="label"
             valueField="value"
             value={meal}
-            disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
           />
           <Dropdown
@@ -374,31 +285,21 @@ const MyRecipesPage = () => {
           />
         </ScrollView>
       </View>
-
       {loading ? (
-        <ActivityIndicator
-          size="large"
-          color="#5F4436"
-          style={{ marginTop: 50 }}
-        />
+        <ActivityIndicator size="large" color="#5F4436" style={{ marginTop: 50 }} />
       ) : recipes.length === 0 ? (
         <View style={styles.noResultsContainer}>
-          <Ionicons name="sad-outline" size={60} color="#c6a484" />
-          <Text style={styles.noResultsText}>No recipes found</Text>
-          <Text style={styles.noResultsSubText}>
-            Try adjusting your filters
-          </Text>
-          <TouchableOpacity
-            style={styles.resetFiltersButton}
-            onPress={clearAllFilters}
-          >
+          <Ionicons name="heart-dislike-outline" size={60} color="#c6a484" />
+          <Text style={styles.noResultsText}>You have no recipes in favorites</Text>
+          <Text style={styles.noResultsSubText}>Try removing filters or adding some recipes!</Text>
+          <TouchableOpacity style={styles.resetFiltersButton} onPress={clearAllFilters}>
             <Text style={styles.resetFiltersText}>Reset Filters</Text>
           </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={recipes}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: any) => item.id}
           renderItem={renderRecipeItem}
           contentContainerStyle={styles.listContent}
         />
@@ -427,24 +328,7 @@ const styles = StyleSheet.create({
     borderColor: "#5bacdc",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
-  },
-  addButton: {
-    width: 70,
-    height: 40,
-    backgroundColor: "#dce8ef",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: "#5bacdc",
-  },
-  addLetters: {
-    letterSpacing: 1,
-    fontSize: 15,
-    fontWeight: "500",
-    color: "#437d9e",
+    marginRight: 4,
   },
   searchBar: {
     flexDirection: "row",
@@ -460,16 +344,24 @@ const styles = StyleSheet.create({
   filterWrapper: { height: 50, marginBottom: 10 },
   scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
-    width: 120,
+    width: 110,
     height: 36,
     backgroundColor: "#c6a484",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
   },
+  dropdownSort: {
+    width: 130,
+    height: 36,
+    backgroundColor: "#5F4436",
+    borderRadius: 18,
+    paddingHorizontal: 10,
+    marginRight: 8,
+  },
   dropText: {
     color: "white",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "bold",
     textAlign: "center",
   },
@@ -482,12 +374,6 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: "center",
     elevation: 3,
-    borderWidth: 2,
-    borderColor: "transparent",
-  },
-  cardSelected: {
-    borderColor: "#63aaf1",
-    backgroundColor: "#f0f7ff",
   },
   cardImage: {
     width: IMAGE_SIZE,
@@ -550,16 +436,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
+  badgeText: { color: "white", fontSize: 10, fontWeight: "bold" },
   noResultsContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+    marginTop: 80,
   },
   noResultsText: {
     fontSize: 20,
@@ -567,6 +450,7 @@ const styles = StyleSheet.create({
     color: "#5F4436",
     marginTop: 20,
     marginBottom: 8,
+    textAlign: 'center'
   },
   noResultsSubText: {
     fontSize: 14,
@@ -581,11 +465,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     elevation: 3,
   },
-  resetFiltersText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
-  },
+  resetFiltersText: { color: "white", fontWeight: "bold", fontSize: 16 },
 });
 
-export default MyRecipesPage;
+export default FavoritesPage;
