@@ -29,7 +29,12 @@ export const getFeed = async (req, res) => {
       .sort({ createdAt: -1 }) // Show newest posts first
       .skip(skip) // Skip previous pages' posts
       .limit(limit) // Limit results to 10 posts
-      .populate("user", "username profilePic"); // This shows the user's name/pic
+      .populate({
+        path: "user",              // The field in the Post model
+        model: "User",             // The model to join with
+        foreignField: "firebaseUid", // Match Post.user to User.firebaseUid
+        select: "username profilePic firebaseUid" // Fields to return to frontend
+      });
 
     res.status(200).json(posts);
   } catch (err) {

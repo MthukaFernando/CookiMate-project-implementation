@@ -1,98 +1,67 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, Image, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import Constants from 'expo-constants'; // 1. Added missing import
+import { View, Text, Image, FlatList, ActivityIndicator, StyleSheet } from 'react-native';
+import axios from 'axios';
+import Constants from 'expo-constants';
 
-interface Post {
-  _id: string;
-  imageUrl: string;
-  caption: string;
-  user: {
-    _id: string;
-    username: string;
-    profilePic: string;
-    firebaseUid: string;
-  };
-  likes: string[];
-  comments: any[];
-}
+// 1. Dynamic IP setup (so it works on your physical phone)
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000/api/social/feed`;
 
-const CommunityFeedCards = () => {
-  const [posts, setPosts] = useState<Post[]>([]);
+export default function SimpleFeedTester() {
+  const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const router = useRouter();
 
   useEffect(() => {
-    const fetchFeed = async () => {
+    const getData = async () => {
       try {
-        // 2. Logic to handle the dynamic IP for physical device testing
-        const debuggerHost = Constants.expoConfig?.hostUri;
-        const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-        
-        // 3. Fixed the fetch URL - used backticks and ${} to inject the variable
-        const API_URL = `http://${address}:5000`;
-        const response = await fetch(`${API_URL}/api/social/feed`); 
-        
-        const data = await response.json();
-        setPosts(data);
-      } catch (error) {
-        console.error("Feed fetch error:", error);
+        console.log("Fetching from:", API_URL);
+        const response = await axios.get(API_URL);
+        setPosts(response.data);
+      } catch (err) {
+        console.error("Connection error. Is server running?", err);
       } finally {
         setLoading(false);
       }
     };
-    fetchFeed();
+    getData();
   }, []);
 
-  const renderPost = ({ item }: { item: Post }) => (
-    <View style={styles.card}>
-      <TouchableOpacity 
-        style={styles.header} 
-        onPress={() => router.push(`/Community/${item.user.firebaseUid}`)}
-      >
-        <Image source={{ uri: item.user.profilePic }} style={styles.avatar} />
-        <Text style={styles.username}>{item.user.username}</Text>
-      </TouchableOpacity>
-
-      <Image source={{ uri: item.imageUrl }} style={styles.postImg} resizeMode="cover" />
-
-      <View style={styles.content}>
-        <Text style={styles.caption}>
-          <Text style={{ fontWeight: 'bold' }}>{item.user?.username} </Text>
-          {item.caption}
-        </Text>
-      </View>
-    </View>
-  );
-
-  if (loading) return (
-    <View style={{ flex: 1, justifyContent: 'center' }}>
-      <ActivityIndicator size="large" color="#FF6B6B" />
-    </View>
-  );
+  if (loading) return <ActivityIndicator size="large" style={styles.center} />;
 
   return (
-    <FlatList
-      data={posts}
-      keyExtractor={(item) => item._id}
-      renderItem={renderPost}
-      contentContainerStyle={styles.listContainer}
-      // Added refreshing capability for a better user experience
-      onRefresh={() => {/* Add fetchFeed logic here again if desired */}}
-      refreshing={loading}
-    />
+    <View style={styles.container}>
+      <Text style={styles.title}>API Test: {address}</Text>
+      
+      <FlatList
+        data={posts}
+        keyExtractor={(item: any) => item._id}
+        renderItem={({ item }) => (
+          <View style={styles.card}>
+            {/* User Info from Populated Field */}
+            <View style={styles.userRow}>
+              <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
+              <Text style={styles.username}>{item.user?.username || 'Unknown'}</Text>
+            </View>
+
+            {/* Post Content */}
+            <Image source={{ uri: item.imageUrl }} style={styles.mainImage} />
+            <Text style={styles.caption}>{item.caption}</Text>
+          </View>
+        )}
+      />
+    </View>
   );
-};
+}
 
 const styles = StyleSheet.create({
-  listContainer: { padding: 10, backgroundColor: '#f8f8f8' },
-  card: { backgroundColor: '#fff', borderRadius: 12, marginBottom: 16, overflow: 'hidden', elevation: 2 },
-  header: { flexDirection: 'row', alignItems: 'center', padding: 12 },
-  avatar: { width: 35, height: 35, borderRadius: 17.5, marginRight: 10 },
-  username: { fontWeight: '600', fontSize: 15 },
-  postImg: { width: '100%', height: 300 },
-  content: { padding: 12 },
-  caption: { fontSize: 14, color: '#333' }
+  container: { flex: 1, backgroundColor: '#f0f0f0', paddingTop: 50 },
+  center: { flex: 1, justifyContent: 'center' },
+  title: { textAlign: 'center', fontWeight: 'bold', marginBottom: 10 },
+  card: { backgroundColor: '#fff', margin: 10, borderRadius: 8, padding: 10, elevation: 3 },
+  userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  avatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10, backgroundColor: '#eee' },
+  username: { fontWeight: 'bold' },
+  mainImage: { width: '100%', height: 250, borderRadius: 5 },
+  caption: { marginTop: 10, color: '#444' }
 });
-
-export default CommunityFeedCards;
