@@ -133,11 +133,17 @@ const MyRecipesPage = () => {
   const loadFavorites = async () => {
     try {
       const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      // Fetch the user data which includes the populated favorites array
       const response = await axios.get(`${API_URL}/api/users/${uid}`);
-      const favIds = response.data.favorites.map((f: any) => f._id || f.id);
+
+      // Map the array to only get the custom 'id' string
+      const favIds = response.data.favorites.map((f: any) => f.id);
+
       setFavorites(favIds);
     } catch (error) {
-      console.log("Error loading favorites from DB", error);
+      console.error("Error loading favorites from DB:", error);
     }
   };
   const toggleFavorite = async (recipeId: string) => {
