@@ -9,6 +9,7 @@ import {
   FlatList,
   Dimensions,
   Modal,
+  ListRenderItemInfo,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -17,24 +18,14 @@ import { Ionicons } from "@expo/vector-icons";
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 3;
 const GAP = 5;
-const IMAGE_SIZE =
-  (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
+const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 /* ---------- Types ---------- */
-
-type Post = {
-  id: string;
-  uri: string;
-};
 
 type RouteParams = {
   CommunityUserid?: string;
   profilePic?: string;
 };
-
-/* ============================
-   TYPES
-============================ */
 
 interface Post {
   id: string;
@@ -45,7 +36,7 @@ export default function CommunityUserProfile() {
   const router = useRouter();
 
   // ✅ Proper Expo Router param handling (no generics)
-  const params = useLocalSearchParams();
+  const params = useLocalSearchParams<RouteParams>();
 
   const CommunityUserid =
     typeof params.CommunityUserid === "string"
@@ -152,7 +143,7 @@ export default function CommunityUserProfile() {
           gap: GAP,
           marginBottom: GAP,
         }}
-        renderItem={({ item }) => (
+        renderItem={({ item }: ListRenderItemInfo<Post>) => (
           <TouchableOpacity
             onPress={() => setSelectedPost(item)}
           >
@@ -267,22 +258,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  modalCard: {
-    width: "90%",
-    backgroundColor: "#fff",
-    borderRadius: 20,
-    overflow: "hidden",
-  },
-  modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 15,
-  },
-  modalAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    marginRight: 10,
-  },
+  modalCard: { width: "90%", backgroundColor: "#fff", borderRadius: 20, overflow: "hidden" },
+  modalHeader: { flexDirection: "row", alignItems: "center", padding: 15 },
+  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
   modalImg: { width: "100%", height: 350 },
 });
