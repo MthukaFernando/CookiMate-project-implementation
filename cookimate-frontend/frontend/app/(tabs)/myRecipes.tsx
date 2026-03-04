@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,75 +10,156 @@ import {
   TextInput,
   SafeAreaView,
   ActivityIndicator,
-  ScrollView, 
+  ScrollView,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
 
-// --- 1. Added Cuisine Options ---
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
+
 const cuisineOptions = [
   { label: "All Cuisines", value: "All" },
+  { label: "American 🍔", value: "American" },
   { label: "Italian 🍝", value: "Italian" },
-  { label: "Chinese 🥡", value: "Chinese" },
   { label: "Mexican 🌮", value: "Mexican" },
   { label: "Indian 🍛", value: "Indian" },
-  { label: "American 🍔", value: "American" },
-  { label: "Thai 🍜", value: "Thai" },
   { label: "Japanese 🍣", value: "Japanese" },
+  { label: "Chinese 🥡", value: "Chinese" },
+  { label: "French 🥖", value: "French" },
+  { label: "Mediterranean 🫒", value: "Mediterranean" },
+  { label: "Caribbean 🌴", value: "Caribbean" },
+  { label: "Sri Lankan 🥥", value: "Sri Lankan" },
+  { label: "Moroccan 🐪", value: "Moroccan" },
+  { label: "Korean 🇰🇷", value: "Korean" },
+  { label: "British 🇬🇧", value: "British" },
+  { label: "Swiss 🧀", value: "Swiss" },
+  { label: "Algerian", value: "Algerian" },
+  { label: "Texan 🤠", value: "Texan" },
+  { label: "Cajun/Creole ⚜️", value: "Louisiana" },
 ];
 
 const mealOptions = [
   { label: "All Meals", value: "All" },
-  { label: "Breakfast", value: "Breakfast" },
-  { label: "Lunch", value: "Lunch" },
-  { label: "Dinner", value: "Dinner" },
+  { label: "Breakfast", value: "breakfast" },
+  { label: "Lunch", value: "lunch" },
+  { label: "Dinner", value: "dinner" },
+  { label: "Snacks 🍿", value: "snack" },
+  { label: "Appetizer 🥗", value: "appetizer" },
+  { label: "Dessert 🍰", value: "dessert" },
+  { label: "Drinks 🍹", value: "drink" },
 ];
+
 const timeOptions = [
   { label: "Any Time", value: "All" },
   { label: "Under 15 min", value: "15" },
   { label: "15-30 min", value: "30" },
+  { label: "30-60 min", value: "60" },
 ];
+
 const dietOptions = [
   { label: "All Diets", value: "All" },
-  { label: "Vegetarian", value: "Vegetarian" },
-  { label: "Vegan", value: "Vegan" },
+  { label: "Vegetarian 🌱", value: "vegetarian" },
+  { label: "Vegan 🌿", value: "vegan" },
+  { label: "Gluten-Free 🌾", value: "gluten-free" },
+  { label: "Low-Carb 🥩", value: "low-carb" },
+  { label: "Low-Calorie 🔥", value: "low-calorie" },
+  { label: "Low-Fat 💪", value: "low-fat" },
+  { label: "Low-Sodium 🧂", value: "low-sodium" },
+  { label: "Diabetic-Friendly 💉", value: "diabetic" },
+  { label: "Healthy 🥗", value: "healthy" },
 ];
 
 const MyRecipesPage = () => {
   const router = useRouter();
+  const { selectedCategory, selectedDate } = useLocalSearchParams();
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
+  const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [searchQuery, setSearchQuery] = useState("");
-  const [meal, setMeal] = useState("All");
-  const [time, setTime] = useState("All");
-  const [diet, setDiet] = useState("All");
-  // --- 2. Added Cuisine State ---
+
+  const [meal, setMeal] = useState((selectedCategory as string) || "All");
   const [cuisine, setCuisine] = useState("All");
+  const [diet, setDiet] = useState("All");
+  const [time, setTime] = useState("All");
+  const [favorites, setFavorites] = useState<string[]>([]);
+
+  const [activeFilterCount, setActiveFilterCount] = useState(0);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadFavorites();
+    }, []),
+  );
+
+  useEffect(() => {
+    if (selectedCategory) {
+      setMeal(selectedCategory as string);
+    } else {
+      setMeal("All");
+    }
+  }, [selectedCategory]);
+
+  useEffect(() => {
+    return () => {
+      router.setParams({
+        selectedCategory: undefined,
+        selectedDate: undefined,
+      });
+    };
+  }, []);
+
+  useEffect(() => {
+    let count = 0;
+    if (searchQuery) count++;
+    if (cuisine !== "All") count++;
+    if (meal !== "All" && meal !== selectedCategory) count++;
+    if (diet !== "All") count++;
+    if (time !== "All") count++;
+    setActiveFilterCount(count);
+  }, [searchQuery, cuisine, meal, diet, time, selectedCategory]);
+
+  const loadFavorites = async () => {
+    try {
+      const storedFavs = await AsyncStorage.getItem("userFavorites");
+      if (storedFavs) setFavorites(JSON.parse(storedFavs));
+    } catch (error) {
+      console.log("Error loading favorites", error);
+    }
+  };
+
+  const toggleFavorite = async (id: string) => {
+    let newFavorites;
+    if (favorites.includes(id)) {
+      newFavorites = favorites.filter((favId) => favId !== id);
+    } else {
+      newFavorites = [...favorites, id];
+    }
+    setFavorites(newFavorites);
+    await AsyncStorage.setItem("userFavorites", JSON.stringify(newFavorites));
+  };
 
   const fetchRecipes = async () => {
     setLoading(true);
     try {
-      // Use the IP that works for you (env variable or hardcoded)
-      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://192.168.1.6:5000';
-      
-      const response = await axios.get(
-        `${API_URL}/api/recipes`,
-        {
-          params: {
-            searchQuery: searchQuery,
-            meal: meal !== "All" ? meal : undefined,
-            diet: diet !== "All" ? diet : undefined,
-            // --- 3. Added Cuisine to Params ---
-            cuisine: cuisine !== "All" ? cuisine : undefined,
-          },
+      const response = await axios.get(`${API_URL}/api/recipes`, {
+        params: {
+          searchQuery: searchQuery,
+          meal: meal !== "All" ? meal : undefined,
+          diet: diet !== "All" ? diet : undefined,
+          cuisine: cuisine !== "All" ? cuisine : undefined,
+          time: time !== "All" ? time : undefined, 
         },
-      );
+      });
       setRecipes(response.data);
     } catch (error) {
       console.error("Backend error:", error);
@@ -87,71 +168,164 @@ const MyRecipesPage = () => {
     }
   };
 
-  // --- 4. Added cuisine to dependency array ---
   useEffect(() => {
     fetchRecipes();
-  }, [searchQuery, meal, diet, cuisine]);
+  }, [searchQuery, meal, diet, cuisine, time]);
 
-  const renderRecipeItem = ({ item }: { item: any }) => (
-    <View style={styles.card}>
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <View style={styles.cardContent}>
-        <Text style={styles.recipeTitle}>{item.name}</Text>
-        <Text style={styles.recipeDescription} numberOfLines={2}>
-          {item.description}
-        </Text>
-        <TouchableOpacity
-          style={styles.viewButton}
-          onPress={() => router.push(`/recipe/${item.id}` as any)} // Use item.id (numeric) instead of item._id
-        >
-          <Text style={styles.viewButtonText}>View Recipe</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+  const handleBackToPlanner = () => {
+    const dateToPass = selectedDate;
+    setSelectedRecipeId(null);
+    setSelectedRecipeData(null);
+    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
+    router.push({
+      pathname: "/menuPlanerPage",
+      params: { openModalWithDate: dateToPass },
+    });
+  };
+
+  const handleAddRecipeToPlanner = () => {
+    if (!selectedRecipeData) return;
+    const dateToPass = selectedDate;
+    const recipeData = selectedRecipeData;
+    const category = selectedCategory;
+
+    setSelectedRecipeId(null);
+    setSelectedRecipeData(null);
+    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
+
+    router.push({
+      pathname: "/menuPlanerPage",
+      params: { 
+        openModalWithDate: dateToPass,
+        newRecipeId: recipeData.id,
+        newRecipeName: recipeData.name,
+        newRecipeImage: recipeData.image,
+        newRecipeCategory: category
+      },
+    });
+  };
+
+  const clearAllFilters = () => {
+    setSearchQuery("");
+    setCuisine("All");
+    setDiet("All");
+    setTime("All");
+    if (!selectedCategory) {
+      setMeal("All");
+    }
+  };
+
+  const renderRecipeItem = ({ item }: { item: any }) => {
+    const isFavorite = favorites.includes(item.id);
+    const isSelected = selectedRecipeId === item.id;
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.9}
+        onPress={() => {
+          if (selectedCategory) {
+            setSelectedRecipeId(item.id);
+            setSelectedRecipeData(item);
+          }
+        }}
+        style={[
+          styles.card,
+          isSelected && styles.cardSelected,
+        ]}
+      >
+        <Image source={{ uri: item.image }} style={styles.cardImage} />
+        <View style={styles.cardContent}>
+          <View style={styles.titleRow}>
+            <Text style={styles.recipeTitle} numberOfLines={2}>
+              {item.name}
+            </Text>
+            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={24}
+                color={isFavorite ? "#e74c3c" : "#5F4436"}
+              />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.recipeDescription} numberOfLines={2}>
+            {item.description}
+          </Text>
+          <TouchableOpacity
+            style={styles.viewButton}
+            onPress={() => router.push(`/recipe/${item.id}` as any)}
+          >
+            <Text style={styles.viewButtonText}>View Recipe</Text>
+          </TouchableOpacity>
+        </View>
+      </TouchableOpacity>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        <TouchableOpacity
-          style={styles.backCircle}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={22} color="#5F4436" />
-        </TouchableOpacity>
+        {selectedCategory && (
+          <TouchableOpacity
+            style={styles.backCircle}
+            onPress={handleBackToPlanner}
+          >
+            <Ionicons name="arrow-back" size={20} color="#437d9e" />
+          </TouchableOpacity>
+        )}
+
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
             placeholder="Search recipes"
+            placeholderTextColor="#999999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           <Ionicons name="search" size={20} color="#8a6666" />
         </View>
+
+        <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
+          <Text style={styles.clearButtonText}>Clear</Text>
+          {activeFilterCount > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{activeFilterCount}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
+        {selectedCategory && (
+          <TouchableOpacity 
+            style={[styles.addButton, !selectedRecipeId && { opacity: 0.4 }]} 
+            onPress={handleAddRecipeToPlanner}
+            disabled={!selectedRecipeId}
+          >
+            <Text style={styles.addLetters}>Add</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* --- 5. Changed to ScrollView for better layout with 4 items --- */}
       <View style={styles.filterWrapper}>
-        <ScrollView 
-          horizontal 
+        <ScrollView
+          horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
         >
           <Dropdown
-            style={styles.dropdown}
+            style={[styles.dropdown, selectedCategory && { opacity: 0.6 }]}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
             data={mealOptions}
             labelField="label"
             valueField="value"
             value={meal}
+            disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
           />
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
-            data={cuisineOptions} // New Cuisine Dropdown
+            data={cuisineOptions}
             labelField="label"
             valueField="value"
             value={cuisine}
@@ -186,10 +360,24 @@ const MyRecipesPage = () => {
           color="#5F4436"
           style={{ marginTop: 50 }}
         />
+      ) : recipes.length === 0 ? (
+        <View style={styles.noResultsContainer}>
+          <Ionicons name="sad-outline" size={60} color="#c6a484" />
+          <Text style={styles.noResultsText}>No recipes found</Text>
+          <Text style={styles.noResultsSubText}>
+            Try adjusting your filters
+          </Text>
+          <TouchableOpacity
+            style={styles.resetFiltersButton}
+            onPress={clearAllFilters}
+          >
+            <Text style={styles.resetFiltersText}>Reset Filters</Text>
+          </TouchableOpacity>
+        </View>
       ) : (
         <FlatList
           data={recipes}
-          keyExtractor={(item) => item._id} 
+          keyExtractor={(item) => item.id}
           renderItem={renderRecipeItem}
           contentContainerStyle={styles.listContent}
         />
@@ -206,18 +394,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 15,
     marginBottom: 10,
+    gap: 12,
   },
   backCircle: {
     width: 40,
     height: 40,
-    backgroundColor: "#e0d6c8",
+    backgroundColor: "#dce8ef",
+    elevation: 5,
     borderRadius: 20,
+    borderWidth: 2,
+    borderColor: "#5bacdc",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
   },
+  addButton: {
+    width: 70,
+    height: 40,
+    backgroundColor: "#dce8ef",
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    borderWidth: 2,
+    borderColor: "#5bacdc",
+  },
+  addLetters: {
+    letterSpacing: 1,
+    fontSize: 15,
+    fontWeight: "500",
+    color: "#437d9e",
+  },
   searchBar: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#fff",
@@ -225,28 +433,25 @@ const styles = StyleSheet.create({
     height: 48,
     paddingHorizontal: 18,
     elevation: 2,
+    flex: 1,
   },
   searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
-  
-  // Updated Styles for Scrolling Filters
-  filterWrapper: {
-    height: 50,
-    marginBottom: 10,
-  },
-  scrollContent: {
-    paddingHorizontal: 15,
-    alignItems: 'center',
-  },
+  filterWrapper: { height: 50, marginBottom: 10 },
+  scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
-    width: 120, 
+    width: 120,
     height: 36,
     backgroundColor: "#c6a484",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
   },
-  dropText: { color: "white", fontSize: 12, fontWeight: "bold", textAlign: 'center' },
-  
+  dropText: {
+    color: "white",
+    fontSize: 12,
+    fontWeight: "bold",
+    textAlign: "center",
+  },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
@@ -256,6 +461,12 @@ const styles = StyleSheet.create({
     padding: 15,
     alignItems: "center",
     elevation: 3,
+    borderWidth: 2,
+    borderColor: "transparent", 
+  },
+  cardSelected: {
+    borderColor: "#63aaf1", 
+    backgroundColor: "#f0f7ff", 
   },
   cardImage: {
     width: IMAGE_SIZE,
@@ -264,11 +475,18 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   cardContent: { flex: 1 },
+  titleRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    marginBottom: 4,
+  },
   recipeTitle: {
     fontSize: 18,
     fontWeight: "bold",
     color: "#5F4436",
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 8,
   },
   recipeDescription: {
     fontSize: 13,
@@ -284,6 +502,69 @@ const styles = StyleSheet.create({
     alignSelf: "flex-start",
   },
   viewButtonText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  clearButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: "#ebe8e4",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#ddd1cb",
+    position: "relative",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  clearButtonText: {
+    color: "#5F4436",
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  badge: {
+    position: "absolute",
+    top: -5,
+    right: -5,
+    backgroundColor: "#e74c3c",
+    borderRadius: 10,
+    minWidth: 18,
+    height: 18,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  badgeText: {
+    color: "white",
+    fontSize: 10,
+    fontWeight: "bold",
+  },
+  noResultsContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 40,
+  },
+  noResultsText: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#5F4436",
+    marginTop: 20,
+    marginBottom: 8,
+  },
+  noResultsSubText: {
+    fontSize: 14,
+    color: "#8a6666",
+    textAlign: "center",
+    marginBottom: 30,
+  },
+  resetFiltersButton: {
+    backgroundColor: "#c6a484",
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    elevation: 3,
+  },
+  resetFiltersText: {
+    color: "white",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
 });
 
 export default MyRecipesPage;

@@ -15,9 +15,9 @@ import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`
+ const debuggerHost = Constants.expoConfig?.hostUri;
+        const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+        const API_URL = `http://${address}:5000`
 const DEFAULT_AVATAR = "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
 
 const ProfilePage = () => {
@@ -77,10 +77,7 @@ const ProfilePage = () => {
                 >
                   <Text style={styles.editBtnText}>Edit Profile</Text>
                 </TouchableOpacity>
-                <TouchableOpacity 
-                  style={styles.settingsBtn}
-                  onPress={() => router.push("../profile/settings")}
-                >
+                <TouchableOpacity style={styles.settingsBtn}>
                   <Feather name="settings" size={18} color="#5F4436" />
                 </TouchableOpacity>
               </View>
@@ -293,7 +290,7 @@ const styles = StyleSheet.create({
   borderBottomWidth: 5, 
   gap: 0,
   
-  // Shadow for iOS
+  
   shadowColor: "#000",
   shadowOffset: { width: 0, height: 4 },
   shadowOpacity: 0.15,
