@@ -267,12 +267,8 @@ const FavoritesPage = () => {
         <ActivityIndicator size="large" color="#5F4436" style={{ marginTop: 50 }} />
       ) : recipes.length === 0 ? (
         <View style={styles.noResultsContainer}>
-          <Ionicons name="heart-dislike-outline" size={60} color="#c6a484" />
+          <Ionicons name="heart-dislike-outline" size={60} color="#3c5f3692" />
           <Text style={styles.noResultsText}>You have no recipes in favorites</Text>
-          <Text style={styles.noResultsSubText}>Try removing filters or adding some recipes!</Text>
-          <TouchableOpacity style={styles.resetFiltersButton} onPress={clearAllFilters}>
-            <Text style={styles.resetFiltersText}>Reset Filters</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
@@ -401,30 +397,16 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
-    marginTop: 80,
+    marginBottom: 100,
   },
   noResultsText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#5F4436",
+    color: "#3c5f3692",
     marginTop: 20,
     marginBottom: 8,
     textAlign: 'center'
   },
-  noResultsSubText: {
-    fontSize: 14,
-    color: "#8a6666",
-    textAlign: "center",
-    marginBottom: 30,
-  },
-  resetFiltersButton: {
-    backgroundColor: "#c6a484",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-    elevation: 3,
-  },
-  resetFiltersText: { color: "white", fontWeight: "bold", fontSize: 16 },
 });
 
 export default FavoritesPage;
