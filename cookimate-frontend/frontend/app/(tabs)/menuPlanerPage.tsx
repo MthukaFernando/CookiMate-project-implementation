@@ -192,7 +192,12 @@ const Page = () => {
   );
 
   return (
+   
     <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
+       <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+       >
       <View style={styles.mainContent}>
         <View style={styles.calendarContainer}>
           <Calendar
@@ -241,8 +246,6 @@ const Page = () => {
             }}
           />
         </View>
-
-        <View style={{ flex: 1 }} />
 
         <View style={styles.carouselShadowContainer}>
           <View style={styles.carouselWrapper}>
@@ -406,6 +409,7 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -423,10 +427,13 @@ export const calendarStyles: any = {
 };
 
 export const styles = StyleSheet.create({
+  scrollContent: {
+    flexGrow: 1,
+  },
   mainContent: {
     flex: 1,
     justifyContent: "space-between",
-    paddingBottom: 20,
+    paddingBottom: 40,
   },
   calendarContainer: { marginTop: 10 },
   dayComponent: {
@@ -465,12 +472,13 @@ export const styles = StyleSheet.create({
   carouselShadowContainer: {
     alignSelf: "center",
     width: CAROUSEL_WIDTH,
-    height: "40%",
+    height: 260,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 12,
+    marginTop: 20,
   },
   carouselWrapper: {
     flex: 1,
