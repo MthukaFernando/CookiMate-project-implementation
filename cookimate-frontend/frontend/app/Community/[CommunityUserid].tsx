@@ -32,28 +32,39 @@ type RouteParams = {
   profilePic?: string;
 };
 
-export default function CommunityUserProfile() {
-  const { CommunityUserid, profilePic } =
-    useLocalSearchParams<RouteParams>();
+/* ============================
+   TYPES
+============================ */
 
+interface Post {
+  id: string;
+  uri: string;
+}
+
+export default function CommunityUserProfile() {
   const router = useRouter();
+
+  // ✅ Proper Expo Router param handling (no generics)
+  const params = useLocalSearchParams();
+
+  const CommunityUserid =
+    typeof params.CommunityUserid === "string"
+      ? params.CommunityUserid
+      : "Chef";
+
+  const profilePic =
+    typeof params.profilePic === "string"
+      ? params.profilePic
+      : "https://via.placeholder.com/150";
+
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
 
   const user = {
-    name: CommunityUserid ?? "Chef",
-    handle: `@${
-      CommunityUserid?.toString()
-        .toLowerCase()
-        .replace(/\s/g, "") ?? "chef"
-    }`,
+    name: CommunityUserid,
+    handle: `@${CommunityUserid.toLowerCase().replace(/\s/g, "")}`,
     bio: "Passionate home cook! 🍳 | Dessert Lover 🍰",
-    profilePic:
-      profilePic ?? "https://via.placeholder.com/150",
-    stats: {
-      recipes: 24,
-      followers: "1.2k",
-      following: 150,
-    },
+    profilePic: profilePic,
+    stats: { recipes: 24, followers: "1.2k", following: 150 },
     posts: [
       {
         id: "1",
@@ -123,7 +134,7 @@ export default function CommunityUserProfile() {
         </View>
 
         <TouchableOpacity style={styles.followBtn}>
-          <Text style={styles.followBtnText}>Follow</Text>
+          <Text style={styles.followBtnText}>Follow </Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -177,7 +188,6 @@ export default function CommunityUserProfile() {
               <Text style={{ fontWeight: "bold" }}>
                 {user.name}
               </Text>
-
               <TouchableOpacity
                 style={{ marginLeft: "auto" }}
                 onPress={() => setSelectedPost(null)}
