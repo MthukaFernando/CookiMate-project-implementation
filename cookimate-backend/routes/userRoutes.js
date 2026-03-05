@@ -1,5 +1,5 @@
 import express from "express";
-import { createUser,getUserByUid,getLevels,updateUser,addToFavorites} from "../controllers/userController.js";
+import { createUser,getUserByUid,getLevels,updateUser,addToFavorites, removeFromFavorites} from "../controllers/userController.js";
 
 const router = express.Router();
 
@@ -20,6 +20,10 @@ router.put("/update/:uid" ,updateUser)
 //user add recips in to the fav array (pass the _id --> we will be uisng findbyId so must pass the built in id for the recipe objcet from the fronted )
 
 router.put("/favorites/:uid" , addToFavorites)
+
+//User remove recipes from the fav array
+
+router.put("/favorites/remove/:uid", removeFromFavorites);
 
 
 

@@ -9,20 +9,23 @@ import {
   ActivityIndicator,
   Modal,
   SafeAreaView,
-  Animated        
+  Animated,
+  Alert,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ConfettiCannon from 'react-native-confetti-cannon';
+import ConfettiCannon from "react-native-confetti-cannon";
+import { auth } from "../../config/firebase";
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
 export default function RecipeDetails() {
+  const uid = auth.currentUser?.uid;
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const [recipe, setRecipe] = useState<any>(null);
@@ -51,34 +54,69 @@ export default function RecipeDetails() {
   useEffect(() => {
     const checkFavorite = async () => {
       try {
-        const storedFavs = await AsyncStorage.getItem("userFavorites");
-        if (storedFavs) {
-          const favorites = JSON.parse(storedFavs);
-          setIsFavorite(favorites.includes(id));
-        }
+        if (!uid || !id) return;
+
+        //Get the users data from the backend
+        const response = await axios.get(`${API_URL}/api/users/${uid}`);
+
+        const favorites = response.data.favorites || [];
+        const isFav = favorites.some((fav: any) => fav.id === id);
+
+        setIsFavorite(isFav);
       } catch (error) {
-        console.log("Error checking favorite", error);
+        console.log("Error checking favorite from DB", error);
       }
     };
 
     if (id) checkFavorite();
   }, [id]);
 
-  const toggleFavorite = async () => {
+  const handleRemoveFavorite = async () => {
     try {
-      const storedFavs = await AsyncStorage.getItem("userFavorites");
-      let favorites = storedFavs ? JSON.parse(storedFavs) : [];
-
-      if (isFavorite) {
-        favorites = favorites.filter((favId: string) => favId !== id);
-      } else {
-        favorites.push(id);
-      }
-
-      await AsyncStorage.setItem("userFavorites", JSON.stringify(favorites));
-      setIsFavorite(!isFavorite);
+      // Remove from MongoDB
+      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
+        recipeId: id,
+      });
+      setIsFavorite(false);
     } catch (error) {
-      console.log("Error toggling favorite", error);
+      console.log("Error removing favorite", error);
+      Alert.alert("Error", "Could not remove from favorites.");
+    }
+  };
+  const toggleFavorite = async () => {
+    if (!uid) {
+      Alert.alert("Error", "You must be logged in to favorite recipes");
+      return;
+    }
+
+    if (isFavorite) {
+      // Show alert before removing
+      Alert.alert(
+        "Remove Favorite",
+        "Are you sure you want to remove this recipe from your favorites?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: handleRemoveFavorite,
+          },
+        ],
+      );
+    } else {
+      // Add to MongoDB immediately
+      try {
+        await axios.put(`${API_URL}/api/users/favorites/${uid}`, {
+          recipeId: id,
+        });
+        setIsFavorite(true);
+      } catch (error: any) {
+        if (error.response?.status === 400) {
+          setIsFavorite(true);
+        } else {
+          Alert.alert("Error", "Could not add to favorites.");
+        }
+      }
     }
   };
 
@@ -208,7 +246,6 @@ export default function RecipeDetails() {
           )}
         </View>
       </ScrollView>
-      
 
       {/* 4. Cooking Mode Modal */}
       <Modal
@@ -220,15 +257,18 @@ export default function RecipeDetails() {
         <SafeAreaView style={styles.modalContainer}>
           {/* Header */}
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeCookingMode} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={closeCookingMode}
+              style={styles.closeButton}
+            >
               <Ionicons name="close" size={28} color="#5F4436" />
             </TouchableOpacity>
-            
+
             {/* Only show progress if NOT finished */}
             {recipe?.steps && currentStepIndex < recipe.steps.length && (
-               <Text style={styles.stepProgress}>
-                 Step {currentStepIndex + 1} of {recipe.steps.length}
-               </Text>
+              <Text style={styles.stepProgress}>
+                Step {currentStepIndex + 1} of {recipe.steps.length}
+              </Text>
             )}
           </View>
 
@@ -236,10 +276,10 @@ export default function RecipeDetails() {
             {recipe?.steps && currentStepIndex < recipe.steps.length ? (
               /* --- ACTIVE STEP CARD --- */
               <View style={styles.stepCard}>
-                 {/* Watermark Number (Fixed Overlap) */}
+                {/* Watermark Number (Fixed Overlap) */}
                 <Text style={styles.stepBigNumber}>{currentStepIndex + 1}</Text>
-                
-                <ScrollView 
+
+                <ScrollView
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.stepScrollContent}
                 >
@@ -247,10 +287,15 @@ export default function RecipeDetails() {
                     {recipe.steps[currentStepIndex]}
                   </Text>
                 </ScrollView>
-                
-                <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
+
+                <TouchableOpacity
+                  style={styles.nextStepButton}
+                  onPress={handleNextStep}
+                >
                   <Text style={styles.nextStepText}>
-                     {currentStepIndex === recipe.steps.length - 1 ? "Finish Cooking" : "Next Step"}
+                    {currentStepIndex === recipe.steps.length - 1
+                      ? "Finish Cooking"
+                      : "Next Step"}
                   </Text>
                   <Ionicons name="arrow-forward" size={20} color="#fff" />
                 </TouchableOpacity>
@@ -259,29 +304,33 @@ export default function RecipeDetails() {
               /* --- FUN COMPLETION SCREEN --- */
               <View style={styles.completedContainer}>
                 {/* Fireworks Explosion! */}
-                <ConfettiCannon 
-                  count={200} 
-                  origin={{x: -10, y: 0}} 
+                <ConfettiCannon
+                  count={200}
+                  origin={{ x: -10, y: 0 }}
                   fallSpeed={2500}
                   fadeOut={true}
                 />
 
                 {/* Mascot Image */}
                 <View style={styles.mascotContainer}>
-                   {/* Make sure mascot.png is in your assets folder! */}
-                   <Image 
-                     source={require('../../assets/images/mascot.png')}
-                     style={styles.mascotImage}
-                     resizeMode="contain"
-                   />
+                  {/* Make sure mascot.png is in your assets folder! */}
+                  <Image
+                    source={require("../../assets/images/mascot.png")}
+                    style={styles.mascotImage}
+                    resizeMode="contain"
+                  />
                 </View>
 
                 <Text style={styles.completedTitle}>Yum!</Text>
                 <Text style={styles.completedSub}>
-                  You just cooked <Text style={{fontWeight: 'bold'}}>{recipe?.name}</Text>!
+                  You just cooked{" "}
+                  <Text style={{ fontWeight: "bold" }}>{recipe?.name}</Text>!
                 </Text>
-                
-                <TouchableOpacity style={styles.doneButton} onPress={closeCookingMode}>
+
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={closeCookingMode}
+                >
                   <Text style={styles.doneButtonText}>Complete Recipe</Text>
                 </TouchableOpacity>
               </View>
@@ -416,18 +465,18 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
 
-completedContainer: {
+  completedContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: 'transparent',
+    backgroundColor: "transparent",
   },
   mascotContainer: {
     width: 250,
     height: 250,
     marginBottom: 20,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   mascotImage: {
     width: "100%",

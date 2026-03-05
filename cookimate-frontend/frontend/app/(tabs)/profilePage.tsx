@@ -112,7 +112,7 @@ const ProfilePage = () => {
               label="Favs" 
               value={user?.favorites?.length || 0} 
               bColor="#B86D2A" 
-              onPress={() => console.log("Route to Favorites")}
+              onPress={() => router.push("/profile/favoritesPage")}
            />
            <StatItem 
               icon="award" 
