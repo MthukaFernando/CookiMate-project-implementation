@@ -169,7 +169,7 @@ export const searchUsers = async (req, res) => {
   try {
     const users = await User.find({
       username: { $regex: query, $options: "i" }, // Case-insensitive search
-    }).select("username profilePic name"); // Only return necessary info
+    }).select("username profilePic name firebaseUid"); 
     
     res.status(200).json(users);
   } catch (err) {
