@@ -1,16 +1,16 @@
 import Post from "../models/Post.js";
 import User from "../models/user.js";
 
-//create a new post to reward the user
+// 1. Create Post: Author gets 10 points
 export const createPost = async (req, res) => {
   try {
-    //create post
     const newPost = new Post(req.body);
     const savedPost = await newPost.save();
-    // reward user with 10 points for sharing a post
+    
+    // Reward the author (firebaseUid is in req.body.user)
     await User.findOneAndUpdate(
       { firebaseUid: req.body.user },
-      { $inc: { points: 10 } },
+      { $inc: { points: 10 } }
     );
     res.status(201).json(savedPost);
   } catch (err) {
@@ -18,22 +18,22 @@ export const createPost = async (req, res) => {
   }
 };
 
+// 2. Get Feed: Populate user info correctly
 export const getFeed = async (req, res) => {
-  // Get the page number from the request
   const page = parseInt(req.query.page) || 1;
-  const limit = 10; // Only send 10 posts per "set"
-  const skip = (page - 1) * limit; // posts to skip based on current page
+  const limit = 10;
+  const skip = (page - 1) * limit;
 
   try {
     const posts = await Post.find()
-      .sort({ createdAt: -1 }) // Show newest posts first
-      .skip(skip) // Skip previous pages' posts
-      .limit(limit) // Limit results to 10 posts
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
       .populate({
-        path: "user",              // The field in the Post model
-        model: "User",             // The model to join with
-        foreignField: "firebaseUid", // Match Post.user to User.firebaseUid
-        select: "username profilePic firebaseUid" // Fields to return to frontend
+        path: "user",
+        model: "User",
+        foreignField: "firebaseUid",
+        select: "username profilePic firebaseUid"
       });
 
     res.status(200).json(posts);
@@ -42,45 +42,61 @@ export const getFeed = async (req, res) => {
   }
 };
 
+// 3. Like Post: Author gets 5 points
 export const likePost = async (req, res) => {
-    try {
-        const post = await Post.findById(req.params.id);
-        const { userId } = req.body; // This is now a Firebase String (e.g., "abc12345")
+  try {
+    const post = await Post.findById(req.params.id);
+    const { userId } = req.body; // Liker's UID
 
-        if (!post.likes.includes(userId)) {
-            // Add like
-            await post.updateOne({ $push: { likes: userId } });
-            
-            // Award points to the AUTHOR using their Firebase UID
-            await User.findOneAndUpdate(
-                { firebaseUid: post.user }, 
-                { $inc: { points: 5 } }
-            );
+    if (!post) return res.status(404).json("Post not found");
 
-            res.status(200).json("Post liked!");
-        } else {
-            // Unlike
-            await post.updateOne({ $pull: { likes: userId } });
-            res.status(200).json("Post unliked.");
-        }
-    } catch (err) {
-        res.status(500).json(err);
+    if (!post.likes.includes(userId)) {
+      await post.updateOne({ $push: { likes: userId } });
+      
+      // Points to Author using the string UID stored in post.user
+      await User.findOneAndUpdate(
+        { firebaseUid: post.user }, 
+        { $inc: { points: 5 } }
+      );
+      res.status(200).json("Post liked!");
+    } else {
+      await post.updateOne({ $pull: { likes: userId } });
+      res.status(200).json("Post unliked.");
     }
+  } catch (err) {
+    res.status(500).json(err);
+  }
 };
 
+// 4. Add Comment: Author gets 5 points (FIXED)
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { userId, text } = req.body;
+    const { userId, text } = req.body; // userId is the Firebase UID of the commenter
 
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
       { $push: { comments: { user: userId, text } } },
-      { new: true }, //return updated document
-    ).populate("comments.user", "username");
+      { new: true }
+    ).populate({
+      path: "comments.user",      // Populate the user inside the comments array
+      model: "User",
+      foreignField: "firebaseUid", // Match the string UID
+      select: "username profilePic"
+    }).populate({
+      path: "user",               // Also populate the post author
+      model: "User",
+      foreignField: "firebaseUid",
+      select: "username firebaseUid"
+    });
 
-    // Reward the user for engaging
-    await User.findByIdAndUpdate(userId, { $inc: { points: 2 } });
+    if (!updatedPost) return res.status(404).json("Post not found");
+
+    // Reward the POST AUTHOR
+    await User.findOneAndUpdate(
+      { firebaseUid: updatedPost.user.firebaseUid }, 
+      { $inc: { points: 5 } } 
+    );
 
     res.status(200).json(updatedPost);
   } catch (err) {
