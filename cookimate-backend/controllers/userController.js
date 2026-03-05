@@ -176,3 +176,63 @@ export const searchUsers = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Call this when the "Complete Recipe" confetti happens
+export const incrementCookCount = async (req, res) => {
+  try {
+    const { uid } = req.params; // Using firebaseUid for consistency
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Viewing another user's profile
+export const getCommunityProfile = async (req, res) => {
+  try {
+    const { uid } = req.params; // Profile being viewed (firebaseUid)
+    const { viewerId } = req.query; // MongoDB _id of the logged-in user
+
+    // Find the user by firebaseUid
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Check if the person viewing is already following this user
+    const isFollowing = viewerId ? user.followers.includes(viewerId) : false;
+
+    // Fetch all recipes created by this user for the posts grid
+    const recipes = await Recipe.find({ createdBy: user._id })
+      .select("title image createdAt")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      _id: user._id, // Needed for the follow logic
+      name: user.name,
+      username: user.username,
+      profilePic: user.profilePic,
+      bio: user.bio,
+      isFollowing,
+      stats: {
+        recipes: user.recipesCookedCount || 0, // Using recipesCookedCount
+        followers: user.followers?.length || 0,
+        following: user.following?.length || 0,
+      },
+      posts: recipes.map(r => ({
+        id: r._id,
+        uri: r.image,
+        title: r.title
+      }))
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
