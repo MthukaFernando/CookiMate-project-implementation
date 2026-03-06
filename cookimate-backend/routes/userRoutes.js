@@ -24,7 +24,7 @@ router.put("/follow", toggleFollow);
 
 router.put("/favorites/toggle/:uid", toggleFavorite);
 
-router.get("/profile/:uid", getCommunityProfile);
+router.get("/community/:uid", getCommunityProfile);
 
 router.put("/complete-recipe/:uid", incrementCookCount);
 
