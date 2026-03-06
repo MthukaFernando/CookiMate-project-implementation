@@ -56,10 +56,13 @@ export const createUser = async (req, res) => {
 export const getUserByUid = async (req, res) => {
   try {
     const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.status(200).json(user);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Convert to a plain object so you can modify the 'followers' property for the UI
+    const userObj = user.toObject();
+    userObj.followersCount = user.followers.length; 
+
+    res.status(200).json(userObj);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
