@@ -7,6 +7,8 @@ import {
   toggleFavorite,
   toggleFollow,
   searchUsers,
+  incrementCookCount,
+  getCommunityProfile
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -21,6 +23,10 @@ router.get("/search", searchUsers);
 router.put("/follow", toggleFollow);
 
 router.put("/favorites/toggle/:uid", toggleFavorite);
+
+router.get("/community/:uid", getCommunityProfile);
+
+router.put("/complete-recipe/:uid", incrementCookCount);
 
 // get user by using the token (UID)
 router.get("/:uid", getUserByUid);

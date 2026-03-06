@@ -130,30 +130,30 @@ export const toggleFavorite = async (req, res) => {
   }
 };
 
-// FOLLOW / UNFOLLOW USER
+// FOLLOW / UNFOLLOW USER (Updated to use Firebase UIDs)
 export const toggleFollow = async (req, res) => {
   try {
-    const { targetUserId, currentUserId } = req.body; // IDs from MongoDB (_id)
+    const { targetUserId, currentUserId } = req.body; // Firebase UIDs
 
-    const targetUser = await User.findById(targetUserId);
-    const currentUser = await User.findById(currentUserId);
+    const targetUser = await User.findOne({ firebaseUid: targetUserId });
+    const currentUser = await User.findOne({ firebaseUid: currentUserId });
 
-    if (!targetUser || !currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!targetUser || !currentUser) return res.status(404).json({ message: "User not found" });
+    if (targetUserId === currentUserId) return res.status(400).json({ message: "Cannot follow yourself" });
 
-    if (!currentUser.following.includes(targetUserId)) {
-      // FOLLOW LOGIC
-      await currentUser.updateOne({ $push: { following: targetUserId } });
-      await targetUser.updateOne({ $push: { followers: currentUserId } });
-      res.status(200).json({ message: "Followed successfully" });
+    const isAlreadyFollowing = currentUser.following.some(id => id.equals(targetUser._id));
+
+    if (!isAlreadyFollowing) {
+      await currentUser.updateOne({ $push: { following: targetUser._id } });
+      await targetUser.updateOne({ $push: { followers: currentUser._id } });
+      res.status(200).json({ isFollowing: true });
     } else {
-      // UNFOLLOW LOGIC
-      await currentUser.updateOne({ $pull: { following: targetUserId } });
-      await targetUser.updateOne({ $pull: { followers: currentUserId } });
-      res.status(200).json({ message: "Unfollowed successfully" });
+      await currentUser.updateOne({ $pull: { following: targetUser._id } });
+      await targetUser.updateOne({ $pull: { followers: currentUser._id } });
+      res.status(200).json({ isFollowing: false });
     }
   } catch (err) {
+    console.error("TOGGLE_FOLLOW_ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -174,5 +174,78 @@ export const searchUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// Call this when the "Complete Recipe" confetti happens
+export const incrementCookCount = async (req, res) => {
+  try {
+    const { uid } = req.params; // Using firebaseUid for consistency
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Viewing another user's profile
+export const getCommunityProfile = async (req, res) => {
+  try {
+    const { uid } = req.params; // profile owner's firebaseUid
+    const { viewerId } = req.query; // logged-in user's firebaseUid
+
+    // Find profile owner
+    const user = await User.findOne({ firebaseUid: uid });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    // Determine follow status
+    let isFollowing = false;
+
+    if (viewerId) {
+      const viewer = await User.findOne({ firebaseUid: viewerId });
+
+      if (viewer) {
+        isFollowing = (user.followers || []).some(fId => fId.equals(viewer._id));
+      }
+    }
+
+    // Fetch user's recipes
+    const recipes = await Recipe.find({ createdBy: user._id })
+      .select("title image createdAt")
+      .sort({ createdAt: -1 });
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      username: user.username,
+      profilePic: user.profilePic,
+      bio: user.bio,
+      isFollowing,
+      stats: {
+        recipes: user.recipesCookedCount || 0,
+        followers: user.followers?.length || 0,
+        following: user.following?.length || 0,
+      },
+      posts: recipes.map(r => ({
+        id: r._id.toString(),
+        uri: r.image,
+        title: r.title,
+      })),
+    });
+
+  } catch (error) {
+    console.error("GET_COMMUNITY_PROFILE_ERROR:", error);
+    res.status(500).json({ message: error.message });
   }
 };

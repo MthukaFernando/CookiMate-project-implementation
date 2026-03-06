@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       default:
         "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
     },
+    bio: {
+      type: String,
+      default: "Welcome to my kitchen! 🍳",
+      maxLength: 150,
+    },
     points: {
       type: Number,
       default: 0,
@@ -34,9 +39,15 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followers: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
 
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
 
     unlockedAchievements: [
       {
