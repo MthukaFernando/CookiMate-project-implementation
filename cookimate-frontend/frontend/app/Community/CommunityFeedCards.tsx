@@ -167,7 +167,7 @@ export default function CommunityFeed() {
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => handleSearch('')}>
-                <Ionicons name="close-circle" size={18} color="#CCC" />
+                <Ionicons name="close-circle" size={18} color="#ead2d2" />
               </TouchableOpacity>
             )}
           </View>
