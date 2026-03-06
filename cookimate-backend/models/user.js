@@ -39,9 +39,15 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 1,
     },
-    followers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    followers: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
 
-    following: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    following: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
 
     unlockedAchievements: [
       {
