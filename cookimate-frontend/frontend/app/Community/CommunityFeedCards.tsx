@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
   resName: { fontWeight: '600' },
 
-  centerContainer: { alignItems: 'center', marginTop: 10 },
+  centerContainer: { alignItems: 'center', marginTop: 30 },
   card: { width: width * 0.92, backgroundColor: 'white', borderRadius: 25, padding: 15, elevation: 3 },
   headerArea: { marginBottom: 12 },
   userRow: { flexDirection: 'row', alignItems: 'center' },
