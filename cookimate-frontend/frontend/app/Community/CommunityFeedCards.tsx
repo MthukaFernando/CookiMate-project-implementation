@@ -56,12 +56,30 @@ export default function CommunityFeed() {
     }
   };
 
+  // --- FIXED LIKE TOGGLE LOGIC ---
   const handleLike = async (postId: string) => {
     if (!currentUser) return;
+    
+    // 1. Optimistic UI update: Toggle the heart immediately
+    setPosts(prev => prev.map(p => {
+      if (p._id === postId) {
+        const hasLiked = p.likes?.includes(currentUser.uid);
+        const newLikes = hasLiked 
+          ? p.likes.filter((id: string) => id !== currentUser.uid) // Remove like
+          : [...(p.likes || []), currentUser.uid]; // Add like
+        return { ...p, likes: newLikes };
+      }
+      return p;
+    }));
+
     try {
-      const res = await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid });
-      setPosts(prev => prev.map(p => p._id === postId ? { ...p, likes: res.data.likes || p.likes } : p));
-    } catch (err) { console.error(err); }
+      // 2. Sync with Backend
+      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid });
+    } catch (err) { 
+      console.error("Like failed", err);
+      // Revert if error (optional)
+      fetchFeed(); 
+    }
   };
 
   const handleCommentSubmit = async (postId: string) => {
@@ -85,7 +103,7 @@ export default function CommunityFeed() {
     return (
       <View style={styles.centerContainer}>
         <View style={styles.card}>
-          {/* 1. Header Area */}
+          {/* Header */}
           <View style={styles.headerArea}>
             <TouchableOpacity style={styles.userRow} onPress={() => router.push(`/Community/${item.user?.firebaseUid}`)}>
                <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
@@ -98,7 +116,7 @@ export default function CommunityFeed() {
             </TouchableOpacity>
           </View>
 
-          {/* 2. Image Area with 75% height Overlay */}
+          {/* Image & Overlay */}
           <View style={styles.imageBox}>
             <Image source={{ uri: item.imageUrl }} style={styles.mainImg} resizeMode="cover" />
             
@@ -106,7 +124,9 @@ export default function CommunityFeed() {
               <View style={styles.commentOverlay}>
                 <View style={styles.overlayHeader}>
                     <Text style={styles.overlayTitle}>Recent Comments</Text>
-                    <Ionicons name="chevron-down" size={20} color="#FF6B6B" />
+                    <TouchableOpacity onPress={() => setActiveCommentPostId(null)}>
+                        <Ionicons name="chevron-down" size={22} color="#FF6B6B" />
+                    </TouchableOpacity>
                 </View>
                 <ScrollView nestedScrollEnabled style={styles.overlayScroll} showsVerticalScrollIndicator={true}>
                   {item.comments?.length > 0 ? (
@@ -124,7 +144,7 @@ export default function CommunityFeed() {
             )}
           </View>
 
-          {/* 3. Caption Row */}
+          {/* Caption */}
           <View style={styles.captionRow}>
              <Text style={styles.captionText}>
                 <Text style={styles.boldUser}>{item.user?.username} </Text>
@@ -132,7 +152,7 @@ export default function CommunityFeed() {
              </Text>
           </View>
 
-          {/* 4. Action Row */}
+          {/* Action Row */}
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => handleLike(item._id)}>
               <Ionicons name={isLiked ? "heart" : "heart-outline"} size={26} color={isLiked ? "#FF3B30" : "#333"} />
@@ -148,7 +168,7 @@ export default function CommunityFeed() {
             </TouchableOpacity>
           </View>
 
-          {/* 5. Clean Bottom Input Box */}
+          {/* Bottom Input Box */}
           {isInteracting && (
             <View style={styles.bottomInputContainer}>
               <TextInput 
@@ -197,20 +217,16 @@ export default function CommunityFeed() {
 
         {isSearching && (
           <View style={styles.dropdown}>
-            {searchResults.length > 0 ? (
-              searchResults.map((u) => (
-                <TouchableOpacity 
-                  key={u._id} 
-                  style={styles.resultItem} 
-                  onPress={() => { setIsSearching(false); setSearchQuery(''); router.push(`/Community/${u.firebaseUid}`); }}
-                >
-                  <Image source={{ uri: u.profilePic }} style={styles.resAvatar} />
-                  <Text style={styles.resName}>@{u.username}</Text>
-                </TouchableOpacity>
-              ))
-            ) : (
-              <Text style={styles.noResult}>No users found</Text>
-            )}
+            {searchResults.map((u) => (
+              <TouchableOpacity 
+                key={u._id} 
+                style={styles.resultItem} 
+                onPress={() => { setIsSearching(false); setSearchQuery(''); router.push(`/Community/${u.firebaseUid}`); }}
+              >
+                <Image source={{ uri: u.profilePic }} style={styles.resAvatar} />
+                <Text style={styles.resName}>@{u.username}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
         )}
       </View>
@@ -236,7 +252,6 @@ const styles = StyleSheet.create({
   resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#eee' },
   resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
   resName: { fontWeight: '600' },
-  noResult: { padding: 10, color: '#999', textAlign: 'center' },
 
   centerContainer: { alignItems: 'center', marginTop: 10 },
   card: { width: width * 0.92, backgroundColor: 'white', borderRadius: 25, padding: 15, elevation: 3 },
@@ -249,14 +264,13 @@ const styles = StyleSheet.create({
   imageBox: { width: '100%', height: 400, borderRadius: 20, overflow: 'hidden', backgroundColor: '#eee' },
   mainImg: { width: '100%', height: '100%' },
   
-  // --- Updated: 75% height Overlay ---
   commentOverlay: { 
     position: 'absolute', 
     bottom: 0, 
     left: 0, 
     right: 0, 
     height: '75%', 
-    backgroundColor: 'rgba(0,0,0,0.75)', 
+    backgroundColor: 'rgba(59, 50, 50, 0.85)', 
     padding: 15,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20
@@ -264,9 +278,9 @@ const styles = StyleSheet.create({
   overlayHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, borderBottomWidth: 0.5, borderBottomColor: '#555', paddingBottom: 5 },
   overlayTitle: { color: 'white', fontWeight: 'bold', fontSize: 14 },
   overlayScroll: { flex: 1 },
-  commentLine: { flexDirection: 'row', marginBottom: 10, flexWrap: 'wrap' },
+  commentLine: { flexDirection: 'row', marginBottom: 12, flexWrap: 'wrap' },
   cUser: { color: '#FF6B6B', fontWeight: 'bold', fontSize: 13 },
-  cText: { color: 'white', fontSize: 13, lineHeight: 18 },
+  cText: { color: '#ede5d7', fontSize: 16, lineHeight: 20 },
   noCommentsText: { color: '#AAA', fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginTop: 40 },
 
   captionRow: { marginTop: 15 },
