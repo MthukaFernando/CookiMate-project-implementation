@@ -19,13 +19,12 @@ export default function CommunityFeed() {
   const router = useRouter();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
-  
-  // Search States
+  const [loading, setLoading] = useState(true);
+
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
 
-  // Comment UI States
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -36,8 +35,12 @@ export default function CommunityFeed() {
     try {
       const response = await axios.get(`${BASE_URL}/social/feed`);
       setPosts(response.data);
-    } catch (error) { console.error(error); } 
-    finally { setRefreshing(false); }
+    } catch (error) { 
+      console.error(error); 
+    } finally { 
+      setRefreshing(false); 
+      setLoading(false);
+    }
   };
 
   useEffect(() => { fetchFeed(); }, []);
@@ -56,28 +59,22 @@ export default function CommunityFeed() {
     }
   };
 
-  // --- FIXED LIKE TOGGLE LOGIC ---
   const handleLike = async (postId: string) => {
     if (!currentUser) return;
-    
-    // 1. Optimistic UI update: Toggle the heart immediately
     setPosts(prev => prev.map(p => {
       if (p._id === postId) {
         const hasLiked = p.likes?.includes(currentUser.uid);
         const newLikes = hasLiked 
-          ? p.likes.filter((id: string) => id !== currentUser.uid) // Remove like
-          : [...(p.likes || []), currentUser.uid]; // Add like
+          ? p.likes.filter((id: string) => id !== currentUser.uid) 
+          : [...(p.likes || []), currentUser.uid];
         return { ...p, likes: newLikes };
       }
       return p;
     }));
-
     try {
-      // 2. Sync with Backend
       await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid });
     } catch (err) { 
       console.error("Like failed", err);
-      // Revert if error (optional)
       fetchFeed(); 
     }
   };
@@ -96,6 +93,15 @@ export default function CommunityFeed() {
     finally { setIsSubmitting(false); }
   };
 
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#FF6B6B" />
+        <Text style={styles.loadingText}>Loading feed...</Text>
+      </View>
+    );
+  }
+
   const renderPost = ({ item }: { item: any }) => {
     const isLiked = item.likes?.includes(currentUser?.uid);
     const isInteracting = activeCommentPostId === item._id;
@@ -103,7 +109,6 @@ export default function CommunityFeed() {
     return (
       <View style={styles.centerContainer}>
         <View style={styles.card}>
-          {/* Header */}
           <View style={styles.headerArea}>
             <TouchableOpacity style={styles.userRow} onPress={() => router.push(`/Community/${item.user?.firebaseUid}`)}>
                <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
@@ -116,10 +121,8 @@ export default function CommunityFeed() {
             </TouchableOpacity>
           </View>
 
-          {/* Image & Overlay */}
           <View style={styles.imageBox}>
             <Image source={{ uri: item.imageUrl }} style={styles.mainImg} resizeMode="cover" />
-            
             {isInteracting && (
               <View style={styles.commentOverlay}>
                 <View style={styles.overlayHeader}>
@@ -144,7 +147,6 @@ export default function CommunityFeed() {
             )}
           </View>
 
-          {/* Caption */}
           <View style={styles.captionRow}>
              <Text style={styles.captionText}>
                 <Text style={styles.boldUser}>{item.user?.username} </Text>
@@ -152,7 +154,6 @@ export default function CommunityFeed() {
              </Text>
           </View>
 
-          {/* Action Row */}
           <View style={styles.actionRow}>
             <TouchableOpacity style={styles.iconBtn} onPress={() => handleLike(item._id)}>
               <Ionicons name={isLiked ? "heart" : "heart-outline"} size={26} color={isLiked ? "#FF3B30" : "#333"} />
@@ -168,7 +169,6 @@ export default function CommunityFeed() {
             </TouchableOpacity>
           </View>
 
-          {/* Bottom Input Box */}
           {isInteracting && (
             <View style={styles.bottomInputContainer}>
               <TextInput 
@@ -201,6 +201,11 @@ export default function CommunityFeed() {
     >
       <View style={styles.searchHeaderContainer}>
         <View style={styles.headerRow}>
+          {/* Back Button */}
+          <TouchableOpacity onPress={() => router.push('/')} style={styles.backBtn}>
+            <Ionicons name="chevron-back" size={28} color="#333" />
+          </TouchableOpacity>
+
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color="#999" style={{ marginRight: 8 }} />
             <TextInput 
@@ -210,6 +215,7 @@ export default function CommunityFeed() {
               onChangeText={handleSearch} 
             />
           </View>
+          
           <TouchableOpacity onPress={() => router.push('/Community/create')}>
             <Ionicons name="add-circle" size={42} color="#FF6B6B" />
           </TouchableOpacity>
@@ -244,9 +250,26 @@ export default function CommunityFeed() {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#f2ece2' },
+  loadingText: { marginTop: 10, color: '#666', fontWeight: '600' },
+
   searchHeaderContainer: { zIndex: 100, backgroundColor: '#f2ece2', padding: 10, paddingBottom: 15 },
-  headerRow: { flexDirection: 'row', alignItems: 'center' },
-  searchBar: { flex: 1, backgroundColor: 'white', borderRadius: 15, paddingHorizontal: 12, marginRight: 10, height: 45, flexDirection: 'row', alignItems: 'center', elevation: 2 },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  
+  // Back button style
+  backBtn: { marginRight: 10, padding: 5 },
+
+  searchBar: { 
+    flex: 1, 
+    backgroundColor: 'white', 
+    borderRadius: 15, 
+    paddingHorizontal: 12, 
+    marginRight: 10, 
+    height: 45, 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    elevation: 2 
+  },
   input: { flex: 1 },
   dropdown: { position: 'absolute', top: 65, left: 10, right: 10, backgroundColor: 'white', borderRadius: 15, elevation: 5, padding: 10, zIndex: 1000 },
   resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: '#eee' },
