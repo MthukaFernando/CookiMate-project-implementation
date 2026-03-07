@@ -12,6 +12,7 @@ import {
   ListRenderItemInfo,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -69,7 +70,7 @@ export default function CommunityUserProfile() {
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
-  const [showModalComments, setShowModalComments] = useState(false); // Toggle for overlay
+  const [showModalComments, setShowModalComments] = useState(false);
 
   const currentUser = auth.currentUser;
 
@@ -119,6 +120,37 @@ export default function CommunityUserProfile() {
     }
   };
 
+  const handleDeletePost = (postId: string) => {
+    Alert.alert(
+      "Delete Post",
+      "Are you sure you want to remove this post forever?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              // Assuming your social route handles deletion via DELETE /social/:postId
+              await axios.delete(`${BASE_URL}/social/${postId}`, {
+                data: { userId: currentUser?.uid }
+              });
+
+              // Update local state to remove the post instantly
+              setProfile((prev) =>
+                prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) } : prev
+              );
+              closeModal();
+            } catch (error) {
+              console.error("Error deleting post:", error);
+              Alert.alert("Error", "Could not delete post. Please try again.");
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const closeModal = () => {
     setSelectedPost(null);
     setShowModalComments(false);
@@ -134,12 +166,7 @@ export default function CommunityUserProfile() {
 
   if (!profile) {
     return (
-      <View
-        style={[
-          styles.container,
-          { justifyContent: "center", alignItems: "center" },
-        ]}
-      >
+      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <Text>User not found</Text>
       </View>
     );
@@ -153,9 +180,7 @@ export default function CommunityUserProfile() {
       <View style={styles.profileCard}>
         <Image
           source={{
-            uri:
-              profile.profilePic ||
-              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+            uri: profile.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
           }}
           style={styles.avatar}
         />
@@ -219,79 +244,58 @@ export default function CommunityUserProfile() {
                 style={styles.modalAvatar}
               />
               <Text style={{ fontWeight: "bold" }}>{profile.username}</Text>
-              <TouchableOpacity
-                style={{ marginLeft: "auto" }}
-                onPress={closeModal}
-              >
-                <Ionicons name="close" size={24} />
-              </TouchableOpacity>
+              
+              <View style={{ flexDirection: 'row', marginLeft: 'auto', alignItems: 'center', gap: 15 }}>
+                {/* Trash Icon: Only visible if the profile belongs to the current user */}
+                {currentUser?.uid === CommunityUserid && (
+                  <TouchableOpacity onPress={() => selectedPost && handleDeletePost(selectedPost.id)}>
+                    <Ionicons name="trash-outline" size={22} color="#FF6B6B" />
+                  </TouchableOpacity>
+                )}
+                
+                <TouchableOpacity onPress={closeModal}>
+                  <Ionicons name="close" size={24} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedPost && (
               <View>
-                {/* Image Container with Absolute Overlay */}
                 <View style={styles.imageWrapper}>
-                  <Image
-                    source={{ uri: selectedPost.uri }}
-                    style={styles.modalImg}
-                  />
+                  <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
 
                   {showModalComments && (
                     <View style={styles.commentOverlay}>
                       <View style={styles.overlayHeader}>
                         <Text style={styles.overlayTitle}>Recent Comments</Text>
-                        <TouchableOpacity
-                          onPress={() => setShowModalComments(false)}
-                        >
-                          <Ionicons
-                            name="chevron-down"
-                            size={22}
-                            color="#FF6B6B"
-                          />
+                        <TouchableOpacity onPress={() => setShowModalComments(false)}>
+                          <Ionicons name="chevron-down" size={22} color="#FF6B6B" />
                         </TouchableOpacity>
                       </View>
-                      <ScrollView
-                        nestedScrollEnabled
-                        style={styles.overlayScroll}
-                      >
+                      <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
                         {selectedPost.comments.length > 0 ? (
                           selectedPost.comments.map((c, index) => (
                             <View key={index} style={styles.commentLine}>
-                              <Text style={styles.cUser}>
-                                {c.user?.username}{" "}
-                              </Text>
+                              <Text style={styles.cUser}>{c.user?.username} </Text>
                               <Text style={styles.cText}>{c.text}</Text>
                             </View>
                           ))
                         ) : (
-                          <Text style={styles.noCommentsText}>
-                            Be the first to comment!
-                          </Text>
+                          <Text style={styles.noCommentsText}>Be the first to comment!</Text>
                         )}
                       </ScrollView>
                     </View>
                   )}
                 </View>
 
-                {/* Actions Row */}
                 <View style={styles.modalActionRow}>
                   <TouchableOpacity style={styles.actionBtn}>
                     <Ionicons
-                      name={
-                        selectedPost.likes.includes(currentUser?.uid || "")
-                          ? "heart"
-                          : "heart-outline"
-                      }
+                      name={selectedPost.likes.includes(currentUser?.uid || "") ? "heart" : "heart-outline"}
                       size={24}
-                      color={
-                        selectedPost.likes.includes(currentUser?.uid || "")
-                          ? "#FF6B6B"
-                          : "#444"
-                      }
+                      color={selectedPost.likes.includes(currentUser?.uid || "") ? "#FF6B6B" : "#444"}
                     />
-                    <Text style={styles.actionText}>
-                      {selectedPost.likes.length}
-                    </Text>
+                    <Text style={styles.actionText}>{selectedPost.likes.length}</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -299,25 +303,18 @@ export default function CommunityUserProfile() {
                     onPress={() => setShowModalComments(!showModalComments)}
                   >
                     <Ionicons
-                      name={
-                        showModalComments ? "chatbubble" : "chatbubble-outline"
-                      }
+                      name={showModalComments ? "chatbubble" : "chatbubble-outline"}
                       size={22}
                       color="#444"
                     />
-                    <Text style={styles.actionText}>
-                      {selectedPost.comments.length}
-                    </Text>
+                    <Text style={styles.actionText}>{selectedPost.comments.length}</Text>
                   </TouchableOpacity>
                 </View>
 
-                {/* Caption */}
                 {selectedPost.caption && (
                   <View style={styles.captionArea}>
                     <Text style={styles.modalCaption}>
-                      <Text style={{ fontWeight: "bold" }}>
-                        {profile.username}{" "}
-                      </Text>
+                      <Text style={{ fontWeight: "bold" }}>{profile.username} </Text>
                       {selectedPost.caption}
                     </Text>
                   </View>
@@ -385,8 +382,6 @@ const styles = StyleSheet.create({
   },
   followingBtn: { backgroundColor: "#A0A0A0" },
   followBtnText: { color: "#fff", fontWeight: "bold" },
-
-  // Modal Styles
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",
@@ -401,8 +396,6 @@ const styles = StyleSheet.create({
   },
   modalHeader: { flexDirection: "row", alignItems: "center", padding: 15 },
   modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
-
-  // Overlay Core
   imageWrapper: { width: "100%", height: 350, position: "relative" },
   modalImg: { width: "100%", height: "100%" },
   commentOverlay: {
@@ -437,7 +430,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
   },
-
   modalActionRow: {
     flexDirection: "row",
     padding: 15,
