@@ -68,7 +68,7 @@ export const likePost = async (req, res) => {
   }
 };
 
-// 4. Add Comment: Author gets 5 points (FIXED)
+// 4. Add Comment: Author gets 5 points 
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -99,6 +99,27 @@ export const addComment = async (req, res) => {
     );
 
     res.status(200).json(updatedPost);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+// 5. Delete Post: Only author can delete
+export const deletePost = async (req, res) => {
+  try {
+    const { postId } = req.params;
+    const { userId } = req.body; // Pass the current user's UID for security
+
+    const post = await Post.findById(postId);
+    if (!post) return res.status(404).json("Post not found");
+
+    // Security Check: Ensure the person deleting is the owner
+    if (post.user !== userId) {
+      return res.status(403).json("You can only delete your own posts!");
+    }
+
+    await Post.findByIdAndDelete(postId);
+    res.status(200).json("Post deleted successfully");
   } catch (err) {
     res.status(500).json(err);
   }
