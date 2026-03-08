@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
 import recipeRoutes from './routes/recipeRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
 
 console.log("Current Directory:", process.cwd());
 console.log("Mongo URI is:", process.env.MONGO_URI);
@@ -28,6 +29,7 @@ app.get('/', (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use("/api/social", socialRoutes);
 
 // --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;

@@ -7,13 +7,13 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
-  ImageBackground,
   Animated,
   TouchableOpacity,
   ScrollView,
   PanResponder,
   Pressable,
 } from "react-native";
+import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 
@@ -72,23 +72,35 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
-  // --- NEW: Animate Border Radius ---
-  // When at TOP (Expanded): Radius is 0 (Square)
-  // When at BOTTOM (Collapsed): Radius is 35 (Rounded)
+  // --- INTERPOLATIONS ---
+
+  // 1. Glassy to Solid Background
+  const panelBgColor = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, COLLAPSED_Y],
+    outputRange: ["rgba(248, 244, 239, 1)", "rgba(255, 255, 255, 0.4)"],
+    extrapolate: "clamp",
+  });
+
+  // 2. Animate Border Radius
   const panelBorderRadius = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
     outputRange: [0, 35],
     extrapolate: "clamp",
   });
 
-  // Fade out content as we collapse
+  // 3. Subtle Glass Border (fade out when expanded)
+  const panelBorderWidth = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, EXPANDED_Y + 50],
+    outputRange: [0, 1],
+    extrapolate: "clamp",
+  });
+
   const contentOpacity = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, EXPANDED_Y + 150],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
 
-  // Fade in peek button as we collapse
   const peekOpacity = slideAnim.interpolate({
     inputRange: [COLLAPSED_Y - 100, COLLAPSED_Y],
     outputRange: [0, 1],
@@ -99,7 +111,7 @@ export default function GenerateRecipesPage() {
     setIsExpanded(open);
     Animated.spring(slideAnim, {
       toValue: open ? EXPANDED_Y : COLLAPSED_Y,
-      useNativeDriver: false, // Must be false to animate layout properties like borderRadius
+      useNativeDriver: false,
       tension: 40,
       friction: 8,
     }).start();
@@ -141,10 +153,20 @@ export default function GenerateRecipesPage() {
 
   return (
     <View style={[styles.container, globalStyle?.container]}>
-      <ImageBackground
-        source={require("../../assets/images/generate.jpg")}
+      <Video
+        source={require("../../assets/videos/generate.mp4")}
         style={StyleSheet.absoluteFill}
-        resizeMode="cover"
+        resizeMode={ResizeMode.COVER}
+        shouldPlay
+        isLooping
+        isMuted
+      />
+
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { backgroundColor: "rgba(0,0,0,0.15)" },
+        ]}
       />
 
       {isExpanded && (
@@ -157,9 +179,11 @@ export default function GenerateRecipesPage() {
           {
             height: height - TOP_MARGIN,
             transform: [{ translateY: slideAnim }],
-            // Apply the animated border radius here
             borderTopLeftRadius: panelBorderRadius,
             borderTopRightRadius: panelBorderRadius,
+            backgroundColor: panelBgColor, // Animated Background
+            borderWidth: panelBorderWidth, // Subtle glass edge
+            borderColor: "rgba(255, 255, 255, 0.3)",
           },
         ]}
       >
@@ -362,15 +386,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: "#F8F4EF",
     zIndex: 9999,
+    // Note: BackgroundColor and BorderRadius are handled by Animated.View styles
   },
   peekButtonWrapper: {
     position: "absolute",
     top: 0,
     height: PEEK_HEIGHT,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
@@ -394,11 +416,7 @@ const styles = StyleSheet.create({
   },
   flexRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   peekTitle: { fontSize: 17, fontWeight: "bold", color: "#4A3B2C" },
-  headerArea: {
-    paddingTop: 15,
-    paddingBottom: 15,
-    alignItems: "center",
-  },
+  headerArea: { paddingTop: 15, paddingBottom: 15, alignItems: "center" },
   dragHandle: {
     width: 45,
     height: 5,

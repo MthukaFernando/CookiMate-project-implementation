@@ -25,9 +25,9 @@ const CAROUSEL_WIDTH = width * 0.9;
 
 //The meal category card content
 const mealCategories = [
-  { label: "Breakfast     🍳🥞", color: "#f8e5ba" },
+  { label: "Breakfast     🍳🥞", color: "#f2f4be" },
   { label: "Lunch     🥗🌮", color: "#c3d7ae" },
-  { label: "Dinner     🥡🍕", color: "#ceb6b0" },
+  { label: "Dinner     🥡🍕", color: "#e3c8c2" },
   { label: "Appetizer     🫒🥟", color: "#c3d8ce" },
   { label: "Dessert     🍰🥮", color: "#e5d1bb" },
   { label: "Drink     🥤☕️", color: "#d7f2fa" },
@@ -419,7 +419,7 @@ export const calendarStyles: any = {
   textSectionTitleColor: "black",
   todayBackgroundColor: "transparent",
   todayTextColor: "#c6a484",
-  arrowColor: "#8a6666",
+  arrowColor: "#ce6e32",
 };
 
 export const styles = StyleSheet.create({
@@ -442,7 +442,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   todayCircle: {
-    backgroundColor: "#c6a484",
+    backgroundColor: "#b1d859",
     borderRadius: 16,
   },
   dayText: {
@@ -450,8 +450,8 @@ export const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   plannedIndicator: {
-    position: "absolute", // FLOAT THE BADGE
-    bottom: 2, // PLACE AT THE BOTTOM
+    position: "absolute", 
+    bottom: 2, 
     backgroundColor: "#FF4D4D",
     borderRadius: 4,
     paddingHorizontal: 4,
@@ -508,7 +508,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 5,
     left: 5,
-    backgroundColor: "#522F2F",
+    backgroundColor: "#9dc254",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -533,8 +533,8 @@ export const styles = StyleSheet.create({
   },
   categoryScrollView: { flex: 1 },
   categoryButton: {
-    minHeight: 90,
-    marginTop: 30,
+    minHeight: 70,
+    marginTop: 23,
     paddingHorizontal: 20,
     borderRadius: 10,
     justifyContent: "center",
@@ -594,7 +594,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     bottom: 15,
     alignSelf: "center",
-    backgroundColor: "#522F2F",
+    backgroundColor: "#573737",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,

@@ -26,6 +26,11 @@ const userSchema = new mongoose.Schema(
       default:
         "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
     },
+    bio: {
+      type: String,
+      default: "Welcome to my kitchen! 🍳",
+      maxLength: 150,
+    },
     points: {
       type: Number,
       default: 0,
@@ -35,9 +40,15 @@ const userSchema = new mongoose.Schema(
       default: 1,
     },
     followers: {
-      type: Number,
-      default: 0,
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
     },
+
+    following: {
+      type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+      default: [],
+    },
+
     unlockedAchievements: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -56,10 +67,15 @@ const userSchema = new mongoose.Schema(
     },
   },
   {
-    timestamps: true, 
-     versionKey: false
+    timestamps: true,
+    versionKey: false,
   },
 );
+
+userSchema.index({ username: 'text' });
+
+userSchema.index({ followers: 1 }); // fast connection lookups
+userSchema.index({ following: 1 }); // fast connection lookups
 
 const User = mongoose.model("User", userSchema);
 export default User;

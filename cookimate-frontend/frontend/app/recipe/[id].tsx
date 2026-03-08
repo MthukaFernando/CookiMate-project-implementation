@@ -17,6 +17,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ConfettiCannon from 'react-native-confetti-cannon';
+import { getAuth } from "firebase/auth";
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -46,6 +47,28 @@ export default function RecipeDetails() {
   const closeCookingMode = () => {
     setCookingMode(false);
     setCurrentStepIndex(0);
+  };
+
+  // New function to handle recipe completion
+  const handleCompleteRecipe = async () => {
+    try {
+      // 1. Get current user's Firebase UID
+      const auth = getAuth();
+      const currentUserUid = auth.currentUser?.uid;
+
+      if (currentUserUid) {
+        // 2. Hit the new increment endpoint
+        await axios.put(`${API_URL}/api/users/complete-recipe/${currentUserUid}`);
+        console.log("Recipe completed! Cook count incremented.");
+      }
+
+      setCookingMode(false);
+      setCurrentStepIndex(0);
+      // Can navigate back to profile to see the +1 change
+    } catch (err) {
+      console.error("Failed to update cook count", err);
+      setCookingMode(false);
+    }
   };
 
   useEffect(() => {
@@ -281,7 +304,10 @@ export default function RecipeDetails() {
                   You just cooked <Text style={{fontWeight: 'bold'}}>{recipe?.name}</Text>!
                 </Text>
                 
-                <TouchableOpacity style={styles.doneButton} onPress={closeCookingMode}>
+                <TouchableOpacity 
+                  style={styles.doneButton} 
+                  onPress={handleCompleteRecipe}
+                >
                   <Text style={styles.doneButtonText}>Complete Recipe</Text>
                 </TouchableOpacity>
               </View>
