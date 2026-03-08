@@ -1,6 +1,7 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
-import Recipe from "../models/Recipe.js"; 
+import Recipe from "../models/Recipe.js";
+import Post from "../models/Post.js"; 
 
 // create a user
 export const createUser = async (req, res) => {
@@ -64,7 +65,7 @@ export const updateUser = async (req, res) => {
         profilePic,
       },
       {
-        returnDocument: "after", // ✅ updated way
+        returnDocument: "after", 
         runValidators: true,
       }
     );
@@ -199,31 +200,29 @@ export const incrementCookCount = async (req, res) => {
 // Viewing another user's profile
 export const getCommunityProfile = async (req, res) => {
   try {
-    const { uid } = req.params; // profile owner's firebaseUid
-    const { viewerId } = req.query; // logged-in user's firebaseUid
+    const { uid } = req.params; 
+    const { viewerId } = req.query;
 
-    // Find profile owner
     const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Determine follow status
     let isFollowing = false;
-
     if (viewerId) {
       const viewer = await User.findOne({ firebaseUid: viewerId });
-
       if (viewer) {
         isFollowing = (user.followers || []).some(fId => fId.equals(viewer._id));
       }
     }
 
-    // Fetch user's recipes
-    const recipes = await Recipe.find({ createdBy: user._id })
-      .select("title image createdAt")
-      .sort({ createdAt: -1 });
+    // Fetch from Post model and populate comment authors
+    const userPosts = await Post.find({ user: uid }) 
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "comments.user",
+        model: "User",
+        foreignField: "firebaseUid",
+        select: "username profilePic"
+      });
 
     res.status(200).json({
       _id: user._id,
@@ -237,15 +236,15 @@ export const getCommunityProfile = async (req, res) => {
         followers: user.followers?.length || 0,
         following: user.following?.length || 0,
       },
-      posts: recipes.map(r => ({
-        id: r._id.toString(),
-        uri: r.image,
-        title: r.title,
+      posts: userPosts.map(p => ({
+        id: p._id.toString(),
+        uri: p.imageUrl,
+        caption: p.caption,
+        likes: p.likes || [], 
+        comments: p.comments || [], 
       })),
     });
-
   } catch (error) {
-    console.error("GET_COMMUNITY_PROFILE_ERROR:", error);
     res.status(500).json({ message: error.message });
   }
 };
