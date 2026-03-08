@@ -7,12 +7,14 @@ import {
   Image, 
   TouchableOpacity, 
   ActivityIndicator,
-  Dimensions
+  Dimensions,
+  Modal
 } from "react-native";
 import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
+
 
 const { width } = Dimensions.get("window");
 
@@ -24,6 +26,9 @@ const LevelsPage = () => {
   const router = useRouter();
   const [levels, setLevels] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedLevel, setSelectedLevel] = useState<any>(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  
 
   useEffect(() => {
     const fetchLevels = async () => {
@@ -42,7 +47,7 @@ const LevelsPage = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#fff" />
+        <ActivityIndicator size="large" color="#f17501" />
       </View>
     );
   }
@@ -62,14 +67,55 @@ const LevelsPage = () => {
         showsVerticalScrollIndicator={false}
       >
         {levels.map((lvl: any) => (
-          <LevelCard key={lvl.levelNumber} level={lvl} />
+          <LevelCard 
+            key={lvl.levelNumber} 
+            level={lvl} 
+            onOpenReqs={() => {
+              setSelectedLevel(lvl);
+              setModalVisible(true);
+            }}
+          />
         ))}
       </ScrollView>
+
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={modalVisible}
+        onRequestClose={() => setModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <TouchableOpacity 
+              style={styles.closeModalBtn} 
+              onPress={() => setModalVisible(false)}
+            >
+              <Feather name="x" size={24} color="#333" />
+            </TouchableOpacity>
+
+            <Text style={styles.modalTitle}>{selectedLevel?.levelName} Tasks</Text>
+            
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {selectedLevel && Object.entries(selectedLevel.requirements).map(([key, value]) => {
+                if (value === 0) return null;
+                return (
+                  <View key={key} style={styles.requirementRow}>
+                    <Feather name="check-circle" size={18} color="#ff4757" />
+                    <Text style={styles.requirementText} numberOfLines={1}>
+                      {key.replace(/([A-Z])/g, ' $1').toLowerCase()}: {value as number}
+                    </Text>
+                  </View>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
 
-const LevelCard = ({ level }: any) => {
+const LevelCard = ({ level, onOpenReqs }: any) => {
   return (
     <View style={styles.cardContainer}>
       <View style={styles.cardLeft}>
@@ -78,8 +124,12 @@ const LevelCard = ({ level }: any) => {
           {level.badge?.description || `Unlock this rank at ${level.minPoints} XP`}
         </Text>
         
-        <TouchableOpacity style={styles.actionBtn} activeOpacity={0.8}>
-          <Text style={styles.actionBtnText}>Requirements</Text>
+        <TouchableOpacity 
+          style={styles.actionBtn} 
+          activeOpacity={0.8}
+          onPress={onOpenReqs}
+        >
+          <Text style={styles.actionBtnText} numberOfLines={1}>Requirements</Text>
         </TouchableOpacity>
       </View>
 
@@ -103,7 +153,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: "center", 
     alignItems: "center", 
-    backgroundColor: "#4834d4" 
+    backgroundColor: "#f2ece2" 
   },
   header: {
     flexDirection: 'row',
@@ -121,7 +171,7 @@ const styles = StyleSheet.create({
   headerTitle: { 
     fontSize: 22, 
     fontWeight: 'bold', 
-    color: '#5F4436',
+    color: '#456406',
     letterSpacing: 0.5
   },
   scrollList: { 
@@ -156,25 +206,25 @@ const styles = StyleSheet.create({
   },
   cardDescription: {
     fontSize: 14,
-    color: '#446305',
+    color: '#636e72',
     marginBottom: 15,
     lineHeight: 18,
     width: '90%',
   },
   actionBtn: {
     backgroundColor: '#eb9f49', 
-    paddingVertical: 8,      
-    paddingHorizontal: 12,  
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 25,
     alignSelf: 'flex-start',
     elevation: 3,
-    flexWrap: 'nowrap',      
+    flexWrap: 'nowrap',
   },
   actionBtnText: {
     color: '#fff',
     fontWeight: 'bold',
-    fontSize: 12,            
-    letterSpacing: 0.5,    
+    fontSize: 12,
+    letterSpacing: 0.5,
   },
   cardRight: {
     flex: 1,
@@ -189,6 +239,45 @@ const styles = StyleSheet.create({
     bottom: -15, 
     right: -10,  
     zIndex: 1,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20
+  },
+  modalContent: {
+    width: '100%',
+    backgroundColor: '#fff',
+    borderRadius: 30,
+    padding: 25,
+    maxHeight: '70%',
+    elevation: 20
+  },
+  closeModalBtn: {
+    alignSelf: 'flex-end',
+    padding: 5
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#2d3436',
+    marginBottom: 20,
+    textAlign: 'center'
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+    gap: 12
+  },
+  requirementText: {
+    fontSize: 16,
+    color: '#444',
+    textTransform: 'capitalize'
   },
 });
 
