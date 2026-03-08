@@ -119,7 +119,7 @@ const ProfilePage = () => {
               label="Levels" 
               value={user?.level || 1} 
               bColor="#612D25" 
-              onPress={() => console.log("Route to Ranks")}
+              onPress={() => router.push("/profile/levelsPage")}
            />
            <StatItem 
               icon="users" 
