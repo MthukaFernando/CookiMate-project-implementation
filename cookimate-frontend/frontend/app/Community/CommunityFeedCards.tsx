@@ -216,7 +216,7 @@ export default function CommunityFeed() {
             />
           </View>
           
-          <TouchableOpacity onPress={() => router.push('/Community/create')}>
+          <TouchableOpacity onPress={() => router.push('/CommunityPost')}>
             <Ionicons name="add-circle" size={42} color="#FF6B6B" />
           </TouchableOpacity>
         </View>
