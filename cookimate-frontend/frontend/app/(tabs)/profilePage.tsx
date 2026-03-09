@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
    width: '48%',
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: '#eee8dd', // Your requested color
+  backgroundColor: '#eee8dd', 
   padding: 12,
   borderRadius: 18,
   borderWidth: 1.5,
