@@ -4,21 +4,21 @@ import User from "../models/user.js";
 // 1. Create Post: Author gets 10 points
 export const createPost = async (req, res) => {
   try {
-    // Check if the file successfully reached Cloudinary
+    // 1. Safety check
     if (!req.file) {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    // Combine text fields with the URL from Cloudinary
+    // 2. Create the post using Cloudinary's response
     const newPost = new Post({
-      user: req.body.user,
+      user: req.body.user,      // Firebase UID
       caption: req.body.caption,
-      imageUrl: req.file.path // This is the URL Cloudinary sent back!
+      imageUrl: req.file.path   // The URL returned from Cloudinary
     });
 
     const savedPost = await newPost.save();
     
-    // Reward the author with 10 points
+    // 3. Reward the author (10 points)
     await User.findOneAndUpdate(
       { firebaseUid: req.body.user },
       { $inc: { points: 10 } }
@@ -26,7 +26,7 @@ export const createPost = async (req, res) => {
     
     res.status(201).json(savedPost);
   } catch (err) {
-    res.status(500).json({ message: "Post creation failed", error: err.message });
+    res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
 
