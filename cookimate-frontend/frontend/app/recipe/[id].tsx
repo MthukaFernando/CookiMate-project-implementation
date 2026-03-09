@@ -135,6 +135,8 @@ export default function RecipeDetails() {
       console.error("Failed to update cook count", err);
       setCookingMode(false);
     }
+  };
+
   const handleTriggerTimer = (seconds: number) => {
     setActiveTimerSeconds(seconds);
     setShowTimerModal(true);
