@@ -4,17 +4,29 @@ import User from "../models/user.js";
 // 1. Create Post: Author gets 10 points
 export const createPost = async (req, res) => {
   try {
-    const newPost = new Post(req.body);
+    // 1. Safety check
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
+    }
+
+    // 2. Create the post using Cloudinary's response
+    const newPost = new Post({
+      user: req.body.user,      // Firebase UID
+      caption: req.body.caption,
+      imageUrl: req.file.path   // The URL returned from Cloudinary
+    });
+
     const savedPost = await newPost.save();
     
-    // Reward the author (firebaseUid is in req.body.user)
+    // 3. Reward the author (10 points)
     await User.findOneAndUpdate(
       { firebaseUid: req.body.user },
       { $inc: { points: 10 } }
     );
+    
     res.status(201).json(savedPost);
   } catch (err) {
-    res.status(500).json({ message: "Post creation failed", error: err });
+    res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
 
@@ -34,6 +46,12 @@ export const getFeed = async (req, res) => {
         model: "User",
         foreignField: "firebaseUid",
         select: "username profilePic firebaseUid"
+      })
+      .populate({
+        path: "comments.user",      // ADDED THIS: Populates comment usernames on refresh
+        model: "User",
+        foreignField: "firebaseUid",
+        select: "username profilePic"
       });
 
     res.status(200).json(posts);
@@ -41,7 +59,6 @@ export const getFeed = async (req, res) => {
     res.status(500).json(err);
   }
 };
-
 // 3. Like Post: Author gets 5 points
 export const likePost = async (req, res) => {
   try {
@@ -124,3 +141,4 @@ export const deletePost = async (req, res) => {
     res.status(500).json(err);
   }
 };
+
