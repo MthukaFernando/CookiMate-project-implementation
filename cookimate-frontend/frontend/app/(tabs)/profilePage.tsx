@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     textAlign: 'center' 
   },
 
-  // Top Mascot-style Container
+  
   topSubContainer: {
     backgroundColor: '#E0C2A0',
     borderRadius: 25,
