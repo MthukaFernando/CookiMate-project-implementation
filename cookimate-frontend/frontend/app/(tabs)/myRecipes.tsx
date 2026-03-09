@@ -189,7 +189,7 @@ const MyRecipesPage = () => {
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
         setFavorites((prev) => [...prev, recipeId]);
       } catch (error) {
-        Alert.alert("Error", "Could not add to favorites.");
+        Alert.alert("Error", "Could not add to favorites :<");
       }
     }
   };
