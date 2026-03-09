@@ -197,10 +197,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E8C28E',
-    overflow: 'hidden', // ✅ Important: Clips the image to the border radius
+    overflow: 'hidden', 
   },
   badgeImage: {
-    width: '75%', // Leaves a little "breathing room" inside the circle
+    width: '75%', 
     height: '75%',
   },
   badgeTitle: { 
