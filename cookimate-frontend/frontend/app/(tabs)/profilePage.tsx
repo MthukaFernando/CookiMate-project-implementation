@@ -112,7 +112,7 @@ const ProfilePage = () => {
               label="Favs" 
               value={user?.favorites?.length || 0} 
               bColor="#B86D2A" 
-              onPress={() => console.log("Route to Favorites")}
+              onPress={() => router.push("/profile/favoritesPage")}
            />
            <StatItem 
               icon="award" 
@@ -197,10 +197,10 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#E8C28E',
-    overflow: 'hidden', // ✅ Important: Clips the image to the border radius
+    overflow: 'hidden', 
   },
   badgeImage: {
-    width: '75%', // Leaves a little "breathing room" inside the circle
+    width: '75%', 
     height: '75%',
   },
   badgeTitle: { 
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     textAlign: 'center' 
   },
 
-  // Top Mascot-style Container
+  
   topSubContainer: {
     backgroundColor: '#E0C2A0',
     borderRadius: 25,
@@ -283,7 +283,7 @@ const styles = StyleSheet.create({
    width: '48%',
   flexDirection: 'row',
   alignItems: 'center',
-  backgroundColor: '#eee8dd', // Your requested color
+  backgroundColor: '#eee8dd', 
   padding: 12,
   borderRadius: 18,
   borderWidth: 1.5,
