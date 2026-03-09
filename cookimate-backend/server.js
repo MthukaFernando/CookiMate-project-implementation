@@ -4,9 +4,10 @@ import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
 import recipeRoutes from './routes/recipeRoutes.js';
 import gamificationRoutes from "./routes/gamificationRoutes.js"; // ONLY THIS LINE ADDED
+import aiRoutes from './routes/aiRoutes.js';
 
 console.log("Current Directory:", process.cwd());
-console.log("Mongo URI is:", process.env.MONGO_URI);
+
 
 import userRoutes from "./routes/userRoutes.js";
 // Initialize Express
@@ -19,6 +20,7 @@ connectDB();
 // --- 2. MIDDLEWARE ---
 app.use(cors()); // Allows your React/Mobile app to talk to this server
 app.use(express.json()); // Allows the server to accept JSON data (like profile pics)
+app.use('/api/ai', aiRoutes);
 
 // --- 3. ROUTES ---
 app.get('/', (req, res) => {

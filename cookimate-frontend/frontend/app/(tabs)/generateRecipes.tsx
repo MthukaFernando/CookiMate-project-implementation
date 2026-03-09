@@ -69,6 +69,8 @@ export default function GenerateRecipesPage() {
   const [mealType, setMealType] = useState<string | null>(null);
   const [prepTime, setPrepTime] = useState<string | null>(null);
   const [servings, setServings] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedRecipe, setGeneratedRecipe] = useState<string | null>(null);
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
@@ -124,6 +126,7 @@ export default function GenerateRecipesPage() {
     setPrepTime(null);
     setServings(null);
     setIngredientInput("");
+    setGeneratedRecipe(null);
   };
 
   const panResponder = useRef(
@@ -149,6 +152,41 @@ export default function GenerateRecipesPage() {
       setSelectedIngredients([...selectedIngredients, formatted]);
     }
     setIngredientInput("");
+  };
+
+  const handleGenerateRecipe = async () => {
+    if (selectedIngredients.length === 0) {
+      alert("Please add at least one ingredient!");
+      return;
+    }
+
+    setIsGenerating(true);
+    setGeneratedRecipe(null);
+
+    try {
+      const message = `Please generate a ${cuisine || ""} ${mealType || "meal"} that takes ${prepTime || "any time"} to make and serves ${servings || "a few"} people.`;
+      
+      const dataToSend = {
+        message: message,
+        diet: "None",
+        ingredients: selectedIngredients.join(", ")
+      };
+
+      const response = await fetch('http://localhost:5000/api/ai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(dataToSend)
+      });
+
+      const data = await response.json();
+      setGeneratedRecipe(data.reply);
+      
+    } catch (error) {
+      console.error("Fetch Error:", error);
+      alert("Could not connect to the kitchen!");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -181,8 +219,8 @@ export default function GenerateRecipesPage() {
             transform: [{ translateY: slideAnim }],
             borderTopLeftRadius: panelBorderRadius,
             borderTopRightRadius: panelBorderRadius,
-            backgroundColor: panelBgColor, // Animated Background
-            borderWidth: panelBorderWidth, // Subtle glass edge
+            backgroundColor: panelBgColor, 
+            borderWidth: panelBorderWidth, 
             borderColor: "rgba(255, 255, 255, 0.3)",
           },
         ]}
@@ -316,13 +354,18 @@ export default function GenerateRecipesPage() {
                 onSelect={setServings}
               />
 
+              {generatedRecipe && (
+                <View style={{ backgroundColor: '#FFF', padding: 20, borderRadius: 15, marginTop: 20, marginBottom: 10, borderWidth: 1, borderColor: '#EBC390' }}>
+                  <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#4A3B2C', marginBottom: 10 }}>Chef's Recommendation:</Text>
+                  <Text style={{ fontSize: 14, color: '#4A3B2C', lineHeight: 22 }}>{generatedRecipe}</Text>
+                </View>
+              )}
+
               <TouchableOpacity
-                style={styles.generateBtn}
+                style={[styles.generateBtn, isGenerating && { opacity: 0.7 }]}
                 activeOpacity={0.8}
-                onPress={() => {
-                  console.log("Generating...");
-                  togglePanel(false);
-                }}
+                onPress={handleGenerateRecipe}
+                disabled={isGenerating}
               >
                 <Ionicons
                   name="flash"
@@ -330,7 +373,9 @@ export default function GenerateRecipesPage() {
                   color="#4A3B2C"
                   style={{ marginRight: 8 }}
                 />
-                <Text style={styles.generateBtnText}>Create My Menu</Text>
+                <Text style={styles.generateBtnText}>
+                  {isGenerating ? "Cooking..." : "Create My Menu"}
+                </Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -387,7 +432,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    // Note: BackgroundColor and BorderRadius are handled by Animated.View styles
+    
   },
   peekButtonWrapper: {
     position: "absolute",
