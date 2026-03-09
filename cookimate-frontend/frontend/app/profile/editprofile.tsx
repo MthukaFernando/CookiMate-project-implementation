@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     elevation: 4,
     borderWidth: 2,
     borderColor: '#E8C28E',
-    marginBottom: 40, // Space so button isn't cramped at bottom
+    marginBottom: 40, 
   },
   label: { fontSize: 14, fontWeight: 'bold', color: '#5D4037', marginBottom: 8, marginTop: 10 },
   avatarRow: { paddingVertical: 10, gap: 15 },
