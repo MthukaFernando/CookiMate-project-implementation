@@ -16,6 +16,7 @@ import {
 import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
+import Constants from "expo-constants";
 
 const TAB_BAR_HEIGHT = 65;
 const PEEK_HEIGHT = 180;
@@ -155,39 +156,44 @@ export default function GenerateRecipesPage() {
   };
 
   const handleGenerateRecipe = async () => {
-    if (selectedIngredients.length === 0) {
-      alert("Please add at least one ingredient!");
-      return;
-    }
+  if (selectedIngredients.length === 0) {
+    alert("Please add at least one ingredient!");
+    return;
+  }
 
-    setIsGenerating(true);
-    setGeneratedRecipe(null);
+  setIsGenerating(true);
+  
+  try {
+    // 1. Get the IP dynamically just like in your other page
+    const debuggerHost = Constants.expoConfig?.hostUri;
+    const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+    const baseUrl = `http://${address}:5000/api/ai/ask`; 
 
-    try {
-      const message = `Please generate a ${cuisine || ""} ${mealType || "meal"} that takes ${prepTime || "any time"} to make and serves ${servings || "a few"} people.`;
-      
-      const dataToSend = {
-        message: message,
-        diet: "None",
-        ingredients: selectedIngredients.join(", ")
-      };
+    const message = `Please generate a ${cuisine || ""} ${mealType || "meal"} that takes ${prepTime || "any time"} to make and serves ${servings || "a few"} people.`;
+    
+    const dataToSend = {
+      message: message,
+      diet: "None",
+      ingredients: selectedIngredients.join(", ")
+    };
 
-      const response = await fetch('http://localhost:5000/api/ai/ask', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(dataToSend)
-      });
+    // 2. Use the dynamic baseUrl
+    const response = await fetch(baseUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(dataToSend)
+    });
 
-      const data = await response.json();
-      setGeneratedRecipe(data.reply);
-      
-    } catch (error) {
-      console.error("Fetch Error:", error);
-      alert("Could not connect to the kitchen!");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+    const data = await response.json();
+    setGeneratedRecipe(data.reply);
+    
+  } catch (error) {
+    console.error("Fetch Error:", error);
+    alert("Could not connect to the kitchen! Check if your server is running.");
+  } finally {
+    setIsGenerating(false);
+  }
+};
 
   return (
     <View style={[styles.container, globalStyle?.container]}>
