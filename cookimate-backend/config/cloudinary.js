@@ -12,7 +12,8 @@ cloudinary.config({
 });
 
 const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
+  // FIX: wrap cloudinary in an object so the library finds .v2.uploader
+  cloudinary: { v2: cloudinary }, 
   params: {
     folder: "posts",
     allowed_formats: ["jpg", "png", "jpeg"],
