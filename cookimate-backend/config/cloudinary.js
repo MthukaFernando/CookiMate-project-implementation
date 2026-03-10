@@ -14,7 +14,7 @@ cloudinary.config({
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "social_posts",
+    folder: "posts",
     allowed_formats: ["jpg", "png", "jpeg"],
     public_id: (req, file) => {
       const fileName = file.originalname.split(".")[0];
