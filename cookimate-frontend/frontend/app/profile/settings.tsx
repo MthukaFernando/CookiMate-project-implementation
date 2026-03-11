@@ -570,15 +570,15 @@ const styles = StyleSheet.create({
     marginTop: 5,
   },
   settingCard: {
-    backgroundColor: '#1A1A1A', // Changed to Charcoal Glow
+    backgroundColor: '#1A1A1A',
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 1, // Changed from 2 to 1
-    borderColor: '#2A2A2A', // Changed to Subtle Dark Border
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -604,12 +604,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#5D4037',
+    color: '#FFFFFF', // Changed to Crisp White
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#8B6B5C',
+    color: '#A6A6A6', // Changed to Champagne Gray
   },
   logoutCard: {
     marginTop: 20,
