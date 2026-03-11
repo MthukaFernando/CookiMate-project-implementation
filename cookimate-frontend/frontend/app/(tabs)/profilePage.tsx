@@ -197,7 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
     marginTop: 20,
   },
   profileHeader: { 
@@ -211,7 +211,7 @@ const styles = StyleSheet.create({
     borderRadius: 45,
     backgroundColor: '#1E1E1E',
     borderWidth: 2,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
     overflow: 'hidden'
   },
   mascotImg: { 
@@ -242,7 +242,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8, 
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
   },
   editBtnText: { 
     fontSize: 12, 
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
   },
 
   // Level Bar
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 20,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
   },
   sectionTitle: { 
     fontSize: 18, 
@@ -331,7 +331,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
   },
   statTextColumn: { 
     flex: 1 
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#2A2A2A',
+    borderColor: '#D4AF37',
     overflow: 'hidden',
   },
   badgeImage: {
