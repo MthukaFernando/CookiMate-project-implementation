@@ -86,3 +86,16 @@ export const getSeasonalRecipes = async (req, res) => {
     res.status(500).json({ message: "Seasonal Fetch Error: " + error.message });
   }
 };
+
+export const getRandomRecipes = async (req, res) => {
+  try {
+    // get 3 random recipes from Recipe collection
+    const recipes = await Recipe.aggregate([
+      { $sample: { size: 3 } }
+    ]);
+
+    res.json(recipes);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
