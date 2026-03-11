@@ -261,8 +261,8 @@ const styles = StyleSheet.create({
   randomInfo: { padding: 15 },
   randomTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   randomDescription: { color: "#aaa", fontSize: 12, marginTop: 5 },
-  viewButtonSmall: { backgroundColor: "#4E342E", paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
-  viewButtonTextSmall: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  viewButtonSmall: { backgroundColor: "#D4AF37", paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
+  viewButtonTextSmall: { color: "#2a2929", fontWeight: "bold", fontSize: 12 },
   
   fab: { 
     position: "absolute", 
