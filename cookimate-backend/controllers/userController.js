@@ -2,7 +2,7 @@ import User from "../models/user.js";
 import Level from "../models/levels.js";
 import Recipe from "../models/Recipe.js";
 import Post from "../models/Post.js"; 
-import UserProgress from "../models/UserProgress.js";  // ONLY THIS LINE ADDED
+import UserProgress from "../models/UserProgress.js";  
 
 // create a user
 export const createUser = async (req, res) => {
@@ -117,14 +117,14 @@ export const updateUser = async (req, res) => {
   }
 };
 
-// TOGGLE FAVORITE - Add/remove recipe from favorites (works like a toggle)
-export const toggleFavorite = async (req, res) => {
+// Add recipe to favorites
+export const addToFavorites = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
 
-    // Check if the recipe exists
-    const recipe = await Recipe.findById(recipeId);
+    // Check if the recipe exists in the recipes collection
+    const recipe = await Recipe.findOne({ id: recipeId });
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
@@ -134,32 +134,42 @@ export const toggleFavorite = async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if it's already a favorite
-    const isFavorited = user.favorites.includes(recipeId);
-
-    if (isFavorited) {
-      // REMOVE logic
-      await User.findOneAndUpdate(
-        { firebaseUid: uid },
-        { $pull: { favorites: recipeId } }
-      );
-      res.status(200).json({ 
-        message: "Removed from favorites", 
-        isFavorite: false 
-      });
-    } else {
-      // ADD logic
-      await User.findOneAndUpdate(
-        { firebaseUid: uid },
-        { $push: { favorites: recipeId } }
-      );
-      res.status(200).json({ 
-        message: "Added to favorites", 
-        isFavorite: true 
-      });
+    // Check if already favorited using the MongoDB _id
+    if (user.favorites.includes(recipe._id)) {
+      return res.status(400).json({ message: "Recipe already in favorites" });
     }
+
+    user.favorites.push(recipe._id);
+    await user.save();
+    res.status(200).json({ message: "Recipe added to favorites" });
   } catch (error) {
-    console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove recipe from favorites
+export const removeFromFavorites = async (req, res) => {
+  try {
+    const { recipeId } = req.body;
+    const { uid } = req.params;
+
+    const recipe = await Recipe.findOne({ id: recipeId });
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    const user = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $pull: { favorites: recipe._id } }, 
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    res.status(200).json({ message: "Recipe removed from favorites" });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };

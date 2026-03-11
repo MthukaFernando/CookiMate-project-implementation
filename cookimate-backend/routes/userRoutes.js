@@ -4,7 +4,8 @@ import {
   getUserByUid,
   getLevels,
   updateUser,
-  toggleFavorite,
+  addToFavorites,      // Matches Controller
+  removeFromFavorites, // Matches Controller
   toggleFollow,
   searchUsers,
   incrementCookCount,
@@ -14,25 +15,14 @@ import {
 const router = express.Router();
 
 router.post("/", createUser);
-
-//getting all the levels (for testing pourpse)
 router.get("/levels", getLevels);
-
 router.get("/search", searchUsers);
-
 router.put("/follow", toggleFollow);
-
-router.put("/favorites/toggle/:uid", toggleFavorite);
-
+router.put("/favorites/:uid", addToFavorites); 
+router.put("/favorites/remove/:uid", removeFromFavorites); 
 router.get("/community/:uid", getCommunityProfile);
-
 router.put("/complete-recipe/:uid", incrementCookCount);
-
-// get user by using the token (UID)
 router.get("/:uid", getUserByUid);
-
-//update the user profile of the logged in user
-
 router.put("/update/:uid", updateUser);
 
 export default router;
