@@ -12,6 +12,7 @@ import {
   ScrollView,
   PanResponder,
   Pressable,
+  StatusBar,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
@@ -20,14 +21,14 @@ import { Ionicons } from "@expo/vector-icons";
 const BRAND = {
   bg: "#121212",
   surface: "#1E1E1E",
-  accent: "#FFB300",
+  accent: "#FFB300", // Gold/Amber
   textMain: "#FFFFFF",
   textMuted: "#A0A0A0",
   inputBg: "#2A2A2A",
   border: "#333333",
 };
 
-// --- RESTORED DATA ---
+// --- DATA ARRAYS ---
 const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic", "Chicken", "Shrimp"];
 const CUISINES = [
   "American",
@@ -55,14 +56,16 @@ const SERVINGS = ["1", "2", "4", "6+"];
 
 export default function GenerateRecipesPage() {
   const { height } = useWindowDimensions();
-  const TOP_MARGIN = 96;
-  const PEEK_HEIGHT = 180;
+
   const TAB_BAR_HEIGHT = 65;
+  const PEEK_HEIGHT = 180;
+  const TOP_MARGIN = 96;
   const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
   const EXPANDED_Y = TOP_MARGIN;
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [ingredientInput, setIngredientInput] = useState("");
+  const [culinaryPrompt, setCulinaryPrompt] = useState("");
   const [selectedIngredients, setSelectedIngredients] = useState<string[]>([]);
   const [cuisine, setCuisine] = useState<string | null>(null);
   const [mealType, setMealType] = useState<string | null>(null);
@@ -101,6 +104,7 @@ export default function GenerateRecipesPage() {
     setPrepTime(null);
     setServings(null);
     setIngredientInput("");
+    setCulinaryPrompt("");
   };
 
   const addIngredient = (name: string) => {
@@ -130,6 +134,8 @@ export default function GenerateRecipesPage() {
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
       <Video
         source={require("../../assets/videos/generate.mp4")}
         style={StyleSheet.absoluteFill}
@@ -141,7 +147,7 @@ export default function GenerateRecipesPage() {
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(0,0,0,0.4)" },
+          { backgroundColor: "rgba(0,0,0,0.5)" },
         ]}
       />
 
@@ -161,12 +167,13 @@ export default function GenerateRecipesPage() {
           },
         ]}
       >
-        {/* --- PEEK BUTTON --- */}
+        {/* --- PEEK BUTTON (Only visible when collapsed) --- */}
         {!isExpanded && (
           <View style={styles.peekButtonWrapper}>
             <TouchableOpacity
               style={styles.peekButton}
               onPress={() => togglePanel(true)}
+              activeOpacity={0.9}
             >
               <View style={styles.flexRow}>
                 <Ionicons name="sparkles" size={20} color={BRAND.bg} />
@@ -185,11 +192,11 @@ export default function GenerateRecipesPage() {
           <View {...panResponder.panHandlers} style={styles.headerArea}>
             <View style={styles.dragHandle} />
             <View style={styles.headerRow}>
-              <TouchableOpacity onPress={() => togglePanel(false)}>
+              <TouchableOpacity onPress={() => togglePanel(false)} hitSlop={20}>
                 <Ionicons name="close" size={26} color={BRAND.textMuted} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>RECIPE BUILDER</Text>
-              <TouchableOpacity onPress={handleReset}>
+              <TouchableOpacity onPress={handleReset} hitSlop={20}>
                 <Text style={styles.resetText}>RESET</Text>
               </TouchableOpacity>
             </View>
@@ -202,36 +209,86 @@ export default function GenerateRecipesPage() {
             <ScrollView
               contentContainerStyle={styles.scrollBody}
               showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
             >
-              {/* Ingredient Input */}
-              <View style={styles.searchSection}>
-                <Ionicons
-                  name="search"
-                  size={20}
-                  color={BRAND.accent}
-                  style={{ marginRight: 10 }}
+              {/* Ingredient Section */}
+              <Text style={styles.label}>Ingredients</Text>
+              <View style={styles.ingredientDisplayArea}>
+                {selectedIngredients.length === 0 ? (
+                  <Text style={styles.emptyText}>
+                    No ingredients added yet...
+                  </Text>
+                ) : (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.chipScroll}
+                  >
+                    {selectedIngredients.map((item) => (
+                      <TouchableOpacity
+                        key={item}
+                        style={styles.chip}
+                        onPress={() =>
+                          setSelectedIngredients(
+                            selectedIngredients.filter((i) => i !== item),
+                          )
+                        }
+                      >
+                        <Text style={styles.chipText}>{item}</Text>
+                        <Ionicons
+                          name="close-circle"
+                          size={14}
+                          color={BRAND.bg}
+                          style={{ marginLeft: 6 }}
+                        />
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+              </View>
+
+              <View style={styles.searchBarWrapper}>
+                <Ionicons name="search" size={20} color={BRAND.accent} />
+                <TextInput
+                  style={styles.textInput}
+                  placeholder="Type an ingredient..."
+                  placeholderTextColor="#666"
+                  value={ingredientInput}
+                  onChangeText={setIngredientInput}
+                  onSubmitEditing={() => addIngredient(ingredientInput)}
+                  returnKeyType="done"
                 />
-                <View style={styles.chipContainer}>
-                  {selectedIngredients.map((item) => (
-                    <TouchableOpacity
-                      key={item}
-                      style={styles.chip}
-                      onPress={() =>
-                        setSelectedIngredients(
-                          selectedIngredients.filter((i) => i !== item),
-                        )
-                      }
-                    >
-                      <Text style={styles.chipText}>{item} ✕</Text>
-                    </TouchableOpacity>
-                  ))}
-                  <TextInput
-                    style={styles.textInput}
-                    placeholder="Add ingredients..."
-                    placeholderTextColor={BRAND.textMuted}
-                    value={ingredientInput}
-                    onChangeText={setIngredientInput}
-                    onSubmitEditing={() => addIngredient(ingredientInput)}
+                {ingredientInput.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => addIngredient(ingredientInput)}
+                  >
+                    <Ionicons
+                      name="add-circle"
+                      size={28}
+                      color={BRAND.accent}
+                    />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {/* Description Prompt Field */}
+              <Text style={styles.label}>What are we making?</Text>
+              <View style={styles.descriptionWrapper}>
+                <TextInput
+                  style={styles.descriptionInput}
+                  placeholder="e.g. 'Make a ribbon cake' or 'Something spicy'..."
+                  placeholderTextColor="#555"
+                  multiline
+                  numberOfLines={3}
+                  value={culinaryPrompt}
+                  onChangeText={setCulinaryPrompt}
+                  textAlignVertical="top"
+                />
+                <View style={styles.descriptionIcon}>
+                  <Ionicons
+                    name="pencil-outline"
+                    size={16}
+                    color={BRAND.accent}
                   />
                 </View>
               </View>
@@ -256,7 +313,7 @@ export default function GenerateRecipesPage() {
 
               <View style={styles.divider} />
 
-              {/* RESTORED FILTERS */}
+              {/* Filters */}
               <FilterRow
                 title="Cuisine"
                 icon="restaurant-outline"
@@ -290,12 +347,10 @@ export default function GenerateRecipesPage() {
                 style={styles.generateBtn}
                 activeOpacity={0.8}
                 onPress={() =>
-                  console.log("Generating with:", {
-                    cuisine,
-                    mealType,
-                    prepTime,
-                    servings,
+                  console.log("Generating...", {
+                    culinaryPrompt,
                     selectedIngredients,
+                    cuisine,
                   })
                 }
               >
@@ -379,6 +434,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 50,
     width: "75%",
+    elevation: 10,
+    shadowColor: BRAND.accent,
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
   },
   peekTitle: {
     fontSize: 16,
@@ -410,32 +469,74 @@ const styles = StyleSheet.create({
   },
   resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
   scrollBody: { paddingHorizontal: 25, paddingBottom: 120 },
-  searchSection: {
-    backgroundColor: BRAND.inputBg,
-    borderRadius: 20,
-    padding: 15,
+
+  // Ingredients Area
+  ingredientDisplayArea: {
+    height: 50,
+    marginBottom: 10,
+    justifyContent: "center",
+  },
+  emptyText: {
+    color: BRAND.textMuted,
+    fontSize: 14,
+    fontStyle: "italic",
+    paddingLeft: 5,
+  },
+  chipScroll: { alignItems: "center", gap: 8 },
+  chip: {
+    backgroundColor: BRAND.accent,
     flexDirection: "row",
     alignItems: "center",
-    marginVertical: 20,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+  },
+  chipText: { fontSize: 13, fontWeight: "800", color: BRAND.bg },
+  searchBarWrapper: {
+    backgroundColor: BRAND.inputBg,
+    borderRadius: 18,
+    paddingLeft: 15,
+    paddingRight: 8,
+    height: 60,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 25,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
-  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 6 },
-  chip: {
-    backgroundColor: BRAND.accent,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 10,
+  textInput: { flex: 1, fontSize: 16, color: BRAND.textMain, marginLeft: 10 },
+
+  // Description Field
+  descriptionWrapper: {
+    backgroundColor: BRAND.inputBg,
+    borderRadius: 18,
+    padding: 15,
+    minHeight: 100,
+    borderWidth: 1,
+    borderColor: BRAND.accent,
+    borderStyle: "dashed",
+    marginBottom: 25,
   },
-  chipText: { fontSize: 12, fontWeight: "800", color: BRAND.bg },
-  textInput: { flex: 1, minWidth: 120, fontSize: 16, color: BRAND.textMain },
+  descriptionInput: {
+    flex: 1,
+    fontSize: 15,
+    color: BRAND.textMain,
+    lineHeight: 22,
+  },
+  descriptionIcon: {
+    position: "absolute",
+    bottom: 12,
+    right: 12,
+    opacity: 0.5,
+  },
+
   label: {
     fontSize: 10,
     fontWeight: "900",
     color: BRAND.textMuted,
     textTransform: "uppercase",
     marginBottom: 12,
-    letterSpacing: 1,
+    letterSpacing: 1.5,
   },
   quickAddScroll: { marginBottom: 30 },
   quickAddBtn: {
