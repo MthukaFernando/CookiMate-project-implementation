@@ -2,6 +2,7 @@ import User from "../models/user.js";
 import Level from "../models/levels.js";
 import Recipe from "../models/Recipe.js";
 import Post from "../models/Post.js"; 
+import UserProgress from "../models/UserProgress.js";  // ONLY THIS LINE ADDED
 
 // create a user
 export const createUser = async (req, res) => {
@@ -16,6 +17,36 @@ export const createUser = async (req, res) => {
       username: username,
       firebaseUid: firebaseUid,
     });
+    
+    // START: ONLY THIS BLOCK ADDED (8 lines)
+    // Find the first simple level (Novice Chef - level 1)
+    const firstSimpleLevel = await Level.findOne({ level: 1 });
+    
+    // Create progress tracking for the user
+    const userProgress = await UserProgress.create({
+      user: newUser._id,
+      simpleLevel: firstSimpleLevel._id,
+      simpleLevelPoints: 0,
+      gamificationLevel: 1,
+      gamificationPoints: 0,
+      stats: {
+        recipesCooked: 0,
+        favoritesSaved: 0,
+        recipesShared: 0,
+        likesReceived: 0,
+        aiGenerations: 0,
+        errorsFixed: 0,
+        weeklyPlansCompleted: 0,
+        followersCount: 0,
+        currentStreak: 0,
+        longestStreak: 0,
+        dailyChallengesDone: 0,
+        photosUploaded: 0,
+        usersHelped: 0
+      }
+    });
+    // END: ONLY THIS BLOCK ADDED
+
     res.status(201).json(newUser);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -25,7 +56,7 @@ export const createUser = async (req, res) => {
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid });
+    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -34,6 +65,8 @@ export const getUserByUid = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+
 
 export const getLevels = async (req, res) => {
   try {
@@ -67,7 +100,7 @@ export const updateUser = async (req, res) => {
       {
         returnDocument: "after", 
         runValidators: true,
-      }
+      },
     );
 
     if (!updatedUser) {

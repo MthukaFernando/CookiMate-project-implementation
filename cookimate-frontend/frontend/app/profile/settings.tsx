@@ -1,0 +1,731 @@
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+  Alert,
+  TextInput,
+  Modal,
+  FlatList,
+  ActivityIndicator,
+  Switch,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { Feather, Ionicons, MaterialCommunityIcons, FontAwesome5, AntDesign } from "@expo/vector-icons";
+import { auth } from "../../config/firebase";
+import axios from "axios";
+import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
+
+// Predefined dietary preferences options - ALL WITH SAME ICON - UPDATED TO GOLD
+const DIETARY_OPTIONS = [
+  { id: '1', name: 'Vegetarian', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '2', name: 'Vegan', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '3', name: 'Gluten-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '4', name: 'Dairy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '5', name: 'Nut-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '6', name: 'Egg-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '7', name: 'Soy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '8', name: 'Fish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '9', name: 'Shellfish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '10', name: 'Keto', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '11', name: 'Paleo', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '12', name: 'Low-Carb', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '13', name: 'Low-Fat', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '14', name: 'Halal', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '15', name: 'Kosher', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+];
+
+// Common allergies options - ALL WITH SAME ICON (food-off) - UPDATED TO ACCENT RED
+const ALLERGY_OPTIONS = [
+  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+];
+
+const Settings = () => {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
+  const [allergyModalVisible, setAllergyModalVisible] = useState(false);
+  const [customPreferenceModal, setCustomPreferenceModal] = useState(false);
+  
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
+  const [allergies, setAllergies] = useState<string[]>([]);
+  const [customPreferences, setCustomPreferences] = useState<string[]>([]);
+  const [newCustomPreference, setNewCustomPreference] = useState('');
+  
+  // Simple notification toggle
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+
+  const currentUser = auth.currentUser;
+  const uid = currentUser?.uid;
+
+  // Fetch dietary preferences
+  const fetchDietaryPreferences = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/${uid}/dietary`);
+      if (response.data) {
+        setDietaryPreferences(response.data.dietaryPreferences || []);
+        setAllergies(response.data.allergies || []);
+        setCustomPreferences(response.data.customPreferences || []);
+      }
+    } catch (err) {
+      console.error("Error fetching dietary preferences:", err);
+    }
+  };
+
+  // Fetch notification setting
+  const fetchNotificationSetting = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/users/${uid}/notifications`);
+      if (response.data) {
+        setNotificationsEnabled(response.data.enabled ?? true);
+      }
+    } catch (err) {
+      console.error("Error fetching notification setting:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchDietaryPreferences();
+    fetchNotificationSetting();
+  }, []);
+
+  // Save dietary preferences
+  const saveDietaryPreferences = async () => {
+    try {
+      setLoading(true);
+      await axios.put(`${API_URL}/api/users/${uid}/dietary`, {
+        dietaryPreferences,
+        allergies,
+        customPreferences,
+      });
+      Alert.alert("Success", "Dietary preferences updated successfully!");
+    } catch (err) {
+      console.error("Error saving dietary preferences:", err);
+      Alert.alert("Error", "Failed to save dietary preferences");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save notification setting
+  const saveNotificationSetting = async (enabled: boolean) => {
+    try {
+      await axios.put(`${API_URL}/api/users/${uid}/notifications`, { enabled });
+    } catch (err) {
+      console.error("Error saving notification setting:", err);
+    }
+  };
+
+  // Toggle notification
+  const toggleNotifications = (value: boolean) => {
+    setNotificationsEnabled(value);
+    saveNotificationSetting(value);
+  };
+
+  // Toggle selection functions
+  const toggleDietaryOption = (optionName: string) => {
+    setDietaryPreferences(prev =>
+      prev.includes(optionName)
+        ? prev.filter(item => item !== optionName)
+        : [...prev, optionName]
+    );
+  };
+
+  const toggleAllergy = (allergyName: string) => {
+    setAllergies(prev =>
+      prev.includes(allergyName)
+        ? prev.filter(item => item !== allergyName)
+        : [...prev, allergyName]
+    );
+  };
+
+  const addCustomPreference = () => {
+    if (newCustomPreference.trim()) {
+      setCustomPreferences(prev => [...prev, newCustomPreference.trim()]);
+      setNewCustomPreference('');
+      setCustomPreferenceModal(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert(
+      "Log Out",
+      "Are you sure you want to log out?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Log Out",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await auth.signOut();
+              await AsyncStorage.removeItem('userToken');
+              router.replace("../auth/login");
+            } catch (error) {
+              Alert.alert("Error", "Failed to log out");
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      "Delete Account",
+      "This action cannot be undone. All your data will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              setLoading(true);
+              await axios.delete(`${API_URL}/api/users/${uid}`);
+              await auth.currentUser?.delete();
+              await AsyncStorage.removeItem('userToken');
+              router.replace("../auth/signup");
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete account");
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Helper function to render icon based on family
+  const renderIcon = (item: any, size: number = 20) => {
+    const iconProps = {
+      size,
+      color: item.color,
+    };
+
+    if (item.iconFamily === 'FontAwesome5') {
+      return <FontAwesome5 name={item.icon} {...iconProps} />;
+    } else if (item.iconFamily === 'MaterialCommunityIcons') {
+      return <MaterialCommunityIcons name={item.icon} {...iconProps} />;
+    } else if (item.iconFamily === 'AntDesign') {
+      return <AntDesign name={item.icon} {...iconProps} />;
+    } else {
+      return <Feather name={item.icon} {...iconProps} />;
+    }
+  };
+
+  // Dietary Preferences Modal
+  const DietaryPreferencesModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={dietaryModalVisible}
+      onRequestClose={() => setDietaryModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Dietary Preferences</Text>
+            <TouchableOpacity onPress={() => setDietaryModalVisible(false)}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Select your dietary preferences:</Text>
+          
+          <FlatList
+            data={DIETARY_OPTIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  dietaryPreferences.includes(item.name) && styles.optionItemSelected
+                ]}
+                onPress={() => toggleDietaryOption(item.name)}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+                  {renderIcon(item)}
+                </View>
+                <Text style={styles.optionText}>{item.name}</Text>
+                {dietaryPreferences.includes(item.name) && (
+                  <Feather name="check" size={20} color="#D4AF37" style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.optionsList}
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              saveDietaryPreferences();
+              setDietaryModalVisible(false);
+            }}
+          >
+            <Text style={styles.saveButtonText}>Save Preferences</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Allergies Modal
+  const AllergiesModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={allergyModalVisible}
+      onRequestClose={() => setAllergyModalVisible(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Allergies & Intolerances</Text>
+            <TouchableOpacity onPress={() => setAllergyModalVisible(false)}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Select any allergies or intolerances:</Text>
+          
+          <FlatList
+            data={ALLERGY_OPTIONS}
+            keyExtractor={(item) => item.id}
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                style={[
+                  styles.optionItem,
+                  allergies.includes(item.name) && styles.optionItemSelected
+                ]}
+                onPress={() => toggleAllergy(item.name)}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
+                  {renderIcon(item)}
+                </View>
+                <Text style={styles.optionText}>{item.name}</Text>
+                {allergies.includes(item.name) && (
+                  <Feather name="check" size={20} color="#D4AF37" style={styles.checkIcon} />
+                )}
+              </TouchableOpacity>
+            )}
+            style={styles.optionsList}
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={() => {
+              saveDietaryPreferences();
+              setAllergyModalVisible(false);
+            }}
+          >
+            <Text style={styles.saveButtonText}>Save Allergies</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  // Custom Preference Modal
+  const CustomPreferenceModal = () => (
+    <Modal
+      animationType="slide"
+      transparent={true}
+      visible={customPreferenceModal}
+      onRequestClose={() => setCustomPreferenceModal(false)}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Add Custom Preference</Text>
+            <TouchableOpacity onPress={() => setCustomPreferenceModal(false)}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>Enter your custom dietary preference:</Text>
+          
+          <TextInput
+            style={styles.customInput}
+            placeholder="e.g., No mushrooms, Low sodium, etc."
+            placeholderTextColor="#A6A6A6"
+            value={newCustomPreference}
+            onChangeText={setNewCustomPreference}
+            multiline
+          />
+
+          <TouchableOpacity
+            style={styles.saveButton}
+            onPress={addCustomPreference}
+          >
+            <Text style={styles.saveButtonText}>Add Preference</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+
+  return (
+    <View style={styles.mainContainer}>
+      <ScrollView 
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Header with back button */}
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
+        {/* Settings Title */}
+        <Text style={styles.settingsTitle}>Settings</Text>
+
+        {/* Notifications Card with Toggle */}
+        <View style={styles.settingCard}>
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Ionicons name="notifications-outline" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Notifications</Text>
+              <Text style={styles.cardSubtitle}>Enable or disable all notifications</Text>
+            </View>
+          </View>
+          <Switch
+            trackColor={{ false: "#2A2A2A", true: "#D4AF37" }}
+            thumbColor={"#FFFFFF"}
+            ios_backgroundColor="#2A2A2A"
+            onValueChange={toggleNotifications}
+            value={notificationsEnabled}
+          />
+        </View>
+
+        {/* Dietary Preferences Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setDietaryModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <MaterialCommunityIcons name="food-apple" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Dietary Preferences</Text>
+              <Text style={styles.cardSubtitle}>
+                {dietaryPreferences.length > 0 
+                  ? dietaryPreferences.slice(0, 2).join(', ') + (dietaryPreferences.length > 2 ? '...' : '')
+                  : "Set your dietary restrictions"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
+        {/* Allergies Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setAllergyModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <MaterialCommunityIcons name="food-off" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Allergies & Intolerances</Text>
+              <Text style={styles.cardSubtitle}>
+                {allergies.length > 0 
+                  ? allergies.slice(0, 2).join(', ') + (allergies.length > 2 ? '...' : '')
+                  : "Add your allergies"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
+        {/* Custom Preferences Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => setCustomPreferenceModal(true)}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Feather name="edit" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Custom Preferences</Text>
+              <Text style={styles.cardSubtitle}>
+                {customPreferences.length > 0 
+                  ? `${customPreferences.length} custom preference(s) added`
+                  : "Add your own preferences"}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
+        {/* Change Password Card */}
+        <TouchableOpacity 
+          style={styles.settingCard}
+          onPress={() => router.push("../profile/change-password")}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Feather name="lock" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Change Password</Text>
+              <Text style={styles.cardSubtitle}>Update your account password</Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
+        {/* Log Out Card */}
+        <TouchableOpacity 
+          style={[styles.settingCard, styles.logoutCard]}
+          onPress={handleLogout}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
+              <Feather name="log-out" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={[styles.cardTitle, styles.logoutText]}>Log Out</Text>
+              <Text style={styles.cardSubtitle}>Sign out of your account</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Delete Account Card */}
+        <TouchableOpacity 
+          style={[styles.settingCard, styles.deleteCard]}
+          onPress={handleDeleteAccount}
+        >
+          <View style={styles.cardContent}>
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
+              <Feather name="trash-2" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={[styles.cardTitle, styles.deleteText]}>Delete Account</Text>
+              <Text style={styles.cardSubtitle}>Permanently delete your account</Text>
+            </View>
+          </View>
+        </TouchableOpacity>
+
+        {/* Extra bottom spacing */}
+        <View style={styles.bottomSpacing} />
+      </ScrollView>
+
+      {/* Modals */}
+      <DietaryPreferencesModal />
+      <AllergiesModal />
+      <CustomPreferenceModal />
+
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#D4AF37" />
+        </View>
+      )}
+    </View>
+  );
+};
+
+const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: '#0A0A0A',
+  },
+  scrollContent: {
+    paddingHorizontal: 25,
+    paddingTop: 10,
+    paddingBottom: 40,
+  },
+  backBtn: {
+    marginVertical: 10,
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+  },
+  settingsTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 20,
+    marginTop: 5,
+  },
+  settingCard: {
+    backgroundColor: '#1A1A1A',
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  cardContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  iconContainer: {
+    width: 50,
+    height: 50,
+    borderRadius: 15,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 15,
+  },
+  textContainer: {
+    flex: 1,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#A6A6A6',
+  },
+  logoutCard: {
+    marginTop: 20,
+    borderColor: '#D4AF37',
+  },
+  deleteCard: {
+    borderColor: '#D4AF37',
+  },
+  logoutText: {
+    color: '#D4AF37',
+  },
+  deleteText: {
+    color: '#D4AF37',
+  },
+  bottomSpacing: {
+    height: 30,
+  },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1A1A1A',
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    padding: 20,
+    maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#D4AF37',
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#A6A6A6',
+    marginBottom: 15,
+  },
+  optionsList: {
+    maxHeight: 400,
+  },
+  optionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  optionItemSelected: {
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+  },
+  optionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  optionText: {
+    fontSize: 14,
+    color: '#FFFFFF',
+    flex: 1,
+  },
+  checkIcon: {
+    marginLeft: 10,
+  },
+  customInput: {
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: '#FFFFFF',
+    backgroundColor: '#1E1E1E',
+    marginBottom: 20,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  saveButton: {
+    backgroundColor: '#D4AF37',
+    padding: 15,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  saveButtonText: {
+    color: '#0A0A0A',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(10,10,10,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+});
+
+export default Settings;
