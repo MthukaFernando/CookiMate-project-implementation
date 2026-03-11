@@ -219,7 +219,7 @@ const styles = StyleSheet.create({
     left: "50%",
     width: 20,
     height: 20,
-    backgroundColor: "#D4AF37",
+    backgroundColor: "#d4a537",
     transform: [{ rotate: "45deg" }],
     zIndex: -1,
   },
@@ -227,14 +227,14 @@ const styles = StyleSheet.create({
   bottomSubContainer: {
     padding: 20,
     marginVertical: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
     borderRadius: 20,
     elevation: 4,
     borderWidth: 2,
-    borderColor: '#E8C28E',
     marginBottom: 40, 
   },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#5D4037', marginBottom: 8, marginTop: 10 },
+  label: { fontSize: 14, fontWeight: 'bold', color: "#ffb700", marginBottom: 8, marginTop: 10 },
   avatarRow: { paddingVertical: 10, gap: 15 },
   avatarBox: {
     width: 70,
@@ -248,16 +248,16 @@ const styles = StyleSheet.create({
   avatarImg: { width: '100%', height: '100%', borderRadius: 35 },
   
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#2A2A2A',
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
     marginBottom: 10,
-    color: '#333'
+    color: "#ffffff"
   },
 
   saveBtn: {
-    backgroundColor: '#B86D2A', 
+    backgroundColor: "#ffb700", 
     padding: 15,
     borderRadius: 15,
     alignItems: 'center',
