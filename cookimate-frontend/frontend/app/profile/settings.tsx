@@ -244,7 +244,7 @@ const Settings = () => {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Dietary Preferences</Text>
             <TouchableOpacity onPress={() => setDietaryModalVisible(false)}>
-              <Feather name="x" size={24} color="#5D4037" />
+              <Feather name="x" size={24} color="#A6A6A6" />
             </TouchableOpacity>
           </View>
 
@@ -300,7 +300,7 @@ const Settings = () => {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Allergies & Intolerances</Text>
             <TouchableOpacity onPress={() => setAllergyModalVisible(false)}>
-              <Feather name="x" size={24} color="#5D4037" />
+              <Feather name="x" size={24} color="#A6A6A6" />
             </TouchableOpacity>
           </View>
 
@@ -356,7 +356,7 @@ const Settings = () => {
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Add Custom Preference</Text>
             <TouchableOpacity onPress={() => setCustomPreferenceModal(false)}>
-              <Feather name="x" size={24} color="#5D4037" />
+              <Feather name="x" size={24} color="#A6A6A6" />
             </TouchableOpacity>
           </View>
 
@@ -365,7 +365,7 @@ const Settings = () => {
           <TextInput
             style={styles.customInput}
             placeholder="e.g., No mushrooms, Low sodium, etc."
-            placeholderTextColor="#999"
+            placeholderTextColor="#A6A6A6"
             value={newCustomPreference}
             onChangeText={setNewCustomPreference}
             multiline
@@ -630,15 +630,17 @@ const styles = StyleSheet.create({
   // Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.8)',
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1A1A1A',
     borderTopLeftRadius: 25,
     borderTopRightRadius: 25,
     padding: 20,
     maxHeight: '80%',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -649,11 +651,11 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#5D4037',
+    color: '#D4AF37',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#8B6B5C',
+    color: '#A6A6A6',
     marginBottom: 15,
   },
   optionsList: {
@@ -665,12 +667,14 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 12,
     marginBottom: 8,
-    backgroundColor: '#F8F4ED',
+    backgroundColor: '#1E1E1E',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
   },
   optionItemSelected: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     borderWidth: 1,
-    borderColor: '#4CAF50',
+    borderColor: '#D4AF37',
   },
   optionIcon: {
     width: 40,
@@ -682,7 +686,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     fontSize: 14,
-    color: '#5D4037',
+    color: '#FFFFFF',
     flex: 1,
   },
   checkIcon: {
@@ -690,11 +694,12 @@ const styles = StyleSheet.create({
   },
   customInput: {
     borderWidth: 1,
-    borderColor: '#E8C28E',
+    borderColor: '#2A2A2A',
     borderRadius: 12,
     padding: 12,
     fontSize: 14,
-    color: '#333',
+    color: '#FFFFFF',
+    backgroundColor: '#1E1E1E',
     marginBottom: 20,
     minHeight: 80,
     textAlignVertical: 'top',
