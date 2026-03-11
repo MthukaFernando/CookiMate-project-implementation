@@ -25,13 +25,13 @@ const CAROUSEL_WIDTH = width * 0.9;
 
 //The meal category card content
 const mealCategories = [
-  { label: "Breakfast     🍳🥞", color: "#f2f4be" },
-  { label: "Lunch     🥗🌮", color: "#c3d7ae" },
-  { label: "Dinner     🥡🍕", color: "#e3c8c2" },
-  { label: "Appetizer     🫒🥟", color: "#c3d8ce" },
-  { label: "Dessert     🍰🥮", color: "#e5d1bb" },
-  { label: "Drink     🥤☕️", color: "#d7f2fa" },
-  { label: "Snack     🍿🥨", color: "#ffe3e0" },
+  { label: "Breakfast     🍳🥞", color: "#ceb604" },
+  { label: "Lunch     🥗🌮", color: "#ceb604" },
+  { label: "Dinner     🥡🍕", color: "#ceb604" },
+  { label: "Appetizer     🫒🥟", color: "#ceb604" },
+  { label: "Dessert     🍰🥮", color: "#ceb604"},
+  { label: "Drink     🥤☕️", color: "#ceb604" },
+  { label: "Snack     🍿🥨", color: "#ceb604" },
 ];
 
 //Default images for when it is not a festival season
@@ -230,7 +230,7 @@ const Page = () => {
                         styles.dayText,
                         state === "disabled"
                           ? { color: "#d9e1e8" }
-                          : { color: isToday ? "white" : "black" },
+                          : { color: isToday ? "white" : "#cecece" },
                       ]}
                     >
                       {date.day}
@@ -318,7 +318,7 @@ const Page = () => {
                           <Ionicons
                             name="restaurant-outline"
                             size={40}
-                            color="#522F2F"
+                            color="#ffff"
                             style={{ opacity: 0.3 }}
                           />
                           <Text style={styles.emptyStateText}>
@@ -415,12 +415,12 @@ const Page = () => {
 };
 
 export const calendarStyles: any = {
-  calendarBackground: "#f2ece2",
-  dayTextColor: "black",
+  calendarBackground: "#0A0A0A",
+  dayTextColor: "white",
   textDayFontWeight: "bold",
   textMonthFontWeight: "bold",
-  monthTextColor: "black",
-  textSectionTitleColor: "black",
+  monthTextColor: "white",
+  textSectionTitleColor: "white",
   todayBackgroundColor: "transparent",
   todayTextColor: "#c6a484",
   arrowColor: "#ce6e32",
@@ -449,7 +449,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   todayCircle: {
-    backgroundColor: "#b1d859",
+    backgroundColor: "#f5a30a",
     borderRadius: 16,
   },
   dayText: {
@@ -483,7 +483,7 @@ export const styles = StyleSheet.create({
   carouselWrapper: {
     flex: 1,
     borderRadius: 25,
-    backgroundColor: "#fff",
+    backgroundColor: "#0A0A0A",
     overflow: "hidden",
   },
   festivalsImage: {
@@ -499,7 +499,7 @@ export const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
     height: height * 0.6,
-    backgroundColor: "#f2ece2",
+    backgroundColor: "#0A0A0A",
     padding: 20,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -507,7 +507,7 @@ export const styles = StyleSheet.create({
     borderLeftWidth: 1.5,
     borderRightWidth: 1.5,
     borderBottomWidth: 0,
-    borderColor: "#522F2F",
+    borderColor: "#ffb0053c",
     elevation: 20,
   },
   initialContent: { flex: 1, position: "relative" },
@@ -516,7 +516,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 5,
     left: 5,
-    backgroundColor: "#9dc254",
+    backgroundColor: "#ffc403",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -535,7 +535,7 @@ export const styles = StyleSheet.create({
   addMealHeader: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#522F2F",
+    color: "#ffffff",
     textAlign: "center",
     marginBottom: 15,
   },
@@ -592,7 +592,7 @@ export const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: "#522F2F",
+    color: "#ffff",
     textAlign: "center",
     marginTop: 10,
     opacity: 0.6,
@@ -602,11 +602,11 @@ export const styles = StyleSheet.create({
     position: "absolute",
     bottom: 15,
     alignSelf: "center",
-    backgroundColor: "#573737",
+    backgroundColor: "#D4AF37",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
-    borderColor: "white",
+    borderColor: "#ffd176",
     borderWidth: 1,
   },
   seasonalButtonText: { color: "#f2ece2", fontSize: 14, fontWeight: "bold" },
