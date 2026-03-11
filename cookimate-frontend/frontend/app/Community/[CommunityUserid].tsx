@@ -245,7 +245,7 @@ export default function CommunityUserProfile() {
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
             onPress={handleFollowToggle}
           >
-            <Text style={styles.followBtnText}>
+            <Text style={isFollowing ? styles.followingBtnText : styles.followBtnText}>
               {isFollowing ? "Following" : "Follow"}
             </Text>
           </TouchableOpacity>
@@ -444,7 +444,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
-  followBtnText: { color: COLORS.background, fontWeight: "bold" },
+  followingBtnText: { color: "green", fontWeight: "bold" },
+  followBtnText: { color: "COLORS.background", fontWeight: "bold" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
