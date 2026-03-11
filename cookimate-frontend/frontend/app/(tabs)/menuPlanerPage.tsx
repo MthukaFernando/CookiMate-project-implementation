@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Platform
 } from "react-native";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Calendar } from "react-native-calendars";
@@ -25,13 +26,13 @@ const CAROUSEL_WIDTH = width * 0.9;
 
 //The meal category card content
 const mealCategories = [
-  { label: "Breakfast     🍳🥞", color: "#f2f4be" },
-  { label: "Lunch     🥗🌮", color: "#c3d7ae" },
-  { label: "Dinner     🥡🍕", color: "#e3c8c2" },
-  { label: "Appetizer     🫒🥟", color: "#c3d8ce" },
-  { label: "Dessert     🍰🥮", color: "#e5d1bb" },
-  { label: "Drink     🥤☕️", color: "#d7f2fa" },
-  { label: "Snack     🍿🥨", color: "#ffe3e0" },
+  { label: "Breakfast     🍳🥞", color: "#ceb604" },
+  { label: "Lunch     🥗🌮", color: "#ceb604" },
+  { label: "Dinner     🥡🍕", color: "#ceb604" },
+  { label: "Appetizer     🫒🥟", color: "#ceb604" },
+  { label: "Dessert     🍰🥮", color: "#ceb604"},
+  { label: "Drink     🥤☕️", color: "#ceb604" },
+  { label: "Snack     🍿🥨", color: "#ceb604" },
 ];
 
 //Default images for when it is not a festival season
@@ -138,18 +139,13 @@ const Page = () => {
     }, 4000);
     return () => clearInterval(timer);
   }, [currentIndex, carouselImages.length]);
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
-    
-    // Calculate the index based on current scroll position
     const manualIndex = Math.round(contentOffsetX / CAROUSEL_WIDTH);
-    
-    // Update the currentIndex state so the button knows which ID to use
     if (manualIndex !== currentIndex && manualIndex < carouselImages.length) {
       setCurrentIndex(manualIndex);
     }
-
-    // Handle the infinite loop reset
     if (contentOffsetX >= (carouselImages.length - 1) * CAROUSEL_WIDTH) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       setCurrentIndex(0);
@@ -192,8 +188,7 @@ const Page = () => {
   );
 
   return (
-   
-    <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
+    <SafeAreaView style={[globalStyle.container, { flex: 1, paddingTop: 20 }]}>
        <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -229,8 +224,8 @@ const Page = () => {
                       style={[
                         styles.dayText,
                         state === "disabled"
-                          ? { color: "#d9e1e8" }
-                          : { color: isToday ? "white" : "black" },
+                          ? { color: "#4d4d4d" }
+                          : { color: isToday ? "white" : "#cecece" },
                       ]}
                     >
                       {date.day}
@@ -268,8 +263,6 @@ const Page = () => {
               style={styles.seasonalButton}
               onPress={() => {
                 const currentRecipe = carouselImages[currentIndex];
-
-                // Navigate to the dynamic recipe route using its ID
                 if (currentRecipe && currentRecipe.id) {
                   router.push(`/recipe/${currentRecipe.id}` as any);
                 }
@@ -318,7 +311,7 @@ const Page = () => {
                           <Ionicons
                             name="restaurant-outline"
                             size={40}
-                            color="#522F2F"
+                            color="#ffff"
                             style={{ opacity: 0.3 }}
                           />
                           <Text style={styles.emptyStateText}>
@@ -415,15 +408,15 @@ const Page = () => {
 };
 
 export const calendarStyles: any = {
-  calendarBackground: "#f2ece2",
-  dayTextColor: "black",
+  calendarBackground: "#1A1A1A",
+  dayTextColor: "white",
   textDayFontWeight: "bold",
   textMonthFontWeight: "bold",
-  monthTextColor: "black",
-  textSectionTitleColor: "black",
+  monthTextColor: "white",
+  textSectionTitleColor: "white",
   todayBackgroundColor: "transparent",
   todayTextColor: "#c6a484",
-  arrowColor: "#ce6e32",
+  arrowColor: "#ffcc00",
 };
 
 export const styles = StyleSheet.create({
@@ -435,12 +428,20 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: 40,
   },
-  calendarContainer: { marginTop: 10 },
+  calendarContainer: { 
+    marginTop: Platform.OS === 'ios' ? 50 : 10,
+    backgroundColor: "#1A1A1A", 
+    borderRadius: 25,
+    overflow: "hidden",
+    paddingVertical: 5,
+    width: CAROUSEL_WIDTH, // Match carousel width
+    alignSelf: "center",   // Center on screen
+  },
   dayComponent: {
     alignItems: "center",
     justifyContent: "center",
     width: 45,
-    height: 50,
+    height: 42,
   },
   dayTextContainer: {
     width: 32,
@@ -449,7 +450,7 @@ export const styles = StyleSheet.create({
     alignItems: "center",
   },
   todayCircle: {
-    backgroundColor: "#b1d859",
+    backgroundColor: "#f5a30a",
     borderRadius: 16,
   },
   dayText: {
@@ -458,7 +459,7 @@ export const styles = StyleSheet.create({
   },
   plannedIndicator: {
     position: "absolute", 
-    bottom: 2, 
+    bottom: 0,
     backgroundColor: "#FF4D4D",
     borderRadius: 4,
     paddingHorizontal: 4,
@@ -483,7 +484,7 @@ export const styles = StyleSheet.create({
   carouselWrapper: {
     flex: 1,
     borderRadius: 25,
-    backgroundColor: "#fff",
+    backgroundColor: "#0A0A0A",
     overflow: "hidden",
   },
   festivalsImage: {
@@ -499,7 +500,7 @@ export const styles = StyleSheet.create({
   formContainer: {
     width: "100%",
     height: height * 0.6,
-    backgroundColor: "#f2ece2",
+    backgroundColor: "#0A0A0A",
     padding: 20,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
@@ -507,7 +508,7 @@ export const styles = StyleSheet.create({
     borderLeftWidth: 1.5,
     borderRightWidth: 1.5,
     borderBottomWidth: 0,
-    borderColor: "#522F2F",
+    borderColor: "#ffb0053c",
     elevation: 20,
   },
   initialContent: { flex: 1, position: "relative" },
@@ -516,7 +517,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 5,
     left: 5,
-    backgroundColor: "#9dc254",
+    backgroundColor: "#ffc403",
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -535,7 +536,7 @@ export const styles = StyleSheet.create({
   addMealHeader: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#522F2F",
+    color: "#ffffff",
     textAlign: "center",
     marginBottom: 15,
   },
@@ -592,7 +593,7 @@ export const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: "#522F2F",
+    color: "#ffff",
     textAlign: "center",
     marginTop: 10,
     opacity: 0.6,
@@ -602,11 +603,11 @@ export const styles = StyleSheet.create({
     position: "absolute",
     bottom: 15,
     alignSelf: "center",
-    backgroundColor: "#573737",
+    backgroundColor: "#D4AF37",
     paddingVertical: 10,
     paddingHorizontal: 20,
     borderRadius: 20,
-    borderColor: "white",
+    borderColor: "#ffd176",
     borderWidth: 1,
   },
   seasonalButtonText: { color: "#f2ece2", fontSize: 14, fontWeight: "bold" },

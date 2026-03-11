@@ -59,7 +59,6 @@ const mealOptions = [
   { label: "Drinks 🍹", value: "drink" },
 ];
 
-
 const timeOptions = [
   { label: "Any Time", value: "All" },
   { label: "Under 15 min", value: "15" },
@@ -109,20 +108,32 @@ const FavoritesPage = () => {
       let favoriteList = response.data.favorites || [];
 
       let filtered = favoriteList.filter((item: any) => {
-        const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesMeal = meal === "All" || item.meal_type?.includes(meal.toLowerCase());
-        const matchesCuisine = cuisine === "All" || item.cuisine?.includes(cuisine);
-        const matchesDiet = diet === "All" || item.search_terms?.includes(diet.toLowerCase());
-        
+        const matchesSearch = item.name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesMeal =
+          meal === "All" || item.meal_type?.includes(meal.toLowerCase());
+        const matchesCuisine =
+          cuisine === "All" || item.cuisine?.includes(cuisine);
+        const matchesDiet =
+          diet === "All" || item.search_terms?.includes(diet.toLowerCase());
+
         let matchesTime = true;
         if (time !== "All" && item.totalTime) {
           const cookTime = parseInt(item.totalTime);
           if (time === "15") matchesTime = cookTime < 15;
-          else if (time === "30") matchesTime = cookTime >= 15 && cookTime <= 30;
+          else if (time === "30")
+            matchesTime = cookTime >= 15 && cookTime <= 30;
           else if (time === "60") matchesTime = cookTime > 30 && cookTime <= 60;
         }
-        
-        return matchesSearch && matchesMeal && matchesCuisine && matchesDiet && matchesTime;
+
+        return (
+          matchesSearch &&
+          matchesMeal &&
+          matchesCuisine &&
+          matchesDiet &&
+          matchesTime
+        );
       });
       setRecipes(filtered);
     } catch (error) {
@@ -135,7 +146,7 @@ const FavoritesPage = () => {
   useFocusEffect(
     useCallback(() => {
       fetchFavorites();
-    }, [searchQuery, meal, diet, cuisine, time])
+    }, [searchQuery, meal, diet, cuisine, time]),
   );
 
   const confirmRemove = (recipeId: string) => {
@@ -144,14 +155,20 @@ const FavoritesPage = () => {
       "Are you sure you want to remove this recipe from favorites?",
       [
         { text: "Cancel", style: "cancel" },
-        { text: "Remove", style: "destructive", onPress: () => handleRemove(recipeId) },
-      ]
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => handleRemove(recipeId),
+        },
+      ],
     );
   };
 
   const handleRemove = async (recipeId: string) => {
     try {
-      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, { recipeId });
+      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
+        recipeId,
+      });
       setRecipes((prev) => prev.filter((item: any) => item.id !== recipeId));
     } catch (err) {
       Alert.alert("Error", "Could not remove recipe.");
@@ -197,7 +214,7 @@ const FavoritesPage = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#5F4436" />
+          <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
         </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
@@ -207,7 +224,7 @@ const FavoritesPage = () => {
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <Ionicons name="search" size={20} color="#8a6666" />
+          <Ionicons name="search" size={20} color="#D4AF37" />
         </View>
         <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
           <Text style={styles.clearButtonText}>Clear</Text>
@@ -219,8 +236,11 @@ const FavoritesPage = () => {
         </TouchableOpacity>
       </View>
       <View style={styles.filterWrapper}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-          
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
@@ -264,11 +284,17 @@ const FavoritesPage = () => {
         </ScrollView>
       </View>
       {loading ? (
-        <ActivityIndicator size="large" color="#5F4436" style={{ marginTop: 50 }} />
+        <ActivityIndicator
+          size="large"
+          color="#5F4436"
+          style={{ marginTop: 50 }}
+        />
       ) : recipes.length === 0 ? (
         <View style={styles.noResultsContainer}>
           <Ionicons name="heart-dislike-outline" size={60} color="#3c5f3692" />
-          <Text style={styles.noResultsText}>You have no recipes in favorites</Text>
+          <Text style={styles.noResultsText}>
+            You have no recipes in favorites
+          </Text>
         </View>
       ) : (
         <FlatList
@@ -283,7 +309,11 @@ const FavoritesPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2ece2", paddingTop: Constants.statusBarHeight,},
+  container: {
+    flex: 1,
+    backgroundColor: "#0A0A0A",
+    paddingTop: Constants.statusBarHeight,
+  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -292,11 +322,12 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 12,
   },
-  
+
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#1A1A1A",
+    borderColor: "#333333",
     borderRadius: 25,
     height: 48,
     paddingHorizontal: 18,
@@ -309,7 +340,7 @@ const styles = StyleSheet.create({
   dropdown: {
     width: 110,
     height: 36,
-    backgroundColor: "#c6a484",
+    backgroundColor: "#FF8C00",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
@@ -323,7 +354,8 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#121212",
+    borderColor: "#1A1A1A",
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,
@@ -346,37 +378,37 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#5F4436",
+    color: "#FFFFFF",
     flex: 1,
     marginRight: 8,
   },
   recipeDescription: {
     fontSize: 13,
-    color: "#555",
+    color: "#BBBBBB",
     marginBottom: 10,
     lineHeight: 18,
   },
   viewButton: {
-    backgroundColor: "#698c1e",
+     backgroundColor: "#D4AF37",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
     alignSelf: "flex-start",
   },
-  viewButtonText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  viewButtonText: { color: "#000000", fontWeight: "bold", fontSize: 12 },
   clearButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#ebe8e4",
+    backgroundColor: "#1A1A1A",
+    borderColor: "#333333",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ddd1cb",
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   clearButtonText: {
-    color: "#5F4436",
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -384,7 +416,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: "#e74c3c",
+    backgroundColor: "#ff1f06",
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -405,7 +437,7 @@ const styles = StyleSheet.create({
     color: "#3c5f3692",
     marginTop: 20,
     marginBottom: 8,
-    textAlign: 'center'
+    textAlign: "center",
   },
 });
 
