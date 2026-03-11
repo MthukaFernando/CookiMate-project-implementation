@@ -260,7 +260,7 @@ export default function GenerateRecipesPage() {
               <TouchableOpacity onPress={() => togglePanel(false)} hitSlop={20}>
                 <Ionicons name="close" size={26} color="#9CA3AF" />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Recipe Builder</Text>
+              <Text style={styles.headerTitle}>Recipe builder</Text>
               <TouchableOpacity
                 onPress={handleReset}
                 style={styles.resetContainer}
