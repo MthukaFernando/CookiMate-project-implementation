@@ -96,7 +96,7 @@ const EditProfile = () => {
         >
           
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#5F4436" />
+            <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
           </TouchableOpacity>
 
           
@@ -180,25 +180,27 @@ const styles = StyleSheet.create({
 
   topSubContainer: {
     borderWidth: 1,
-    borderColor: "#f0871f45",
     padding: 15,
     alignItems: "center",
     borderRadius: 20,
-    backgroundColor: '#E0C2A0',
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
   },
   mascotCircle: {
     width: 140, 
     height: 140,
     borderWidth: 3,
-    borderColor: '#EBEBEB',
+    borderColor: '#ffc106',
     borderRadius: 70,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffff",
+    marginTop: 20,
+    marginBottom: 10,
   },
-  mascotImg: { width: "100%", height: "100%" },
-  welcomemsg: { marginRight: "auto", marginBottom: 10, fontSize: 22, fontWeight: '600', color: "#5D4037" },
+  mascotImg: { width: "100%", height: "100%"},
+  welcomemsg: { marginRight: "auto", marginBottom: 10, fontSize: 22, fontWeight: '600', color: "#ffb700"},
   bubble: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#D4AF37",
     padding: 12,
     borderRadius: 20,
     marginTop: 10,
@@ -210,14 +212,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  bubbleText: { fontSize: 14, color: "#5D4037", textAlign: "center" },
+  bubbleText: { fontSize: 14, color: "#000000", textAlign: "center", fontWeight: "bold" },
   bubbleTail: {
     position: "absolute",
     top: -8,
-    left: "20%",
+    left: "50%",
     width: 20,
     height: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#D4AF37",
     transform: [{ rotate: "45deg" }],
     zIndex: -1,
   },
