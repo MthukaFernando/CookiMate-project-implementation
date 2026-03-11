@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#F3F4F6",
   },
-  filterTagActive: { backgroundColor: "#4A3B2C", borderColor: "#4A3B2C" },
+  filterTagActive: { backgroundColor: "#167730", borderColor: "#167730" },// changed the colour of the filter button
   filterTagText: { color: "#6B7280", fontWeight: "700", fontSize: 14 },
   filterTagTextActive: { color: "#FFF" },
   generateBtn: {
