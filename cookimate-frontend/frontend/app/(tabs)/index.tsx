@@ -23,6 +23,8 @@ import Constants from "expo-constants";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
+// Video dimensions (75% of width)
+const VIDEO_SIZE = SCREEN_WIDTH * 0.75;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
 
@@ -154,31 +156,29 @@ function HomePage() {
           </SafeAreaView>
         </LinearGradient>
 
-        <View style={styles.videoSection}>
-          <Video
-            ref={videoRef}
-            source={require("../../assets/videos/mascot_Home_animation.mp4")}
-            style={styles.mascotVideo}
-            resizeMode={ResizeMode.COVER}
-            shouldPlay
-            isLooping
-            isMuted
-          />
-          
-          <Animated.View style={[
-            styles.bubbleWrapper,
-            { transform: [{ translateY: floatAnim }] }
-          ]}>
-            {/* The tail border (Black) */}
-            <View style={styles.comicTailBorder} />
-            
-            <View style={styles.bubbleBody}>
-              <Text style={styles.bubbleText}>{message}</Text>
+        <View style={styles.heroContainer}>
+            <View style={styles.videoSection}>
+            <Video
+                ref={videoRef}
+                source={require("../../assets/videos/mascot_Home_animation.mp4")}
+                style={styles.mascotVideo}
+                resizeMode={ResizeMode.COVER}
+                shouldPlay
+                isLooping
+                isMuted
+            />
             </View>
-
-            {/* The tail inner (White) - Sits on top of the border */}
-            <View style={styles.comicTailInner} />
-          </Animated.View>
+            
+            <Animated.View style={[
+                styles.bubbleWrapper,
+                { transform: [{ translateY: floatAnim }] }
+            ]}>
+                <View style={styles.comicTailBorder} />
+                <View style={styles.bubbleBody}>
+                <Text style={styles.bubbleText}>{message}</Text>
+                </View>
+                <View style={styles.comicTailInner} />
+            </Animated.View>
         </View>
 
         <View style={styles.contentBody}>
@@ -211,8 +211,6 @@ function HomePage() {
 
         <View style={{ height: 120 }} />
       </ScrollView>
-
-      
     </View>
   );
 }
@@ -222,10 +220,21 @@ const styles = StyleSheet.create({
   headerTop: { paddingHorizontal: 25, paddingTop: 10, paddingBottom: 15 },
   welcome: { fontSize: 28, fontWeight: "900", color: "#f8f8f8" },
 
-  videoSection: {
+  heroContainer: {
     width: SCREEN_WIDTH,
-    height: SCREEN_WIDTH * 0.95,
-    backgroundColor: theme.headerBg, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 30,
+    backgroundColor: theme.headerBg,
+  },
+  videoSection: {
+    width: VIDEO_SIZE,
+    height: VIDEO_SIZE * 0.8, // Slightly shorter than wide for a nice oval feel
+    borderRadius: 40, // High border radius for circular look
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: theme.gold,
+    backgroundColor: '#000',
   },
   mascotVideo: {
     width: '100%',
@@ -234,72 +243,69 @@ const styles = StyleSheet.create({
 
   bubbleWrapper: {
     position: 'absolute',
-    top: '32%', 
-    left: '42%', 
-    width: '52%',
+    top: 10, 
+    right: '10%', 
+    width: '50%',
     zIndex: 10,
   },
   bubbleBody: { 
     backgroundColor: "#fff", 
-    paddingHorizontal: 16,
-    paddingVertical: 14, 
-    borderRadius: 22,
-    borderBottomLeftRadius: 2, // Sharpens the corner where the tail attaches
+    paddingHorizontal: 12,
+    paddingVertical: 10, 
+    borderRadius: 20,
+    borderBottomLeftRadius: 2,
     borderWidth: 3,
     borderColor: '#000',
     shadowColor: "#000",
-    shadowOffset: { width: 5, height: 5 },
+    shadowOffset: { width: 4, height: 4 },
     shadowOpacity: 0.8,
     shadowRadius: 0,
     elevation: 5,
     zIndex: 2,
   },
   bubbleText: { 
-    fontSize: 14, 
+    fontSize: 12, 
     fontWeight: "900", 
     color: "#000", 
-    lineHeight: 18, 
+    lineHeight: 16, 
     textAlign: 'center',
     textTransform: 'uppercase',
   },
-  // The Black Outline Triangle
   comicTailBorder: {
     position: 'absolute',
-    bottom: -18,
+    bottom: -15,
     left: -2, 
     width: 0,
     height: 0,
     borderStyle: 'solid',
-    borderLeftWidth: 15,
-    borderRightWidth: 15,
-    borderTopWidth: 25,
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 20,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#000',
     transform: [{ rotate: '25deg' }],
     zIndex: 1,
   },
-  // The White Fill Triangle
   comicTailInner: {
     position: 'absolute',
-    bottom: -13,
+    bottom: -10,
     left: 1, 
     width: 0,
     height: 0,
     borderStyle: 'solid',
-    borderLeftWidth: 12,
-    borderRightWidth: 12,
-    borderTopWidth: 22,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 18,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#fff',
     transform: [{ rotate: '25deg' }],
-    zIndex: 3, // Sit on top of the bubble's bottom border
+    zIndex: 3,
   },
 
   contentBody: { 
     backgroundColor: theme.mainBg, 
-    marginTop: -1, 
   },
   sectionHeading: { fontSize: 22, fontWeight: "800", color: "#fff", marginLeft: 25, marginTop: 25, marginBottom: 15 },
   
@@ -320,22 +326,6 @@ const styles = StyleSheet.create({
   randomDescription: { color: "#aaa", fontSize: 12, marginTop: 5 },
   viewButtonSmall: { backgroundColor: theme.gold, paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
   viewButtonTextSmall: { color: "#222", fontWeight: "bold", fontSize: 12 },
-  
-  fab: { 
-    position: "absolute", 
-    bottom: 35, 
-    right: 25, 
-    width: 65, 
-    height: 65, 
-    borderRadius: 32.5, 
-    backgroundColor: theme.accent, 
-    justifyContent: "center", 
-    alignItems: "center", 
-    elevation: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.5,
-    shadowRadius: 6
-  },
 });
 
 export default HomePage;
