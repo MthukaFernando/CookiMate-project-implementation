@@ -19,8 +19,8 @@ connectDB();
 
 // --- 2. MIDDLEWARE ---
 app.use(cors()); // Allows your React/Mobile app to talk to this server
-app.use(express.json()); // Allows the server to accept JSON data (like profile pics)
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' })); // Allows the server to accept JSON data (like profile pics)
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // --- 3. ROUTES ---
 app.get('/', (req, res) => {
