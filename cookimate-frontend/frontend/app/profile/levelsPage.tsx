@@ -56,7 +56,7 @@ const LevelsPage = () => {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={24} color="#5F4436" />
+          <Feather name="arrow-left" size={24} color='#fff200'/>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cooking Levels</Text>
         <View style={{ width: 40 }} /> 
@@ -100,7 +100,7 @@ const LevelsPage = () => {
                 if (value === 0) return null;
                 return (
                   <View key={key} style={styles.requirementRow}>
-                    <Feather name="check-circle" size={18} color="#ff4757" />
+                    <Feather name="check-circle" size={18} color="#ff9500" />
                     <Text style={styles.requirementText} numberOfLines={1}>
                       {key.replace(/([A-Z])/g, ' $1').toLowerCase()}: {value as number}
                     </Text>
@@ -147,7 +147,7 @@ const LevelCard = ({ level, onOpenReqs }: any) => {
 const styles = StyleSheet.create({
   container: { 
     flex: 1, 
-    backgroundColor: "#f2ece2" 
+    backgroundColor: "#0A0A0A" 
   },
   center: { 
     flex: 1, 
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   headerTitle: { 
     fontSize: 22, 
     fontWeight: 'bold', 
-    color: '#456406',
+    color: '#fff200',
     letterSpacing: 0.5
   },
   scrollList: { 
@@ -179,7 +179,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40 
   },
   cardContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
     borderRadius: 30,
     height: 160,
     flexDirection: 'row',
@@ -201,12 +202,12 @@ const styles = StyleSheet.create({
   cardLevelName: {
     fontSize: 24,
     fontWeight: '900',
-    color: '#2d3436',
+    color: '#ffffff',
     marginBottom: 4,
   },
   cardDescription: {
     fontSize: 14,
-    color: '#636e72',
+    color: '#fbffc7',
     marginBottom: 15,
     lineHeight: 18,
     width: '90%',
@@ -249,7 +250,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     width: '100%',
-    backgroundColor: '#fff',
+    backgroundColor: '#1A1A1A',
     borderRadius: 30,
     padding: 25,
     maxHeight: '70%',
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 22,
     fontWeight: 'bold',
-    color: '#2d3436',
+    color: '#ffffff',
     marginBottom: 20,
     textAlign: 'center'
   },
@@ -271,12 +272,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: '#fffd8b',
     gap: 12
   },
   requirementText: {
     fontSize: 16,
-    color: '#444',
+    color: '#ffffff',
     textTransform: 'capitalize'
   },
 });
