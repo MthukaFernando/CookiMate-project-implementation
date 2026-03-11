@@ -10,6 +10,16 @@ import { Ionicons } from "@expo/vector-icons";
 type Duration = { hours?: number; minutes?: number; seconds?: number };
 const { width } = Dimensions.get("window");
 
+const UI_COLORS = {
+  background: "#0A0A0A",
+  primaryGold: "#FFB300",
+  surface: "#1A1A1A",
+  textLight: "#FFFFFF",
+  textMuted: "#A6A6A6",
+  border: "#2A2A2A",
+  accentRed: "#FF4444",
+};
+
 export default function Timer({
   initialSeconds = 0,
   onClose,
