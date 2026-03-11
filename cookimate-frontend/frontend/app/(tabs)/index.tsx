@@ -31,8 +31,8 @@ const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
 const theme = {
-  headerBg: "#130B00", // Gold-to-Dark Header
-  mainBg: "#0A0A0A",   // The requested deep black background
+  headerBg: "#130B00", 
+  mainBg: "#0A0A0A",   
   gold: "#D4AF37",
   card: "#1E1E1E",
   text: "#FFFFFF",
@@ -84,8 +84,25 @@ function HomePage() {
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const videoRef = useRef(null);
+  
+  const floatAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -15, 
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 2000,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+
     const messages = ["Let's cook!", "AI recipes ready!", "What's in the fridge?", "I'm hungry!"];
     const interval = setInterval(() => {
       setMessage(messages[Math.floor(Math.random() * messages.length)]);
@@ -131,14 +148,12 @@ function HomePage() {
 
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
         
-        {/* 1. WELCOME HEADER */}
         <LinearGradient colors={[theme.gold, "#8B6300"]} style={styles.headerTop}>
           <SafeAreaView>
             <Text style={styles.welcome}>Welcome Back</Text>
           </SafeAreaView>
         </LinearGradient>
 
-        {/* 2. VIDEO SECTION */}
         <View style={styles.videoSection}>
           <Video
             ref={videoRef}
@@ -150,20 +165,22 @@ function HomePage() {
             isMuted
           />
           
-          <View style={styles.bubbleContainer}>
-            <View style={styles.bubble}>
+          <Animated.View style={[
+            styles.bubbleWrapper,
+            { transform: [{ translateY: floatAnim }] }
+          ]}>
+            {/* The tail border (Black) */}
+            <View style={styles.comicTailBorder} />
+            
+            <View style={styles.bubbleBody}>
               <Text style={styles.bubbleText}>{message}</Text>
             </View>
-            <MaterialCommunityIcons 
-              name="menu-left" 
-              size={40} 
-              color="#fff" 
-              style={styles.bubbleTail} 
-            />
-          </View>
+
+            {/* The tail inner (White) - Sits on top of the border */}
+            <View style={styles.comicTailInner} />
+          </Animated.View>
         </View>
 
-        {/* 3. CONTENT BODY (Full #0A0A0A) */}
         <View style={styles.contentBody}>
           <Text style={styles.sectionHeading}>Explore</Text>
           <ScrollView
@@ -195,54 +212,96 @@ function HomePage() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-     
+      <Pressable style={styles.fab} onPress={() => router.push("/menuPlanerPage")}>
+        <MaterialCommunityIcons name="robot" size={28} color="#000" />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.mainBg },
-  
   headerTop: { paddingHorizontal: 25, paddingTop: 10, paddingBottom: 15 },
   welcome: { fontSize: 28, fontWeight: "900", color: "#f8f8f8" },
 
   videoSection: {
     width: SCREEN_WIDTH,
     height: SCREEN_WIDTH * 0.95,
-    backgroundColor: theme.headerBg, // Keep top part matching the video base
+    backgroundColor: theme.headerBg, 
   },
   mascotVideo: {
     width: '100%',
     height: '100%',
   },
 
-  bubbleContainer: {
+  bubbleWrapper: {
     position: 'absolute',
-    top: '15%',
-    right: 15,
-    width: '55%',
-    zIndex: 10
+    top: '32%', 
+    left: '42%', 
+    width: '52%',
+    zIndex: 10,
   },
-  bubble: { 
+  bubbleBody: { 
     backgroundColor: "#fff", 
-    padding: 12, 
-    borderRadius: 20,
-    elevation: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 14, 
+    borderRadius: 22,
+    borderBottomLeftRadius: 2, // Sharpens the corner where the tail attaches
+    borderWidth: 3,
+    borderColor: '#000',
     shadowColor: "#000",
-    shadowOpacity: 0.3,
-    shadowRadius: 5
+    shadowOffset: { width: 5, height: 5 },
+    shadowOpacity: 0.8,
+    shadowRadius: 0,
+    elevation: 5,
+    zIndex: 2,
   },
-  bubbleTail: { 
-    position: "absolute", 
-    left: -22, 
-    bottom: 5, 
-    transform: [{ rotate: "10deg" }] 
+  bubbleText: { 
+    fontSize: 14, 
+    fontWeight: "900", 
+    color: "#000", 
+    lineHeight: 18, 
+    textAlign: 'center',
+    textTransform: 'uppercase',
   },
-  bubbleText: { fontSize: 13, fontWeight: "700", color: "#333", lineHeight: 18 },
+  // The Black Outline Triangle
+  comicTailBorder: {
+    position: 'absolute',
+    bottom: -18,
+    left: -2, 
+    width: 0,
+    height: 0,
+    borderStyle: 'solid',
+    borderLeftWidth: 15,
+    borderRightWidth: 15,
+    borderTopWidth: 25,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#000',
+    transform: [{ rotate: '25deg' }],
+    zIndex: 1,
+  },
+  // The White Fill Triangle
+  comicTailInner: {
+    position: 'absolute',
+    bottom: -13,
+    left: 1, 
+    width: 0,
+    height: 0,
+    borderStyle: 'solid',
+    borderLeftWidth: 12,
+    borderRightWidth: 12,
+    borderTopWidth: 22,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderTopColor: '#fff',
+    transform: [{ rotate: '25deg' }],
+    zIndex: 3, // Sit on top of the bubble's bottom border
+  },
 
   contentBody: { 
     backgroundColor: theme.mainBg, 
-    marginTop: -1, // Anti-aliasing fix to prevent a gap
+    marginTop: -1, 
   },
   sectionHeading: { fontSize: 22, fontWeight: "800", color: "#fff", marginLeft: 25, marginTop: 25, marginBottom: 15 },
   
@@ -261,8 +320,8 @@ const styles = StyleSheet.create({
   randomInfo: { padding: 15 },
   randomTitle: { color: "#fff", fontWeight: "700", fontSize: 16 },
   randomDescription: { color: "#aaa", fontSize: 12, marginTop: 5 },
-  viewButtonSmall: { backgroundColor: "#D4AF37", paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
-  viewButtonTextSmall: { color: "#2a2929", fontWeight: "bold", fontSize: 12 },
+  viewButtonSmall: { backgroundColor: theme.gold, paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
+  viewButtonTextSmall: { color: "#222", fontWeight: "bold", fontSize: 12 },
   
   fab: { 
     position: "absolute", 
@@ -274,10 +333,10 @@ const styles = StyleSheet.create({
     backgroundColor: theme.accent, 
     justifyContent: "center", 
     alignItems: "center", 
-    elevation: 8,
+    elevation: 10,
     shadowColor: "#000",
-    shadowOpacity: 0.4,
-    shadowRadius: 5
+    shadowOpacity: 0.5,
+    shadowRadius: 6
   },
 });
 
