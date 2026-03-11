@@ -503,7 +503,7 @@ const Settings = () => {
         >
           <View style={styles.cardContent}>
             <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
-              <Feather name="log-out" size={24} color="#FF4444" />
+              <Feather name="log-out" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.cardTitle, styles.logoutText]}>Log Out</Text>
@@ -519,7 +519,7 @@ const Settings = () => {
         >
           <View style={styles.cardContent}>
             <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
-              <Feather name="trash-2" size={24} color="#FF4444" />
+              <Feather name="trash-2" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.cardTitle, styles.deleteText]}>Delete Account</Text>
@@ -613,16 +613,16 @@ const styles = StyleSheet.create({
   },
   logoutCard: {
     marginTop: 20,
-    borderColor: '#FF4444',
+    borderColor: '#D4AF37',
   },
   deleteCard: {
-    borderColor: '#FF4444',
+    borderColor: '#D4AF37',
   },
   logoutText: {
-    color: '#FF4444',
+    color: '#D4AF37',
   },
   deleteText: {
-    color: '#FF4444',
+    color: '#D4AF37',
   },
   bottomSpacing: {
     height: 30,
