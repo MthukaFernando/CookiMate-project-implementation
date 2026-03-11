@@ -117,87 +117,81 @@ export default function Timer({
     <View style={styles.timerContainer}>
       {onClose && (
         <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
-          <Ionicons name="close-circle" size={36} color="#5F4436" />
+          <Ionicons name="chevron-back" size={28} color={UI_COLORS.primaryGold} />
         </TouchableOpacity>
       )}
 
       <View style={styles.progressWrapper}>
         <AnimatedCircularProgress
-          size={width * 0.65}
-          width={12}
-          fill={
-            totalSeconds > 0
-              ? (secondsLeft / totalSeconds) * 100
-              : 0
-          }
-          tintColor="#88653d"
-          backgroundColor="#E0C2A0"
+          size={width * 0.7}
+          width={10}
+          fill={totalSeconds > 0 ? (secondsLeft / totalSeconds) * 100 : 0}
+          tintColor={UI_COLORS.primaryGold}
+          backgroundColor={UI_COLORS.border}
           rotation={0}
           lineCap="round"
         >
           {() => (
             <TouchableOpacity
+              activeOpacity={0.8}
               onPress={() => secondsLeft > 0 && setRunning(!running)}
               style={styles.innerCircle}
             >
-              <Text style={styles.timerText}>
-                {formatDisplay(secondsLeft)}
-              </Text>
-              <Text style={styles.statusText}>
-                {running ? "PAUSE" : "START"}
-              </Text>
+              <Text style={styles.timerText}>{formatDisplay(secondsLeft)}</Text>
+              <View style={[styles.badge, { backgroundColor: running ? "#332B14" : "#222" }]}>
+                <Text style={[styles.statusText, { color: running ? UI_COLORS.primaryGold : "#31db2e" }]}>
+                  {running ? "PAUSE" : "START"}
+                </Text>
+              </View>
             </TouchableOpacity>
           )}
         </AnimatedCircularProgress>
       </View>
 
       <View style={styles.controlsRow}>
-        <TouchableOpacity
-          onPress={() => setShowPicker(true)}
-          style={styles.mainButton}
-        >
-          <Text style={styles.buttonText}>Edit</Text>
+        <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.mainButton}>
+          <Text style={styles.buttonText}>Edit Timer</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={resetTimer}
-          style={[styles.mainButton, { borderColor: "#d9534f" }]}
-        >
-          <Text style={[styles.buttonText, { color: "#d9534f" }]}>
-            Reset
-          </Text>
+        <TouchableOpacity onPress={resetTimer} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>Reset</Text>
         </TouchableOpacity>
       </View>
 
-      {/* SOUND DROPDOWN */}
-      <View
-        style={{
-          marginTop: 25,
-          width: 240,
-          zIndex: 1000,
-          ...(Platform.OS === "android" && { elevation: 1000 }),
-        }}
-      >
+      <View style={styles.dropdownContainerWrapper}>
+        <Text style={styles.label}>ALARM TONE</Text>
         <DropDownPicker
-          open={open}
-          value={selectedAlarmValue}
-          items={items}
-          setOpen={setOpen}
-          setValue={(callback) => {
-            const value =
-              typeof callback === "function"
-                ? callback(selectedAlarmValue)
-                : callback;
-            setSelectedAlarmValue(value);
-          }}
-          setItems={setItems}
-          placeholder="🔔 Timer Sounds"
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownContainer}
-          listMode="SCROLLVIEW"
-          maxHeight={300}  
-          disabled={running}
-        />
+        open={open}
+        value={selectedAlarmValue}
+        items={items}
+        setOpen={setOpen}
+        setValue={(callback) => {
+          const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
+          setSelectedAlarmValue(value);
+        }}
+        setItems={setItems}
+        placeholder="Select Tone"
+        placeholderStyle={{ color: UI_COLORS.textMuted }}
+        style={styles.dropdown}
+        dropDownContainerStyle={styles.dropdownList}
+        textStyle={styles.dropdownText}
+        listMode="SCROLLVIEW"
+        maxHeight={300}
+        disabled={running}
+        
+        // 1. Custom Arrow Icons
+        ArrowUpIconComponent={() => (
+          <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
+        )}
+        ArrowDownIconComponent={() => (
+          <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />
+        )}
+        
+        // 2. Custom Tick Icon (shown when an item is selected)
+        TickIconComponent={() => (
+          <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />
+        )}
+      />
       </View>
 
       <TimerPickerModal
@@ -205,18 +199,14 @@ export default function Timer({
         visible={showPicker}
         setIsVisible={setShowPicker}
         onConfirm={(picked: Duration) => {
-          const total =
-            (picked.hours || 0) * 3600 +
-            (picked.minutes || 0) * 60 +
-            (picked.seconds || 0);
-
+          const total = (picked.hours || 0) * 3600 + (picked.minutes || 0) * 60 + (picked.seconds || 0);
           setSecondsLeft(total);
           setTotalSeconds(total);
           setShowPicker(false);
         }}
         styles={{
-          theme: "light",
-          backgroundColor: "#F2ECE2",
+          theme: "dark",
+          backgroundColor: UI_COLORS.surface,
         }}
       />
     </View>
