@@ -26,7 +26,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
-const HEADER_HEIGHT = SCREEN_HEIGHT * 0.30;
+const HEADER_HEIGHT = SCREEN_HEIGHT * 0.45;
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -51,14 +51,8 @@ type NavCardProps = {
 
 const NavCard = ({ title, imageSource, href, badgeText, iconName }: NavCardProps) => {
   const scale = new Animated.Value(1);
-
-  const pressIn = () => {
-    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
-  };
-
-  const pressOut = () => {
-    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
-  };
+  const pressIn = () => Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
+  const pressOut = () => Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
 
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
@@ -69,6 +63,7 @@ const NavCard = ({ title, imageSource, href, badgeText, iconName }: NavCardProps
         style={styles.navCard}
       >
         <Image source={imageSource} style={styles.navImage} />
+        <View style={styles.cardOverlay} />
         <View style={styles.badge}>
           <Text style={styles.badgeText}>{badgeText}</Text>
         </View>
@@ -84,15 +79,6 @@ const NavCard = ({ title, imageSource, href, badgeText, iconName }: NavCardProps
   );
 };
 
-const QuickButton = ({ icon, label }: any) => (
-  <Pressable style={styles.quickButton}>
-    <MaterialCommunityIcons name={icon} size={22} color="#000" />
-    <Text style={styles.quickText}>{label}</Text>
-  </Pressable>
-);
-
-// --- MAIN PAGE ---
-
 function HomePage() {
   const [message, setMessage] = useState("Hi! What would you like to cook today?");
   const [recipes, setRecipes] = useState([]);
@@ -104,10 +90,11 @@ function HomePage() {
       "Let's cook something amazing!",
       "Try an AI recipe today!",
       "What's in your fridge?",
+      "I'm hungry just thinking about it!",
     ];
     const interval = setInterval(() => {
       setMessage(messages[Math.floor(Math.random() * messages.length)]);
-    }, 9000);
+    }, 7000);
     return () => clearInterval(interval);
   }, []);
 
@@ -145,7 +132,6 @@ function HomePage() {
       Alert.alert("Error", "Please log in to save recipes.");
       return;
     }
-
     const isFav = favorites.includes(recipeId);
     try {
       if (isFav) {
@@ -162,19 +148,12 @@ function HomePage() {
 
   const renderRecipe = ({ item }: any) => {
     const isFavorite = favorites.includes(item.id);
-
     return (
-      <Pressable
-        style={styles.randomCard}
-        onPress={() => router.push(`/recipe/${item.id}`)}
-      >
+      <Pressable style={styles.randomCard} onPress={() => router.push(`/recipe/${item.id}`)}>
         <Image source={{ uri: item.image }} style={styles.randomImage} />
-
         <View style={styles.randomInfo}>
           <View style={styles.cardHeaderRow}>
-            <Text style={styles.randomTitle} numberOfLines={1}>
-              {item.name}
-            </Text>
+            <Text style={styles.randomTitle} numberOfLines={1}>{item.name}</Text>
             <Pressable hitSlop={10} onPress={() => toggleFavorite(item.id)}>
               <MaterialCommunityIcons
                 name={isFavorite ? "heart" : "heart-outline"}
@@ -183,11 +162,9 @@ function HomePage() {
               />
             </Pressable>
           </View>
-
           <Text style={styles.randomDescription} numberOfLines={2}>
             {item.description || item.cuisine || "Tap to see ingredients and steps."}
           </Text>
-
           <View style={styles.viewButtonSmall}>
             <Text style={styles.viewButtonTextSmall}>View Recipe</Text>
           </View>
@@ -201,193 +178,103 @@ function HomePage() {
       <StatusBar barStyle="light-content" />
 
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* HEADER */}
-        <LinearGradient colors={["#FFD54F", "#FFB300"]} style={styles.header}>
-          <SafeAreaView>
-            <Text style={styles.welcome}>Welcome Back 👋</Text>
-            <View style={styles.mascotRow}>
-              <Image
-                source={require("../../assets/images/Home-page-Mascot.png")}
-                style={styles.mascot}
-              />
-              <View style={styles.bubble}>
-                <Text style={styles.bubbleText}>{message}</Text>
+        <View style={{ backgroundColor: theme.background }}>
+          <LinearGradient 
+            colors={["#D4AF37", "#4e390c", theme.background]} 
+            style={styles.header}
+            locations={[0, 0.5, 0.9]} 
+          >
+            <SafeAreaView style={styles.headerContent}>
+              <Text style={styles.welcome}>Welcome Back </Text>
+              
+              <View style={styles.mascotContainer}>
+                <Image
+                  source={require("../../assets/images/Home-page-Mascot.png")}
+                  style={styles.mascotLarge}
+                />
+                <View style={styles.bubbleContainer}>
+                  <View style={styles.bubble}>
+                    <Text style={styles.bubbleText}>{message}</Text>
+                  </View>
+                  <MaterialCommunityIcons 
+                    name="menu-left" 
+                    size={40} 
+                    color="#fff" 
+                    style={styles.bubbleTail} 
+                  />
+                </View>
               </View>
-            </View>
-          </SafeAreaView>
-        </LinearGradient>
-
-        {/* QUICK ACTIONS */}
-        <View style={styles.quickRow}>
-          <QuickButton icon="fire" label="Trending" />
-          <QuickButton icon="timer" label="Quick Meals" />
-          <QuickButton icon="leaf" label="Healthy" />
+            </SafeAreaView>
+          </LinearGradient>
         </View>
 
-        {/* FEATURED NAVIGATION */}
-        <Text style={styles.sectionHeading}>Explore</Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          snapToInterval={CARD_WIDTH + SPACING * 2}
-          contentContainerStyle={{ paddingHorizontal: 15 }}
-        >
-          <NavCard
-            title="Find Recipes"
-            imageSource={require("../../assets/images/recipes.png")}
-            href="/menuPlanerPage"
-            badgeText="100+ recipes"
-            iconName="silverware-fork-knife"
-          />
-          <NavCard
-            title="Generate Recipes"
-            imageSource={require("../../assets/images/ai.png")}
-            href="/menuPlanerPage"
-            badgeText="AI powered"
-            iconName="robot"
-          />
-          <NavCard
-            title="Community"
-            imageSource={require("../../assets/images/community.png")}
-            href="Community/CommunityFeedCards"
-            badgeText="Share food"
-            iconName="account-group"
-          />
-        </ScrollView>
-
-        {/* RECOMMENDED SECTION (Updated Card Style) */}
-        <Text style={styles.sectionHeading}>Recommended For You</Text>
-        {loading ? (
-          <ActivityIndicator size="large" color={theme.accent} />
-        ) : (
-          <FlatList
-            data={recipes}
-            renderItem={renderRecipe}
-            keyExtractor={(item: any) => item.id}
+        <View style={styles.contentBody}>
+          <Text style={styles.sectionHeading}>Explore</Text>
+          <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ paddingHorizontal: 20 }}
-          />
-        )}
+            snapToInterval={CARD_WIDTH + SPACING * 2}
+            contentContainerStyle={{ paddingHorizontal: 15 }}
+          >
+            <NavCard title="Find Recipes" imageSource={require("../../assets/images/recipes.png")} href="/menuPlanerPage" badgeText="100+ recipes" iconName="silverware-fork-knife" />
+            <NavCard title="Generate Recipes" imageSource={require("../../assets/images/ai.png")} href="/menuPlanerPage" badgeText="AI powered" iconName="robot" />
+            <NavCard title="Community" imageSource={require("../../assets/images/community.png")} href="Community/CommunityFeedCards" badgeText="Share food" iconName="account-group" />
+          </ScrollView>
+
+          <Text style={styles.sectionHeading}>Recommended For You</Text>
+          {loading ? (
+            <ActivityIndicator size="large" color={theme.accent} />
+          ) : (
+            <FlatList
+              data={recipes}
+              renderItem={renderRecipe}
+              keyExtractor={(item: any) => item.id}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 20 }}
+            />
+          )}
+        </View>
 
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      {/* FLOATING AI BUTTON */}
-      <Pressable style={styles.fab} onPress={() => router.push("/menuPlanerPage")}>
-        <MaterialCommunityIcons name="robot" size={28} color="#000" />
-      </Pressable>
+      
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.background },
-  header: {
-    height: HEADER_HEIGHT,
-    paddingHorizontal: 25,
-    justifyContent: "center",
-  },
-  welcome: { fontSize: 26, fontWeight: "800", color: "#000" },
-  mascotRow: { flexDirection: "row", alignItems: "center", marginTop: 15 },
-  mascot: { width: 120, height: 120, marginRight: 15 },
-  bubble: { flex: 1, backgroundColor: "#fff", padding: 12, borderRadius: 18 },
-  bubbleText: { fontSize: 15, fontWeight: "600", color: "#333" },
-  quickRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 20 },
-  quickButton: {
-    backgroundColor: theme.accent,
-    padding: 12,
-    borderRadius: 18,
-    alignItems: "center",
-    width: 90,
-  },
-  quickText: { fontSize: 12, fontWeight: "700", marginTop: 4 },
-  sectionHeading: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#fff",
-    marginLeft: 25,
-    marginTop: 30,
-    marginBottom: 15,
-  },
-  navCard: {
-    width: CARD_WIDTH,
-    height: 350,
-    borderRadius: 30,
-    marginHorizontal: SPACING,
-    overflow: "hidden",
-    backgroundColor: theme.card,
-  },
+  header: { height: HEADER_HEIGHT, paddingHorizontal: 25 },
+  headerContent: { flex: 1, justifyContent: "space-between" },
+  welcome: { fontSize: 28, fontWeight: "900", color: "#f8f8f8", marginTop: 10 },
+  mascotContainer: { flexDirection: "row", alignItems: "flex-end", marginBottom: 40 },
+  mascotLarge: { width: 160, height: 160, resizeMode: "contain" },
+  bubbleContainer: { flex: 1, marginLeft: -10, marginBottom: 40 },
+  bubble: { backgroundColor: "#fff", padding: 15, borderRadius: 20 },
+  bubbleTail: { position: "absolute", left: -22, bottom: 5, transform: [{ rotate: "15deg" }] },
+  bubbleText: { fontSize: 15, fontWeight: "700", color: "#333", lineHeight: 20 },
+  contentBody: { marginTop: -20 },
+  sectionHeading: { fontSize: 22, fontWeight: "800", color: "#fff", marginLeft: 25, marginTop: 10, marginBottom: 15 },
+  navCard: { width: CARD_WIDTH, height: 350, borderRadius: 30, marginHorizontal: SPACING, overflow: "hidden", backgroundColor: theme.card },
   navImage: { width: "100%", height: "70%" },
-  badge: {
-    position: "absolute",
-    top: 12,
-    left: 12,
-    backgroundColor: theme.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  badgeText: { fontWeight: "700", fontSize: 11 },
+  cardOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: 'rgba(0,0,0,0.1)', height: '70%' },
+  badge: { position: "absolute", top: 15, left: 15, backgroundColor: theme.accent, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 12, zIndex: 2 },
+  badgeText: { fontWeight: "800", fontSize: 12, color: "#000" },
   cardFooter: { padding: 15 },
   titleRow: { flexDirection: "row", alignItems: "center" },
   navTitle: { fontSize: 20, fontWeight: "800", color: "#fff", marginLeft: 8 },
-  subtitle: { marginTop: 6, color: "#aaa" },
-  
-  // UPDATED RECIPE CARD STYLES
-  randomCard: {
-    width: 260,
-    backgroundColor: theme.card,
-    borderRadius: 24,
-    marginRight: 18,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
+  subtitle: { marginTop: 6, color: "#aaa", fontSize: 13 },
+  randomCard: { width: 260, backgroundColor: theme.card, borderRadius: 24, marginRight: 18, overflow: "hidden", borderWidth: 1, borderColor: "#333" },
   randomImage: { width: "100%", height: 140 },
   randomInfo: { padding: 15 },
-  cardHeaderRow: { 
-    flexDirection: "row", 
-    justifyContent: "space-between", 
-    alignItems: "center",
-    marginBottom: 4 
-  },
-  randomTitle: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
-    flex: 1,
-    marginRight: 10,
-  },
-  randomDescription: {
-    color: "#aaa",
-    fontSize: 12,
-    marginTop: 6,
-    lineHeight: 18,
-    height: 36,
-  },
-  viewButtonSmall: {
-    backgroundColor: "#4E342E",
-    paddingVertical: 6,
-    paddingHorizontal: 14,
-    borderRadius: 8,
-    alignSelf: "flex-start",
-    marginTop: 12,
-  },
-  viewButtonTextSmall: { color: "#fff", fontWeight: "bold", fontSize: 11 },
-  
-  fab: {
-    position: "absolute",
-    bottom: 35,
-    right: 25,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: theme.accent,
-    justifyContent: "center",
-    alignItems: "center",
-    elevation: 6,
-  },
+  cardHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
+  randomTitle: { color: "#fff", fontWeight: "700", fontSize: 16, flex: 1, marginRight: 10 },
+  randomDescription: { color: "#aaa", fontSize: 12, marginTop: 6, lineHeight: 18, height: 36 },
+  viewButtonSmall: { backgroundColor: "#4E342E", paddingVertical: 8, paddingHorizontal: 15, borderRadius: 10, alignSelf: "flex-start", marginTop: 12 },
+  viewButtonTextSmall: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  fab: { position: "absolute", bottom: 35, right: 25, width: 65, height: 65, borderRadius: 32.5, backgroundColor: theme.accent, justifyContent: "center", alignItems: "center", elevation: 8 },
 });
 
 export default HomePage;
