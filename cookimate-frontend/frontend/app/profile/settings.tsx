@@ -539,7 +539,7 @@ const Settings = () => {
 
       {loading && (
         <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#923d0a" />
+          <ActivityIndicator size="large" color="#D4AF37" />
         </View>
       )}
     </View>
@@ -705,14 +705,14 @@ const styles = StyleSheet.create({
     textAlignVertical: 'top',
   },
   saveButton: {
-    backgroundColor: '#923d0a',
+    backgroundColor: '#D4AF37',
     padding: 15,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 20,
   },
   saveButtonText: {
-    color: '#fff',
+    color: '#0A0A0A',
     fontSize: 16,
     fontWeight: '600',
   },
@@ -722,7 +722,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(255,255,255,0.7)',
+    backgroundColor: 'rgba(10,10,10,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
   },
