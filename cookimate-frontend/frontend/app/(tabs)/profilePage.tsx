@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
     gap: 10 
   },
   editBtn: { 
-    backgroundColor: '#1E1E1E',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     paddingHorizontal: 15, 
     paddingVertical: 8, 
     borderRadius: 12,
@@ -247,10 +247,10 @@ const styles = StyleSheet.create({
   editBtnText: { 
     fontSize: 12, 
     fontWeight: 'bold', 
-    color: '#FFFFFF' 
+    color: '#D4AF37' 
   },
   settingsBtn: { 
-    backgroundColor: '#1E1E1E',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     width: 35, 
     height: 35, 
     borderRadius: 12, 
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
     width: 35, 
     height: 35, 
     borderRadius: 10, 
-    backgroundColor: '#1A1A1A',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     justifyContent: 'center', 
     alignItems: 'center',
     borderWidth: 1,
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     width: 60,
     height: 60,
     borderRadius: 20,
-    backgroundColor: '#1E1E1E',
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
