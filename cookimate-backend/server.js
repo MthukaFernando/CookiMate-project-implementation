@@ -1,10 +1,10 @@
-import dotenv from 'dotenv';
+import dotenv from "dotenv";
 dotenv.config();
-import express from 'express';
-import cors from 'cors';
-import connectDB from './config/db.js'; // Ensure the path is correct
-import recipeRoutes from './routes/recipeRoutes.js';
-import socialRoutes from './routes/socialRoutes.js';
+import express from "express";
+import cors from "cors";
+import connectDB from "./config/db.js"; // Ensure the path is correct
+import recipeRoutes from "./routes/recipeRoutes.js";
+import socialRoutes from "./routes/socialRoutes.js";
 
 console.log("Current Directory:", process.cwd());
 console.log("Mongo URI is:", process.env.MONGO_URI);
@@ -19,22 +19,20 @@ connectDB();
 
 // --- 2. MIDDLEWARE ---
 app.use(cors()); // Allows your React/Mobile app to talk to this server
-app.use(express.json({ limit: '10mb' })); // Allows the server to accept JSON data (like profile pics)
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: "10mb" })); // Allows the server to accept JSON data (like profile pics)
+app.use(express.urlencoded({ limit: "10mb", extended: true }));
 
 // --- 3. ROUTES ---
-app.get('/', (req, res) => {
+app.get("/", (req, res) => {
   res.send("Cookimate API is running! ");
 });
 
-
-
 app.use("/api/users", userRoutes);
-app.use('/api/recipes', recipeRoutes);
+app.use("/api/recipes", recipeRoutes);
 app.use("/api/social", socialRoutes);
 
 // --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(` Server humming along on port ${PORT}`);
 });
