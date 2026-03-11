@@ -30,6 +30,17 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
 
+const COLORS = {
+  background: "#050505", // Deeper black
+  primaryGold: "#D4AF37",
+  surface: "#121212", // Elevation color
+  surfaceLight: "#1E1E1E",
+  textLight: "#F5F5F5",
+  textMuted: "#888888",
+  border: "#262626",
+  accentRed: "#FF4444",
+};
+
 interface Post {
   id: string;
   uri: string;
