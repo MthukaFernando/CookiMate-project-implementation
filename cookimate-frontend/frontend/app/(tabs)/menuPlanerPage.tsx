@@ -164,7 +164,7 @@ const Page = () => {
   const handleDeleteRecipe = (uniqueId: string) => {
     Alert.alert(
       "Remove Recipe",
-      "Are you sure you want to remove this recipe from your planner?",
+      "Are you sure you want to delete this recipe from your planner :3?",
       [
         { text: "Cancel", style: "cancel" },
         {

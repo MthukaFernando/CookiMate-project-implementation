@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import connectDB from './config/db.js'; // Ensure the path is correct
 import recipeRoutes from './routes/recipeRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
 import gamificationRoutes from "./routes/gamificationRoutes.js"; // ONLY THIS LINE ADDED
 
 console.log("Current Directory:", process.cwd());
@@ -19,6 +20,7 @@ connectDB();
 // --- 2. MIDDLEWARE ---
 app.use(cors()); // Allows your React/Mobile app to talk to this server
 app.use(express.json()); // Allows the server to accept JSON data (like profile pics)
+app.use(express.urlencoded({ extended: true }));
 
 // --- 3. ROUTES ---
 app.get('/', (req, res) => {
@@ -27,6 +29,7 @@ app.get('/', (req, res) => {
 
 app.use("/api/users", userRoutes);
 app.use('/api/recipes', recipeRoutes);
+app.use("/api/social", socialRoutes);
 app.use("/api/gamification", gamificationRoutes); // ONLY THIS LINE ADDED
 
 // --- 4. START SERVER ---

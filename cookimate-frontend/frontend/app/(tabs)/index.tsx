@@ -152,7 +152,7 @@ function HomePage() {
           <NavCard
             title="Community"
             imageSource={require("../../assets/images/community.png")}
-            href="/menuPlanerPage"
+            href="Community/CommunityFeedCards"
             bColor="none"
             badgeText="share journey"
             iconName="account-group"

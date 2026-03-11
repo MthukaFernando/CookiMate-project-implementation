@@ -1,6 +1,7 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
 import Recipe from "../models/Recipe.js";
+import Post from "../models/Post.js"; 
 import UserProgress from "../models/UserProgress.js";  // ONLY THIS LINE ADDED
 
 // create a user
@@ -84,36 +85,7 @@ export const getLevels = async (req, res) => {
   }
 };
 
-// Remove favorites from the favorites array
-
-export const removeFromFavorites = async (req, res) => {
-  try {
-    const { recipeId } = req.body;
-    const { uid } = req.params;
-
-    const recipe = await Recipe.findOne({ id: recipeId });
-
-    if (!recipe) {
-      return res.status(404).json({ message: "Recipe not found" });
-    }
-
-    const user = await User.findOneAndUpdate(
-      { firebaseUid: uid },
-      { $pull: { favorites: recipe._id  } }, 
-      { new: true }
-    );
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    res.status(200).json({ message: "Recipe removed from favorites" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
-};
-
-// Edit user with , (username, name , profilepic)
+// Edit user with (username, name, profilepic)
 export const updateUser = async (req, res) => {
   try {
     const { username, name, profilePic } = req.body;
@@ -126,7 +98,7 @@ export const updateUser = async (req, res) => {
         profilePic,
       },
       {
-        returnDocument: "after", // ✅ updated way
+        returnDocument: "after", 
         runValidators: true,
       },
     );
@@ -145,37 +117,167 @@ export const updateUser = async (req, res) => {
   }
 };
 
-//the api that will let the user add recips to the fav (the id of the recips will be stored in the user collection under favorites array )
-export const addToFavorites = async (req, res) => {
+// TOGGLE FAVORITE - Add/remove recipe from favorites (works like a toggle)
+export const toggleFavorite = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
 
-    //check if the fronend had sent a valid id that is in the recips collection
-    const recipe = await Recipe.findOne({ id: recipeId });
+    // Check if the recipe exists
+    const recipe = await Recipe.findById(recipeId);
     if (!recipe) {
       return res.status(404).json({ message: "Recipe not found" });
     }
-    //get the logged in user object from the user collection
-    // Find user
+
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    //check if the recips id is already there this is importat as we can give the user a feedbcak msg
 
-   if (user.favorites.includes(recipe._id)) {
-      return res.status(400).json({ message: "Recipe already in favorites" });
+    // Check if it's already a favorite
+    const isFavorited = user.favorites.includes(recipeId);
+
+    if (isFavorited) {
+      // REMOVE logic
+      await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $pull: { favorites: recipeId } }
+      );
+      res.status(200).json({ 
+        message: "Removed from favorites", 
+        isFavorite: false 
+      });
+    } else {
+      // ADD logic
+      await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { $push: { favorites: recipeId } }
+      );
+      res.status(200).json({ 
+        message: "Added to favorites", 
+        isFavorite: true 
+      });
     }
-
-    //this will add the recipe _id (built in mongodb) end of the faverecipe array
-    user.favorites.push(recipe._id);
-    await user.save();
-    res.status(200).json({
-      message: "Recipe added to favorites",
-    });
   } catch (error) {
     console.error(error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// FOLLOW / UNFOLLOW USER (Updated to use Firebase UIDs)
+export const toggleFollow = async (req, res) => {
+  try {
+    const { targetUserId, currentUserId } = req.body; // Firebase UIDs
+
+    const targetUser = await User.findOne({ firebaseUid: targetUserId });
+    const currentUser = await User.findOne({ firebaseUid: currentUserId });
+
+    if (!targetUser || !currentUser) return res.status(404).json({ message: "User not found" });
+    if (targetUserId === currentUserId) return res.status(400).json({ message: "Cannot follow yourself" });
+
+    const isAlreadyFollowing = currentUser.following.some(id => id.equals(targetUser._id));
+
+    if (!isAlreadyFollowing) {
+      await currentUser.updateOne({ $push: { following: targetUser._id } });
+      await targetUser.updateOne({ $push: { followers: currentUser._id } });
+      res.status(200).json({ isFollowing: true });
+    } else {
+      await currentUser.updateOne({ $pull: { following: targetUser._id } });
+      await targetUser.updateOne({ $pull: { followers: currentUser._id } });
+      res.status(200).json({ isFollowing: false });
+    }
+  } catch (err) {
+    console.error("TOGGLE_FOLLOW_ERROR:", err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// SEARCH USERS
+export const searchUsers = async (req, res) => {
+  const query = req.query.username;
+  
+  if (!query) {
+    return res.status(400).json({ message: "Username query parameter is required" });
+  }
+  
+  try {
+    const users = await User.find({
+      username: { $regex: query, $options: "i" }, // Case-insensitive search
+    }).select("username profilePic name firebaseUid"); 
+    
+    res.status(200).json(users);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Call this when the "Complete Recipe" confetti happens
+export const incrementCookCount = async (req, res) => {
+  try {
+    const { uid } = req.params; // Using firebaseUid for consistency
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Viewing another user's profile
+export const getCommunityProfile = async (req, res) => {
+  try {
+    const { uid } = req.params; 
+    const { viewerId } = req.query;
+
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    let isFollowing = false;
+    if (viewerId) {
+      const viewer = await User.findOne({ firebaseUid: viewerId });
+      if (viewer) {
+        isFollowing = (user.followers || []).some(fId => fId.equals(viewer._id));
+      }
+    }
+
+    // Fetch from Post model and populate comment authors
+    const userPosts = await Post.find({ user: uid }) 
+      .sort({ createdAt: -1 })
+      .populate({
+        path: "comments.user",
+        model: "User",
+        foreignField: "firebaseUid",
+        select: "username profilePic"
+      });
+
+    res.status(200).json({
+      _id: user._id,
+      name: user.name,
+      username: user.username,
+      profilePic: user.profilePic,
+      bio: user.bio,
+      isFollowing,
+      stats: {
+        recipes: user.recipesCookedCount || 0,
+        followers: user.followers?.length || 0,
+        following: user.following?.length || 0,
+      },
+      posts: userPosts.map(p => ({
+        id: p._id.toString(),
+        uri: p.imageUrl,
+        caption: p.caption,
+        likes: p.likes || [], 
+        comments: p.comments || [], 
+      })),
+    });
+  } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };

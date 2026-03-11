@@ -134,13 +134,8 @@ const MyRecipesPage = () => {
     try {
       const uid = auth.currentUser?.uid;
       if (!uid) return;
-
-      // Fetch the user data which includes the populated favorites array
       const response = await axios.get(`${API_URL}/api/users/${uid}`);
-
-      // Map the array to only get the custom 'id' string
       const favIds = response.data.favorites.map((f: any) => f.id);
-
       setFavorites(favIds);
     } catch (error) {
       console.error("Error loading favorites from DB:", error);
@@ -170,7 +165,6 @@ const MyRecipesPage = () => {
     const isCurrentlyFavorite = favorites.includes(recipeId);
 
     if (isCurrentlyFavorite) {
-      // Show the confirmation alert before removing
       Alert.alert(
         "Remove Favorite",
         "Are you sure you want to remove this recipe from your favorites?",
@@ -184,12 +178,11 @@ const MyRecipesPage = () => {
         ],
       );
     } else {
-      // If not a favorite, add it
       try {
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
         setFavorites((prev) => [...prev, recipeId]);
       } catch (error) {
-        Alert.alert("Error", "Could not add to favorites.");
+        Alert.alert("Error", "Could not add to favorites :<");
       }
     }
   };
@@ -262,7 +255,6 @@ const MyRecipesPage = () => {
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
-    const isFavorite = favorites.includes(item.id);
     const isSelected = selectedRecipeId === item.id;
 
     return (
@@ -286,7 +278,7 @@ const MyRecipesPage = () => {
               <Ionicons
                 name={favorites.includes(item.id) ? "heart" : "heart-outline"}
                 size={24}
-                color={favorites.includes(item.id) ? "#e74c3c" : "#5F4436"}
+                color={favorites.includes(item.id) ? "#D4AF37" : "#FFFFFF"}
               />
             </TouchableOpacity>
           </View>
@@ -312,7 +304,7 @@ const MyRecipesPage = () => {
             style={styles.backCircle}
             onPress={handleBackToPlanner}
           >
-            <Ionicons name="arrow-back" size={20} color="#437d9e" />
+            <Ionicons name="arrow-back" size={20} color="#D4AF37" />
           </TouchableOpacity>
         )}
 
@@ -320,11 +312,11 @@ const MyRecipesPage = () => {
           <TextInput
             style={styles.searchInput}
             placeholder="Search recipes"
-            placeholderTextColor="#999999"
+            placeholderTextColor="#666666"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
-          <Ionicons name="search" size={20} color="#8a6666" />
+          <Ionicons name="search" size={20} color="#D4AF37" />
         </View>
 
         <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
@@ -357,6 +349,7 @@ const MyRecipesPage = () => {
             style={[styles.dropdown, selectedCategory && { opacity: 0.6 }]}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
+            iconColor="white"
             data={mealOptions}
             labelField="label"
             valueField="value"
@@ -368,6 +361,7 @@ const MyRecipesPage = () => {
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
+            iconColor="white"
             data={cuisineOptions}
             labelField="label"
             valueField="value"
@@ -378,6 +372,7 @@ const MyRecipesPage = () => {
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
+            iconColor="white"
             data={timeOptions}
             labelField="label"
             valueField="value"
@@ -388,6 +383,7 @@ const MyRecipesPage = () => {
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
+            iconColor="white"
             data={dietOptions}
             labelField="label"
             valueField="value"
@@ -400,12 +396,12 @@ const MyRecipesPage = () => {
       {loading ? (
         <ActivityIndicator
           size="large"
-          color="#5F4436"
+          color="#D4AF37"
           style={{ marginTop: 50 }}
         />
       ) : recipes.length === 0 ? (
         <View style={styles.noResultsContainer}>
-          <Ionicons name="sad-outline" size={60} color="#c6a484" />
+          <Ionicons name="sad-outline" size={60} color="#333333" />
           <Text style={styles.noResultsText}>No recipes found</Text>
           <Text style={styles.noResultsSubText}>
             Try adjusting your filters
@@ -430,7 +426,7 @@ const MyRecipesPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2ece2" },
+  container: { flex: 1, backgroundColor: "#000000" },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -442,11 +438,10 @@ const styles = StyleSheet.create({
   backCircle: {
     width: 40,
     height: 40,
-    backgroundColor: "#dce8ef",
-    elevation: 5,
+    backgroundColor: "#1A1A1A",
     borderRadius: 20,
-    borderWidth: 2,
-    borderColor: "#5bacdc",
+    borderWidth: 1,
+    borderColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -454,37 +449,37 @@ const styles = StyleSheet.create({
   addButton: {
     width: 70,
     height: 40,
-    backgroundColor: "#dce8ef",
+    backgroundColor: "#1A1A1A",
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: "#5bacdc",
+    borderWidth: 1,
+    borderColor: "#D4AF37",
   },
   addLetters: {
     letterSpacing: 1,
     fontSize: 15,
-    fontWeight: "500",
-    color: "#437d9e",
+    fontWeight: "600",
+    color: "#D4AF37",
   },
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+    backgroundColor: "#1A1A1A",
     borderRadius: 25,
     height: 48,
     paddingHorizontal: 18,
-    elevation: 2,
     flex: 1,
+    borderWidth: 1,
+    borderColor: "#333333",
   },
-  searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
+  searchInput: { flex: 1, fontSize: 16, color: "#FFFFFF" },
   filterWrapper: { height: 50, marginBottom: 10 },
   scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
     width: 120,
     height: 36,
-    backgroundColor: "#c6a484",
+    backgroundColor: "#FF8C00",
     borderRadius: 18,
     paddingHorizontal: 10,
     marginRight: 8,
@@ -498,18 +493,17 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: "#fff",
+    backgroundColor: "#121212",
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,
     alignItems: "center",
-    elevation: 3,
-    borderWidth: 2,
-    borderColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#1A1A1A",
   },
   cardSelected: {
-    borderColor: "#63aaf1",
-    backgroundColor: "#f0f7ff",
+    borderColor: "#D4AF37",
+    backgroundColor: "#1A1A1A",
   },
   cardImage: {
     width: IMAGE_SIZE,
@@ -527,37 +521,37 @@ const styles = StyleSheet.create({
   recipeTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#5F4436",
+    color: "#FFFFFF",
     flex: 1,
     marginRight: 8,
   },
   recipeDescription: {
     fontSize: 13,
-    color: "#555",
+    color: "#BBBBBB",
     marginBottom: 10,
     lineHeight: 18,
   },
   viewButton: {
-    backgroundColor: "#4E342E",
+    backgroundColor: "#D4AF37",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
     alignSelf: "flex-start",
   },
-  viewButtonText: { color: "#fff", fontWeight: "bold", fontSize: 12 },
+  viewButtonText: { color: "#000000", fontWeight: "bold", fontSize: 12 },
   clearButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
-    backgroundColor: "#ebe8e4",
+    backgroundColor: "#1A1A1A",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#ddd1cb",
+    borderColor: "#333333",
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   clearButtonText: {
-    color: "#5F4436",
+    color: "#FFFFFF",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -565,7 +559,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: "#e74c3c",
+    backgroundColor: "#FF8C00",
     borderRadius: 10,
     minWidth: 18,
     height: 18,
@@ -586,22 +580,21 @@ const styles = StyleSheet.create({
   noResultsText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#5F4436",
+    color: "#FFFFFF",
     marginTop: 20,
     marginBottom: 8,
   },
   noResultsSubText: {
     fontSize: 14,
-    color: "#8a6666",
+    color: "#666666",
     textAlign: "center",
     marginBottom: 30,
   },
   resetFiltersButton: {
-    backgroundColor: "#c6a484",
+    backgroundColor: "#FF8C00",
     paddingVertical: 12,
     paddingHorizontal: 30,
     borderRadius: 25,
-    elevation: 3,
   },
   resetFiltersText: {
     color: "white",
