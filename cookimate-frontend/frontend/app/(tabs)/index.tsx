@@ -1,8 +1,6 @@
 import { router } from "expo-router";
 import React, { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { globalStyle } from "../globalStyleSheet.style";
-import Svg, { Path } from "react-native-svg";
 import {
   Image,
   Pressable,
@@ -14,282 +12,381 @@ import {
   Dimensions,
   SafeAreaView,
   StatusBar,
+  Animated,
+  FlatList,
+  ActivityIndicator,
+  Alert
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import axios from "axios";
+import Constants from "expo-constants";
+import { auth } from "../../config/firebase";
 
-//The sizing for the curved border
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
-const CARD_WIDTH = SCREEN_WIDTH * 0.7;
-const SPACING = 12;
 
-const HEADER_HEIGHT = SCREEN_HEIGHT * 0.3;
+const CARD_WIDTH = SCREEN_WIDTH * 0.72;
+const SPACING = 12;
+const HEADER_HEIGHT = SCREEN_HEIGHT * 0.30;
+
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
+
+const theme = {
+  background: "#121212",
+  card: "#1E1E1E",
+  text: "#FFFFFF",
+  accent: "#FFD54F",
+};
+
+// --- COMPONENTS ---
 
 type NavCardProps = {
   title: string;
   imageSource: ImageSourcePropType;
-  bColor: string;
   href: string;
   badgeText: string;
   iconName: string;
 };
 
-const NavCard = ({
-  title,
-  imageSource,
-  href,
-  bColor,
-  badgeText,
-  iconName,
-}: NavCardProps) => (
-  <Pressable
-    onPress={() => router.push(href as any)}
-    style={({ pressed }) => [
-      styles.navCard,
-      {
-        backgroundColor:
-          bColor === "none" ? "rgba(253, 247, 233, 0.94)" : bColor,
-      },
-      pressed && styles.cardPressed,
-    ]}
-  >
-    <View style={styles.navImageWrapper}>
-      <Image source={imageSource} style={styles.navImage} resizeMode="cover" />
-      <View style={styles.orangeBadge}>
-        <Text style={styles.orangeBadgeText}>{badgeText}</Text>
-      </View>
-    </View>
-    <View style={styles.navTextContainer}>
-      <View style={styles.titleRow}>
-        <MaterialCommunityIcons name={iconName as any} size={20} color="#333" />
-        <Text style={styles.navTitle}>{title}</Text>
-      </View>
-      <View style={styles.navSubtitleContainer}>
-        <Text style={styles.navSubtitle}>Tap to explore</Text>
-      </View>
-    </View>
+const NavCard = ({ title, imageSource, href, badgeText, iconName }: NavCardProps) => {
+  const scale = new Animated.Value(1);
+
+  const pressIn = () => {
+    Animated.spring(scale, { toValue: 0.95, useNativeDriver: true }).start();
+  };
+
+  const pressOut = () => {
+    Animated.spring(scale, { toValue: 1, useNativeDriver: true }).start();
+  };
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <Pressable
+        onPress={() => router.push(href as any)}
+        onPressIn={pressIn}
+        onPressOut={pressOut}
+        style={styles.navCard}
+      >
+        <Image source={imageSource} style={styles.navImage} />
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{badgeText}</Text>
+        </View>
+        <View style={styles.cardFooter}>
+          <View style={styles.titleRow}>
+            <MaterialCommunityIcons name={iconName as any} size={20} color={theme.accent} />
+            <Text style={styles.navTitle}>{title}</Text>
+          </View>
+          <Text style={styles.subtitle}>Tap to explore</Text>
+        </View>
+      </Pressable>
+    </Animated.View>
+  );
+};
+
+const QuickButton = ({ icon, label }: any) => (
+  <Pressable style={styles.quickButton}>
+    <MaterialCommunityIcons name={icon} size={22} color="#000" />
+    <Text style={styles.quickText}>{label}</Text>
   </Pressable>
 );
 
+// --- MAIN PAGE ---
+
 function HomePage() {
-  const [message, setMessage] = useState(
-    "Hi! What would you like to cook today",
-  );
+  const [message, setMessage] = useState("Hi! What would you like to cook today?");
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
     const messages = [
-      "Hi! Are you feeling hungry?",
-      "Let's make something tasty!",
-      "I'm ready to help find recipes!",
+      "Let's cook something amazing!",
+      "Try an AI recipe today!",
+      "What's in your fridge?",
     ];
     const interval = setInterval(() => {
       setMessage(messages[Math.floor(Math.random() * messages.length)]);
-    }, 10000);
+    }, 9000);
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <View style={styles.Container}>
-      <StatusBar barStyle="dark-content" />
+  useEffect(() => {
+    fetchRandomRecipes();
+    loadFavorites();
+  }, []);
 
-      <ScrollView showsVerticalScrollIndicator={false} style={{ flex: 1 }}>
-        <View style={{ height: HEADER_HEIGHT, width: SCREEN_WIDTH }}>
-          <View style={StyleSheet.absoluteFill}>
-            {/*The code for the curved border*/}
-            <Svg
-              height={HEADER_HEIGHT}
-              width={SCREEN_WIDTH}
-              viewBox={`0 0 ${SCREEN_WIDTH} ${HEADER_HEIGHT}`}
-            >
-              <Path
-                d={`M0 0 H${SCREEN_WIDTH} V${HEADER_HEIGHT - 40} Q${SCREEN_WIDTH / 2} ${HEADER_HEIGHT + 20} 0 ${HEADER_HEIGHT - 40} Z`}
-                fill="rgba(240, 217, 170, 0.8)"
+  const loadFavorites = async () => {
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      const favIds = response.data.favorites.map((f: any) => f.id);
+      setFavorites(favIds);
+    } catch (error) {
+      console.log("Error loading favorites:", error);
+    }
+  };
+
+  const fetchRandomRecipes = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/api/recipes/random`);
+      setRecipes(response.data);
+    } catch (error) {
+      console.log("Random recipe fetch error:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggleFavorite = async (recipeId: string) => {
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      Alert.alert("Error", "Please log in to save recipes.");
+      return;
+    }
+
+    const isFav = favorites.includes(recipeId);
+    try {
+      if (isFav) {
+        await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, { recipeId });
+        setFavorites(prev => prev.filter(id => id !== recipeId));
+      } else {
+        await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
+        setFavorites(prev => [...prev, recipeId]);
+      }
+    } catch (error) {
+      console.log("Toggle favorite error:", error);
+    }
+  };
+
+  const renderRecipe = ({ item }: any) => {
+    const isFavorite = favorites.includes(item.id);
+
+    return (
+      <Pressable
+        style={styles.randomCard}
+        onPress={() => router.push(`/recipe/${item.id}`)}
+      >
+        <Image source={{ uri: item.image }} style={styles.randomImage} />
+
+        <View style={styles.randomInfo}>
+          <View style={styles.cardHeaderRow}>
+            <Text style={styles.randomTitle} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Pressable hitSlop={10} onPress={() => toggleFavorite(item.id)}>
+              <MaterialCommunityIcons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={22}
+                color={isFavorite ? "#e74c3c" : theme.accent}
               />
-            </Svg>
+            </Pressable>
           </View>
 
+          <Text style={styles.randomDescription} numberOfLines={2}>
+            {item.description || item.cuisine || "Tap to see ingredients and steps."}
+          </Text>
+
+          <View style={styles.viewButtonSmall}>
+            <Text style={styles.viewButtonTextSmall}>View Recipe</Text>
+          </View>
+        </View>
+      </Pressable>
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" />
+
+      <ScrollView showsVerticalScrollIndicator={false}>
+        {/* HEADER */}
+        <LinearGradient colors={["#FFD54F", "#FFB300"]} style={styles.header}>
           <SafeAreaView>
-            <View style={styles.headerContent}>
-              <Text style={styles.welcomemsg}>Welcome Back!!</Text>
-              <View style={styles.mascotRow}>
-                <View style={styles.mascotCircle}>
-                  <Image
-                    source={require("../../assets/images/Home-page-Mascot.png")}
-                    style={styles.mascotImg}
-                  />
-                </View>
-                <View style={styles.bubble}>
-                  <View style={styles.bubbleTail} />
-                  <Text style={styles.bubbleText}>{message}</Text>
-                </View>
+            <Text style={styles.welcome}>Welcome Back 👋</Text>
+            <View style={styles.mascotRow}>
+              <Image
+                source={require("../../assets/images/Home-page-Mascot.png")}
+                style={styles.mascot}
+              />
+              <View style={styles.bubble}>
+                <Text style={styles.bubbleText}>{message}</Text>
               </View>
             </View>
           </SafeAreaView>
+        </LinearGradient>
+
+        {/* QUICK ACTIONS */}
+        <View style={styles.quickRow}>
+          <QuickButton icon="fire" label="Trending" />
+          <QuickButton icon="timer" label="Quick Meals" />
+          <QuickButton icon="leaf" label="Healthy" />
         </View>
 
-        <Text style={styles.sectionHeading}>Featured Categories</Text>
+        {/* FEATURED NAVIGATION */}
+        <Text style={styles.sectionHeading}>Explore</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           snapToInterval={CARD_WIDTH + SPACING * 2}
-          decelerationRate="fast"
-          contentContainerStyle={styles.horizontalScrollPadding}
+          contentContainerStyle={{ paddingHorizontal: 15 }}
         >
           <NavCard
             title="Find Recipes"
             imageSource={require("../../assets/images/recipes.png")}
             href="/menuPlanerPage"
-            bColor="none"
             badgeText="100+ recipes"
-            iconName="silverware-fork-knife" //The icon that appears next to the headings of the cards
+            iconName="silverware-fork-knife"
           />
           <NavCard
             title="Generate Recipes"
             imageSource={require("../../assets/images/ai.png")}
             href="/menuPlanerPage"
-            bColor="none"
-            badgeText="fast responses"
-            iconName="robot" 
+            badgeText="AI powered"
+            iconName="robot"
           />
           <NavCard
             title="Community"
             imageSource={require("../../assets/images/community.png")}
             href="Community/CommunityFeedCards"
-            bColor="none"
-            badgeText="share journey"
+            badgeText="Share food"
             iconName="account-group"
           />
         </ScrollView>
-        <View style={{ height: 50 }} />
+
+        {/* RECOMMENDED SECTION (Updated Card Style) */}
+        <Text style={styles.sectionHeading}>Recommended For You</Text>
+        {loading ? (
+          <ActivityIndicator size="large" color={theme.accent} />
+        ) : (
+          <FlatList
+            data={recipes}
+            renderItem={renderRecipe}
+            keyExtractor={(item: any) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ paddingHorizontal: 20 }}
+          />
+        )}
+
+        <View style={{ height: 120 }} />
       </ScrollView>
+
+      {/* FLOATING AI BUTTON */}
+      <Pressable style={styles.fab} onPress={() => router.push("/menuPlanerPage")}>
+        <MaterialCommunityIcons name="robot" size={28} color="#000" />
+      </Pressable>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  Container: { flex: 1, backgroundColor: "#f2ece2" },
-
-  headerContent: { paddingHorizontal: 25, paddingTop: 5 },
-
-  mascotRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 10,
-    gap: 15,
+  container: { flex: 1, backgroundColor: theme.background },
+  header: {
+    height: HEADER_HEIGHT,
+    paddingHorizontal: 25,
+    justifyContent: "center",
   },
-
+  welcome: { fontSize: 26, fontWeight: "800", color: "#000" },
+  mascotRow: { flexDirection: "row", alignItems: "center", marginTop: 15 },
+  mascot: { width: 120, height: 120, marginRight: 15 },
+  bubble: { flex: 1, backgroundColor: "#fff", padding: 12, borderRadius: 18 },
+  bubbleText: { fontSize: 15, fontWeight: "600", color: "#333" },
+  quickRow: { flexDirection: "row", justifyContent: "space-around", marginTop: 20 },
+  quickButton: {
+    backgroundColor: theme.accent,
+    padding: 12,
+    borderRadius: 18,
+    alignItems: "center",
+    width: 90,
+  },
+  quickText: { fontSize: 12, fontWeight: "700", marginTop: 4 },
   sectionHeading: {
     fontSize: 22,
-    fontWeight: "bold",
+    fontWeight: "800",
+    color: "#fff",
     marginLeft: 25,
-    marginTop: 25,
+    marginTop: 30,
     marginBottom: 15,
-    color: "#333",
   },
-
-  horizontalScrollPadding: { paddingHorizontal: 15, paddingBottom: 20 },
-
   navCard: {
     width: CARD_WIDTH,
-    height: 380,
-    marginHorizontal: SPACING,
-    borderRadius: 35,
-    padding: 20,
-    justifyContent: "space-between",
-    borderWidth: 2,
-    borderColor: "rgba(254, 252, 243, 0.3)",
-    overflow: "hidden",
-  },
-
-  navImageWrapper: {
-    flex: 1,
-    width: "100%",
+    height: 350,
     borderRadius: 30,
+    marginHorizontal: SPACING,
     overflow: "hidden",
-    marginBottom: 10,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    backgroundColor: theme.card,
   },
-
-  navImage: { width: "100%", height: "100%" },
-
-  orangeBadge: {
+  navImage: { width: "100%", height: "70%" },
+  badge: {
     position: "absolute",
     top: 12,
     left: 12,
-    backgroundColor: "#FF8C42",
+    backgroundColor: theme.accent,
     paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingVertical: 4,
+    borderRadius: 10,
   },
+  badgeText: { fontWeight: "700", fontSize: 11 },
+  cardFooter: { padding: 15 },
+  titleRow: { flexDirection: "row", alignItems: "center" },
+  navTitle: { fontSize: 20, fontWeight: "800", color: "#fff", marginLeft: 8 },
+  subtitle: { marginTop: 6, color: "#aaa" },
   
-  orangeBadgeText: { color: "#fff", fontSize: 11, fontWeight: "bold" },
-
-  navTextContainer: { backgroundColor: "transparent", paddingVertical: 10 },
-
-  titleRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-
-  navSubtitleContainer: {
-    backgroundColor: "rgba(178, 219, 91, 0.9)",
-    alignSelf: "flex-start",
-    paddingHorizontal: 15,
-    height: 30,
-    justifyContent: "center",
-    borderRadius: 15,
-    marginTop: 8,
-  },
-  
-  navTitle: { fontSize: 22, fontWeight: "800", color: "#333" },
-
-  navSubtitle: { fontSize: 12, fontWeight: "700", color: "#445c16" },
-
-  cardPressed: {
-    transform: [{ scale: 0.98 }],
-    backgroundColor: "rgba(249, 246, 231, 0.6)",
-  },
-
-  mascotCircle: {
-    width: 180,
-    height: 180,
-    borderRadius: 40,
+  // UPDATED RECIPE CARD STYLES
+  randomCard: {
+    width: 260,
+    backgroundColor: theme.card,
+    borderRadius: 24,
+    marginRight: 18,
     overflow: "hidden",
-    backgroundColor: "none",
+    borderWidth: 1,
+    borderColor: "#333",
   },
-
-  mascotImg: { width: "100%", height: "100%" },
-
-  welcomemsg: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#3f5a05",
-    marginTop: 10,
+  randomImage: { width: "100%", height: 140 },
+  randomInfo: { padding: 15 },
+  cardHeaderRow: { 
+    flexDirection: "row", 
+    justifyContent: "space-between", 
+    alignItems: "center",
+    marginBottom: 4 
   },
-
-  bubble: {
-    height: 80,
+  randomTitle: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 16,
     flex: 1,
-    backgroundColor: "#ffffff",
-    paddingHorizontal: 15,
-    paddingVertical: 10,
-    borderRadius: 20,
-    elevation: 2,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
-    position: "relative",
-    marginLeft: 10,
+    marginRight: 10,
   },
-
-  bubbleText: { fontSize: 16, color: "#5D4037", fontWeight: "600" },
-
-  bubbleTail: {
+  randomDescription: {
+    color: "#aaa",
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 18,
+    height: 36,
+  },
+  viewButtonSmall: {
+    backgroundColor: "#4E342E",
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+    marginTop: 12,
+  },
+  viewButtonTextSmall: { color: "#fff", fontWeight: "bold", fontSize: 11 },
+  
+  fab: {
     position: "absolute",
-    left: -8,
-    top: "50%",
-    marginTop: -8,
-    width: 16,
-    height: 16,
-    backgroundColor: "#ffffff",
-    transform: [{ rotate: "45deg" }],
-    zIndex: -1,
+    bottom: 35,
+    right: 25,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: theme.accent,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 6,
   },
 });
 
