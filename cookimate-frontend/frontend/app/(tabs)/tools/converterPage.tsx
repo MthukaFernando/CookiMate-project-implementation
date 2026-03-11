@@ -17,9 +17,9 @@ const { width } = Dimensions.get("window");
 
 // --- DARK MODE BRANDING ---
 const BRAND = {
-  bg: "#0A0A0A",        // Deep Midnight
-  surface: "#1E1E1E",   // Elevated Grey
-  accent: "#D4AF37",    // Vibrant Amber/Gold
+  bg: "#0A0A0A", // Deep Midnight
+  surface: "#1E1E1E", // Elevated Grey
+  accent: "#D4AF37", // Vibrant Amber/Gold
   textMain: "#FFFFFF",
   textMuted: "#A0A0A0",
   inputBg: "#2A2A2A",
@@ -110,7 +110,7 @@ export default function ConverterPage() {
           {!conversionType ? (
             <View style={styles.gridContainer}>
               <Text style={styles.sectionLabel}>CHOOSE CATEGORY</Text>
-              
+
               <View style={styles.grid}>
                 {categories.map((item) => (
                   <TouchableOpacity
@@ -126,7 +126,9 @@ export default function ConverterPage() {
                         color={BRAND.accent}
                       />
                     </View>
-                    <Text style={styles.cardLabel}>{item.id.toUpperCase()}</Text>
+                    <Text style={styles.cardLabel}>
+                      {item.id.toUpperCase()}
+                    </Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -157,19 +159,28 @@ export default function ConverterPage() {
                   onPress={() => setShowPicker({ side: "left" })}
                 >
                   <Text style={styles.unitBtnText}>{unitLeft}</Text>
-                  <Ionicons name="chevron-down" size={14} color={BRAND.accent} />
+                  <Ionicons
+                    name="chevron-down"
+                    size={14}
+                    color={BRAND.accent}
+                  />
                 </TouchableOpacity>
               </View>
 
               <View style={styles.swapContainer}>
                 <View style={styles.swapLine} />
                 <View style={styles.swapCircle}>
-                    <Ionicons name="swap-vertical" size={22} color={BRAND.bg} />
+                  <Ionicons name="swap-vertical" size={22} color={BRAND.bg} />
                 </View>
                 <View style={styles.swapLine} />
               </View>
 
-              <View style={[styles.inputWrapper, { borderColor: BRAND.accent, borderBottomWidth: 2 }]}>
+              <View
+                style={[
+                  styles.inputWrapper,
+                  { borderColor: BRAND.accent, borderBottomWidth: 2 },
+                ]}
+              >
                 <TextInput
                   style={styles.mainInput}
                   value={input2}
@@ -183,7 +194,11 @@ export default function ConverterPage() {
                   onPress={() => setShowPicker({ side: "right" })}
                 >
                   <Text style={styles.unitBtnText}>{unitRight}</Text>
-                  <Ionicons name="chevron-down" size={14} color={BRAND.accent} />
+                  <Ionicons
+                    name="chevron-down"
+                    size={14}
+                    color={BRAND.accent}
+                  />
                 </TouchableOpacity>
               </View>
             </View>
@@ -191,9 +206,9 @@ export default function ConverterPage() {
         </View>
 
         <Modal visible={!!showPicker} transparent animationType="slide">
-          <TouchableOpacity 
-            style={styles.modalOverlay} 
-            activeOpacity={1} 
+          <TouchableOpacity
+            style={styles.modalOverlay}
+            activeOpacity={1}
             onPress={() => setShowPicker(null)}
           >
             <View style={styles.modalContent}>
@@ -235,7 +250,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     letterSpacing: 3,
     marginBottom: 30,
-    textAlign: 'center',
+    textAlign: "center",
   },
   grid: {
     flexDirection: "row",
