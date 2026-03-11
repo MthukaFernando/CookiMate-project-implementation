@@ -549,7 +549,7 @@ const Settings = () => {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#f2ece2',
+    backgroundColor: '#0A0A0A', // Changed to Deep Midnight
   },
   scrollContent: {
     paddingHorizontal: 25,
