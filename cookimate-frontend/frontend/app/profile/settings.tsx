@@ -44,16 +44,16 @@ const DIETARY_OPTIONS = [
 
 // Common allergies options - ALL WITH SAME ICON (food-off) - UPDATED TO ACCENT RED
 const ALLERGY_OPTIONS = [
-  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
-  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
 ];
 
 const Settings = () => {
