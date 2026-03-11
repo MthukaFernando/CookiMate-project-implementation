@@ -23,37 +23,37 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
-// Predefined dietary preferences options - ALL WITH SAME ICON
+// Predefined dietary preferences options - ALL WITH SAME ICON - UPDATED TO GOLD
 const DIETARY_OPTIONS = [
-  { id: '1', name: 'Vegetarian', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#4CAF50' },
-  { id: '2', name: 'Vegan', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#8BC34A' },
-  { id: '3', name: 'Gluten-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FF9800' },
-  { id: '4', name: 'Dairy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#2196F3' },
-  { id: '5', name: 'Nut-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#9C27B0' },
-  { id: '6', name: 'Egg-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: '7', name: 'Soy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#3F51B5' },
-  { id: '8', name: 'Fish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#00BCD4' },
-  { id: '9', name: 'Shellfish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#009688' },
-  { id: '10', name: 'Keto', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FF5722' },
-  { id: '11', name: 'Paleo', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#795548' },
-  { id: '12', name: 'Low-Carb', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#607D8B' },
-  { id: '13', name: 'Low-Fat', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#FFC107' },
-  { id: '14', name: 'Halal', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#4A5568' },
-  { id: '15', name: 'Kosher', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#2D3748' },
+  { id: '1', name: 'Vegetarian', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '2', name: 'Vegan', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '3', name: 'Gluten-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '4', name: 'Dairy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '5', name: 'Nut-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '6', name: 'Egg-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '7', name: 'Soy-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '8', name: 'Fish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '9', name: 'Shellfish-Free', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '10', name: 'Keto', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '11', name: 'Paleo', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '12', name: 'Low-Carb', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '13', name: 'Low-Fat', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '14', name: 'Halal', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
+  { id: '15', name: 'Kosher', icon: 'food-apple', iconFamily: 'MaterialCommunityIcons', color: '#D4AF37' },
 ];
 
-// Common allergies options - ALL WITH SAME ICON (food-off)
+// Common allergies options - ALL WITH SAME ICON (food-off) - UPDATED TO ACCENT RED
 const ALLERGY_OPTIONS = [
-  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
-  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#F44336' },
+  { id: 'a1', name: 'Peanuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a2', name: 'Tree Nuts', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a3', name: 'Milk', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a4', name: 'Eggs', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a5', name: 'Wheat', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a6', name: 'Soy', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a7', name: 'Fish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a8', name: 'Shellfish', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a9', name: 'Sesame', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
+  { id: 'a10', name: 'Sulfites', icon: 'food-off', iconFamily: 'MaterialCommunityIcons', color: '#FF4444' },
 ];
 
 const Settings = () => {
@@ -261,12 +261,12 @@ const Settings = () => {
                 ]}
                 onPress={() => toggleDietaryOption(item.name)}
               >
-                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
+                <View style={[styles.optionIcon, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
                   {renderIcon(item)}
                 </View>
                 <Text style={styles.optionText}>{item.name}</Text>
                 {dietaryPreferences.includes(item.name) && (
-                  <Feather name="check" size={20} color="#4CAF50" style={styles.checkIcon} />
+                  <Feather name="check" size={20} color="#D4AF37" style={styles.checkIcon} />
                 )}
               </TouchableOpacity>
             )}
@@ -317,12 +317,12 @@ const Settings = () => {
                 ]}
                 onPress={() => toggleAllergy(item.name)}
               >
-                <View style={[styles.optionIcon, { backgroundColor: item.color + '20' }]}>
+                <View style={[styles.optionIcon, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
                   {renderIcon(item)}
                 </View>
                 <Text style={styles.optionText}>{item.name}</Text>
                 {allergies.includes(item.name) && (
-                  <Feather name="check" size={20} color="#4CAF50" style={styles.checkIcon} />
+                  <Feather name="check" size={20} color="#D4AF37" style={styles.checkIcon} />
                 )}
               </TouchableOpacity>
             )}
@@ -502,8 +502,8 @@ const Settings = () => {
           onPress={handleLogout}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#F4433620' }]}>
-              <Feather name="log-out" size={24} color="#F44336" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
+              <Feather name="log-out" size={24} color="#FF4444" />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.cardTitle, styles.logoutText]}>Log Out</Text>
@@ -518,8 +518,8 @@ const Settings = () => {
           onPress={handleDeleteAccount}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#F4433620' }]}>
-              <Feather name="trash-2" size={24} color="#F44336" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(255, 68, 68, 0.15)' }]}>
+              <Feather name="trash-2" size={24} color="#FF4444" />
             </View>
             <View style={styles.textContainer}>
               <Text style={[styles.cardTitle, styles.deleteText]}>Delete Account</Text>
@@ -613,16 +613,16 @@ const styles = StyleSheet.create({
   },
   logoutCard: {
     marginTop: 20,
-    borderColor: '#F44336',
+    borderColor: '#FF4444',
   },
   deleteCard: {
-    borderColor: '#F44336',
+    borderColor: '#FF4444',
   },
   logoutText: {
-    color: '#F44336',
+    color: '#FF4444',
   },
   deleteText: {
-    color: '#F44336',
+    color: '#FF4444',
   },
   bottomSpacing: {
     height: 30,
