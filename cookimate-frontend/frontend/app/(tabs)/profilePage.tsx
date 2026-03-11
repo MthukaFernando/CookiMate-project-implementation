@@ -119,7 +119,7 @@ const ProfilePage = () => {
             icon="award" 
             label="Levels" 
             value={user?.level || 1} 
-            onPress={() => console.log("Route to Ranks")}
+            onPress={() => router.push("/profile/levelsPage")}
           />
           <StatItem 
             icon="users" 
