@@ -17,7 +17,7 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import ConfettiCannon from 'react-native-confetti-cannon';
+import ConfettiCannon from "react-native-confetti-cannon";
 import { getAuth } from "firebase/auth";
 import { auth } from "../../config/firebase";
 
@@ -39,18 +39,19 @@ const extractAllTimings = (text: string): number[] => {
   let normalized = text.toLowerCase();
 
   // 1. Convert "1 1/2" to "1.5"
-  normalized = normalized.replace(/(\d+)\s+(\d)\/(\d)/g, (_, whole, num, den) => 
-    (parseInt(whole) + parseInt(num) / parseInt(den)).toString()
+  normalized = normalized.replace(/(\d+)\s+(\d)\/(\d)/g, (_, whole, num, den) =>
+    (parseInt(whole) + parseInt(num) / parseInt(den)).toString(),
   );
 
   // 2. Convert standalone "1/2" to "0.5"
-  normalized = normalized.replace(/(^|\s)(\d)\/(\d)/g, (_, space, num, den) => 
-    space + (parseInt(num) / parseInt(den)).toString()
+  normalized = normalized.replace(
+    /(^|\s)(\d)\/(\d)/g,
+    (_, space, num, den) => space + (parseInt(num) / parseInt(den)).toString(),
   );
 
   // 3. Match numbers followed by time units
   const timeRegex = /(\d+(?:\.\d+)?)\s*(hour|hr|h|min|minute|m)(?:s|es)?/gi;
-  
+
   const results: number[] = [];
   let match;
 
@@ -58,9 +59,9 @@ const extractAllTimings = (text: string): number[] => {
     const value = parseFloat(match[1]);
     const unit = match[2].toLowerCase();
 
-    if (unit.startsWith('h')) {
+    if (unit.startsWith("h")) {
       results.push(Math.floor(value * 3600));
-    } else if (unit.startsWith('m')) {
+    } else if (unit.startsWith("m")) {
       results.push(Math.floor(value * 60));
     }
   }
@@ -118,19 +119,18 @@ export default function RecipeDetails() {
   // New function to handle recipe completion
   const handleCompleteRecipe = async () => {
     try {
-      // 1. Get current user's Firebase UID
       const auth = getAuth();
       const currentUserUid = auth.currentUser?.uid;
 
       if (currentUserUid) {
-        // 2. Hit the new increment endpoint
-        await axios.put(`${API_URL}/api/users/complete-recipe/${currentUserUid}`);
+        await axios.put(
+          `${API_URL}/api/users/complete-recipe/${currentUserUid}`,
+        );
         console.log("Recipe completed! Cook count incremented.");
       }
 
       setCookingMode(false);
       setCurrentStepIndex(0);
-      // Can navigate back to profile to see the +1 change
     } catch (err) {
       console.error("Failed to update cook count", err);
       setCookingMode(false);
@@ -146,19 +146,10 @@ export default function RecipeDetails() {
     const checkFavorite = async (recipeId: string) => {
       try {
         if (!uid || !id) return;
-
-        //Get the users data from the backend
         const response = await axios.get(`${API_URL}/api/users/${uid}`);
-
         const favorites = response.data.favorites || [];
         const isFav = favorites.some((fav: any) => fav.id === id);
-
         setIsFavorite(isFav);
-        const storedFavs = await AsyncStorage.getItem("userFavorites");
-        if (storedFavs) {
-          const favorites = JSON.parse(storedFavs);
-          setIsFavorite(favorites.includes(recipeId));
-        }
       } catch (error) {
         console.log("Error checking favorite from DB", error);
       }
@@ -168,25 +159,16 @@ export default function RecipeDetails() {
 
   const handleRemoveFavorite = async () => {
     try {
-      // Remove from MongoDB
       await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
         recipeId: id,
       });
       setIsFavorite(false);
-      const storedFavs = await AsyncStorage.getItem("userFavorites");
-      let favorites = storedFavs ? JSON.parse(storedFavs) : [];
-      if (isFavorite) {
-        favorites = favorites.filter((favId: string) => favId !== (id as string));
-      } else {
-        favorites.push(id as string);
-      }
-      await AsyncStorage.setItem("userFavorites", JSON.stringify(favorites));
-      setIsFavorite(!isFavorite);
     } catch (error) {
       console.log("Error removing favorite", error);
       Alert.alert("Error", "Could not remove from favorites.");
     }
   };
+
   const toggleFavorite = async () => {
     if (!uid) {
       Alert.alert("Error", "You must be logged in to favorite recipes");
@@ -194,7 +176,6 @@ export default function RecipeDetails() {
     }
 
     if (isFavorite) {
-      // Show alert before removing
       Alert.alert(
         "Remove Favorite",
         "Are you sure you want to remove this recipe from your favorites?",
@@ -208,7 +189,6 @@ export default function RecipeDetails() {
         ],
       );
     } else {
-      // Add to MongoDB immediately
       try {
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, {
           recipeId: id,
@@ -242,7 +222,7 @@ export default function RecipeDetails() {
   if (loading) {
     return (
       <View style={styles.centerContainer}>
-        <ActivityIndicator size="large" color="#5F4436" />
+        <ActivityIndicator size="large" color="#D4AF37" />
       </View>
     );
   }
@@ -251,7 +231,10 @@ export default function RecipeDetails() {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error || "Recipe not found"}</Text>
-        <TouchableOpacity style={styles.backButtonFixed} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButtonFixed}
+          onPress={() => router.back()}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -265,18 +248,23 @@ export default function RecipeDetails() {
           {recipe.image ? (
             <Image source={{ uri: recipe.image }} style={styles.headerImage} />
           ) : (
-            <View style={[styles.headerImage, { backgroundColor: "#ddd" }]} />
+            <View
+              style={[styles.headerImage, { backgroundColor: "#1A1A1A" }]}
+            />
           )}
 
-          <TouchableOpacity style={styles.roundBackButton} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#5F4436" />
+          <TouchableOpacity
+            style={styles.roundBackButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#D4AF37" />
           </TouchableOpacity>
 
           <TouchableOpacity style={styles.heartButton} onPress={toggleFavorite}>
             <Ionicons
               name={isFavorite ? "heart" : "heart-outline"}
               size={28}
-              color={isFavorite ? "#e74c3c" : "#5F4436"}
+              color={isFavorite ? "#D4AF37" : "#FFFFFF"}
             />
           </TouchableOpacity>
         </View>
@@ -286,11 +274,11 @@ export default function RecipeDetails() {
 
           <View style={styles.statsRow}>
             <View style={styles.statItem}>
-              <Ionicons name="time-outline" size={20} color="#5F4436" />
+              <Ionicons name="time-outline" size={20} color="#D4AF37" />
               <Text style={styles.statText}>{recipe.totalTime || "N/A"}</Text>
             </View>
             <View style={styles.statItem}>
-              <Ionicons name="restaurant-outline" size={20} color="#5F4436" />
+              <Ionicons name="restaurant-outline" size={20} color="#D4AF37" />
               <Text style={styles.statText}>
                 {recipe.servings ? `${recipe.servings} Servings` : "General"}
               </Text>
@@ -299,8 +287,16 @@ export default function RecipeDetails() {
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.startCookingButton} onPress={handleStartCooking}>
-            <Ionicons name="play-circle" size={24} color="#fff" style={{ marginRight: 8 }} />
+          <TouchableOpacity
+            style={styles.startCookingButton}
+            onPress={handleStartCooking}
+          >
+            <Ionicons
+              name="play-circle"
+              size={24}
+              color="#000"
+              style={{ marginRight: 8 }}
+            />
             <Text style={styles.startCookingText}>Start Cooking</Text>
           </TouchableOpacity>
 
@@ -330,14 +326,24 @@ export default function RecipeDetails() {
                     <Text style={styles.stepNumber}>{index + 1}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.listItem}>{step}</Text>
-                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          flexWrap: "wrap",
+                          gap: 8,
+                        }}
+                      >
                         {timings.map((seconds, tIdx) => (
                           <TouchableOpacity
                             key={tIdx}
                             style={styles.inlineTimerButton}
                             onPress={() => handleTriggerTimer(seconds)}
                           >
-                            <Ionicons name="timer-outline" size={14} color="#5F4436" />
+                            <Ionicons
+                              name="timer-outline"
+                              size={14}
+                              color="#FFFFFF"
+                            />
                             <Text style={styles.inlineTimerText}>
                               {formatDisplayTime(seconds)}
                             </Text>
@@ -358,11 +364,19 @@ export default function RecipeDetails() {
       </ScrollView>
 
       {/* Cooking Mode Modal */}
-      <Modal visible={cookingMode} animationType="slide" transparent={false} onRequestClose={closeCookingMode}>
+      <Modal
+        visible={cookingMode}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={closeCookingMode}
+      >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeCookingMode} style={styles.closeButton}>
-              <Ionicons name="close" size={28} color="#5F4436" />
+            <TouchableOpacity
+              onPress={closeCookingMode}
+              style={styles.closeButton}
+            >
+              <Ionicons name="close" size={28} color="#D4AF37" />
             </TouchableOpacity>
 
             {recipe?.steps && currentStepIndex < recipe.steps.length && (
@@ -375,8 +389,6 @@ export default function RecipeDetails() {
           <View style={styles.modalContent}>
             {recipe?.steps && currentStepIndex < recipe.steps.length ? (
               <View style={styles.stepCard}>
-                
-                {/* Watermark Number */}
                 <Text style={styles.stepBigNumber}>{currentStepIndex + 1}</Text>
 
                 <ScrollView
@@ -387,35 +399,49 @@ export default function RecipeDetails() {
                     {recipe.steps[currentStepIndex]}
                   </Text>
 
-                  {/* Timer Buttons */}
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
-                    {extractAllTimings(recipe.steps[currentStepIndex]).map((seconds, tIdx) => (
-                      <TouchableOpacity
-                        key={tIdx}
-                        style={styles.modalTimerButton}
-                        onPress={() => handleTriggerTimer(seconds)}
-                      >
-                        <Ionicons name="timer-outline" size={24} color="#5F4436" />
-                        <Text style={styles.modalTimerText}>
-                          Start {formatDisplayTime(seconds)} Timer
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: 12,
+                    }}
+                  >
+                    {extractAllTimings(recipe.steps[currentStepIndex]).map(
+                      (seconds, tIdx) => (
+                        <TouchableOpacity
+                          key={tIdx}
+                          style={styles.modalTimerButton}
+                          onPress={() => handleTriggerTimer(seconds)}
+                        >
+                          <Ionicons
+                            name="timer-outline"
+                            size={24}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.modalTimerText}>
+                            Start {formatDisplayTime(seconds)} Timer
+                          </Text>
+                        </TouchableOpacity>
+                      ),
+                    )}
                   </View>
                 </ScrollView>
 
-                <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
+                <TouchableOpacity
+                  style={styles.nextStepButton}
+                  onPress={handleNextStep}
+                >
                   <Text style={styles.nextStepText}>
                     {currentStepIndex === recipe.steps.length - 1
                       ? "Finish Cooking"
                       : "Next Step"}
                   </Text>
-                  <Ionicons name="arrow-forward" size={20} color="#fff" />
+                  <Ionicons name="arrow-forward" size={20} color="#000" />
                 </TouchableOpacity>
               </View>
             ) : (
               <View style={styles.completedContainer}>
-                
                 <ConfettiCannon
                   count={200}
                   origin={{ x: -10, y: 0 }}
@@ -435,11 +461,14 @@ export default function RecipeDetails() {
 
                 <Text style={styles.completedSub}>
                   You just cooked{" "}
-                  <Text style={{ fontWeight: "bold" }}>{recipe?.name}</Text>!
+                  <Text style={{ fontWeight: "bold", color: "#D4AF37" }}>
+                    {recipe?.name}
+                  </Text>
+                  !
                 </Text>
-                
-                <TouchableOpacity 
-                  style={styles.doneButton} 
+
+                <TouchableOpacity
+                  style={styles.doneButton}
                   onPress={handleCompleteRecipe}
                 >
                   <Text style={styles.doneButtonText}>Complete Recipe</Text>
@@ -452,92 +481,250 @@ export default function RecipeDetails() {
 
       {/* Timer Logic Overlay */}
       <Modal visible={showTimerModal} animationType="fade" transparent={false}>
-        <Timer initialSeconds={activeTimerSeconds} onClose={() => setShowTimerModal(false)} />
+        <Timer
+          initialSeconds={activeTimerSeconds}
+          onClose={() => setShowTimerModal(false)}
+        />
       </Modal>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2ece2" },
-  centerContainer: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f2ece2" },
+  container: { flex: 1, backgroundColor: "#000000" },
+  centerContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#000000",
+  },
   imageWrapper: { width: "100%", height: 300, position: "relative" },
   headerImage: { width: "100%", height: "100%", resizeMode: "cover" },
   roundBackButton: {
-    position: "absolute", top: 50, left: 20, backgroundColor: "rgba(255,255,255,0.9)",
-    width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", elevation: 5,
+    position: "absolute",
+    top: 50,
+    left: 20,
+    backgroundColor: "rgba(26,26,26,0.9)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
   },
   startCookingButton: {
-    backgroundColor: "#cbaacb", flexDirection: "row", justifyContent: "center", alignItems: "center",
-    paddingVertical: 14, borderRadius: 12, marginTop: 10, marginBottom: 10, elevation: 3,
+    backgroundColor: "#D4AF37",
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderRadius: 12,
+    marginTop: 10,
+    marginBottom: 10,
+    elevation: 3,
   },
-  startCookingText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
-  modalContainer: { flex: 1, backgroundColor: "#f2ece2" },
+  startCookingText: { color: "#000", fontSize: 18, fontWeight: "bold" },
+  modalContainer: { flex: 1, backgroundColor: "#000000" },
   modalHeader: {
-    flexDirection: "row", justifyContent: "space-between", alignItems: "center",
-    paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
   closeButton: { padding: 10 },
-  stepProgress: { fontSize: 16, fontWeight: "600", color: "#8a6666" },
-  modalContent: { flex: 1, paddingHorizontal: 20, paddingBottom: 40, justifyContent: "center" },
+  stepProgress: { fontSize: 16, fontWeight: "600", color: "#BBBBBB" },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    justifyContent: "center",
+  },
   stepCard: {
-    backgroundColor: "#fff", borderRadius: 30, padding: 30, height: "80%",
-    justifyContent: "space-between", alignItems: "center", elevation: 5, overflow: "hidden", position: "relative",
+    backgroundColor: "#121212",
+    borderRadius: 30,
+    padding: 30,
+    height: "80%",
+    justifyContent: "space-between",
+    alignItems: "center",
+    elevation: 5,
+    overflow: "hidden",
+    position: "relative",
+    borderWidth: 1,
+    borderColor: "#333333",
   },
   stepBigNumber: {
-    fontSize: 240, fontWeight: "bold", color: "rgba(203, 170, 203, 0.15)",
-    position: "absolute", top: 80, zIndex: -1,
+    fontSize: 240,
+    fontWeight: "bold",
+    color: "rgba(212, 175, 55, 0.08)",
+    position: "absolute",
+    top: 80,
+    zIndex: -1,
   },
   stepScrollContent: { flexGrow: 1, justifyContent: "center" },
-  stepText: { fontSize: 24, color: "#4a4a4a", textAlign: "center", lineHeight: 36, fontWeight: "500", marginBottom: 20 },
-  nextStepButton: {
-    backgroundColor: "#5F4436", flexDirection: "row", alignItems: "center",
-    paddingVertical: 16, paddingHorizontal: 32, borderRadius: 30, width: "100%", justifyContent: "center",
+  stepText: {
+    fontSize: 24,
+    color: "#FFFFFF",
+    textAlign: "center",
+    lineHeight: 36,
+    fontWeight: "500",
+    marginBottom: 20,
   },
-  nextStepText: { color: "#fff", fontSize: 18, fontWeight: "bold", marginRight: 10 },
-  completedContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
-  mascotContainer: { width: 250, height: 250, marginBottom: 20, justifyContent: "center", alignItems: "center" },
+  nextStepButton: {
+    backgroundColor: "#D4AF37",
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 30,
+    width: "100%",
+    justifyContent: "center",
+  },
+  nextStepText: {
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginRight: 10,
+  },
+  completedContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  mascotContainer: {
+    width: 250,
+    height: 250,
+    marginBottom: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   mascotImage: { width: "100%", height: "100%" },
-  completedTitle: { fontSize: 36, fontWeight: "900", color: "#5F4436", marginBottom: 10 },
-  completedSub: { fontSize: 18, color: "#8a6666", textAlign: "center", marginBottom: 40, paddingHorizontal: 30 },
-  doneButton: { backgroundColor: "#4caf50", paddingVertical: 16, paddingHorizontal: 60, borderRadius: 30 },
+  completedTitle: {
+    fontSize: 36,
+    fontWeight: "900",
+    color: "#D4AF37",
+    marginBottom: 10,
+  },
+  completedSub: {
+    fontSize: 18,
+    color: "#BBBBBB",
+    textAlign: "center",
+    marginBottom: 40,
+    paddingHorizontal: 30,
+  },
+  doneButton: {
+    backgroundColor: "#FF8C00",
+    paddingVertical: 16,
+    paddingHorizontal: 60,
+    borderRadius: 30,
+  },
   doneButtonText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
   heartButton: {
-    position: "absolute", top: 50, right: 20, backgroundColor: "rgba(255,255,255,0.9)",
-    width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", elevation: 5,
+    position: "absolute",
+    top: 50,
+    right: 20,
+    backgroundColor: "rgba(26,26,26,0.9)",
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
   },
   contentSection: {
-    flex: 1, marginTop: -30, backgroundColor: "#f2ece2",
-    borderTopLeftRadius: 30, borderTopRightRadius: 30, padding: 24, minHeight: 500,
+    flex: 1,
+    marginTop: -30,
+    backgroundColor: "#000000",
+    borderTopLeftRadius: 30,
+    borderTopRightRadius: 30,
+    padding: 24,
+    minHeight: 500,
   },
-  title: { fontSize: 26, fontWeight: "bold", color: "#5F4436", marginBottom: 16 },
-  statsRow: { flexDirection: "row", justifyContent: "flex-start", marginBottom: 16 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 16,
+  },
   statItem: { flexDirection: "row", alignItems: "center", marginRight: 24 },
-  statText: { color: "#5F4436", fontWeight: "600", fontSize: 14 },
-  divider: { height: 1, backgroundColor: "#dccfc6", marginVertical: 20 },
-  sectionTitle: { fontSize: 20, fontWeight: "700", color: "#5F4436", marginBottom: 12 },
-  listItemRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
-  bullet: { width: 6, height: 6, borderRadius: 3, backgroundColor: "#cbaacb", marginTop: 8, marginRight: 10 },
-  listItem: { fontSize: 16, color: "#4a4a4a", lineHeight: 24, flex: 1 },
+  statText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
+  divider: { height: 1, backgroundColor: "#333333", marginVertical: 20 },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#D4AF37",
+    marginBottom: 12,
+  },
+  listItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
+  bullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: "#D4AF37",
+    marginTop: 8,
+    marginRight: 10,
+  },
+  listItem: { fontSize: 16, color: "#BBBBBB", lineHeight: 24, flex: 1 },
   stepContainerMain: { marginBottom: 16 },
   stepNumber: {
-    fontWeight: "bold", color: "#fff", backgroundColor: "#cbaacb",
-    width: 24, height: 24, borderRadius: 12, textAlign: "center", lineHeight: 24, marginRight: 12,
+    fontWeight: "bold",
+    color: "#000",
+    backgroundColor: "#D4AF37",
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    textAlign: "center",
+    lineHeight: 24,
+    marginRight: 12,
   },
-  errorText: { color: "red", fontSize: 16, marginBottom: 20 },
-  backButtonFixed: { padding: 10, backgroundColor: "#5F4436", borderRadius: 8 },
-  backButtonText: { color: "white" },
+  errorText: { color: "#e74c3c", fontSize: 16, marginBottom: 20 },
+  backButtonFixed: { padding: 10, backgroundColor: "#D4AF37", borderRadius: 8 },
+  backButtonText: { color: "black", fontWeight: "bold" },
 
   // TIMER SPECIFIC STYLES
   inlineTimerButton: {
-    flexDirection: "row", alignItems: "center", backgroundColor: "#E0C2A0",
-    paddingVertical: 4, paddingHorizontal: 10, borderRadius: 12, marginTop: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FF8C00",
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    marginTop: 6,
   },
-  inlineTimerText: { color: "#5F4436", fontSize: 12, fontWeight: "700", marginLeft: 4 },
+  inlineTimerText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 4,
+  },
   modalTimerButton: {
-    flexDirection: "row", alignItems: "center", justifyContent: "center",
-    backgroundColor: "#E0C2A0", paddingVertical: 12, paddingHorizontal: 20,
-    borderRadius: 20, marginTop: 10, borderWidth: 1, borderColor: "#5F4436",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#FF8C00",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    marginTop: 10,
   },
-  modalTimerText: { color: "#5F4436", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
+  modalTimerText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
 });
