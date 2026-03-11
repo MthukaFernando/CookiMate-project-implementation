@@ -434,7 +434,7 @@ const Settings = () => {
               </Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={24} color="#5D4037" />
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
         {/* Allergies Card */}
@@ -455,7 +455,7 @@ const Settings = () => {
               </Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={24} color="#5D4037" />
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
         {/* Custom Preferences Card */}
@@ -476,7 +476,7 @@ const Settings = () => {
               </Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={24} color="#5D4037" />
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
         {/* Change Password Card */}
@@ -493,7 +493,7 @@ const Settings = () => {
               <Text style={styles.cardSubtitle}>Update your account password</Text>
             </View>
           </View>
-          <Feather name="chevron-right" size={24} color="#5D4037" />
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
         {/* Log Out Card */}
