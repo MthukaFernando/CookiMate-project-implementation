@@ -91,7 +91,7 @@ export const getRandomRecipes = async (req, res) => {
   try {
     // get 3 random recipes from Recipe collection
     const recipes = await Recipe.aggregate([
-      { $sample: { size: 3 } }
+      { $sample: { size: 5 } }
     ]);
 
     res.json(recipes);
