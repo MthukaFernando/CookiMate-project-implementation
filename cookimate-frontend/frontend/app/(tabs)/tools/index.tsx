@@ -1,43 +1,65 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
 import { Link } from 'expo-router';
 
-// We import the content from our other files (we will code these in the next step)
+// Importing your updated pages
 import TimerPage from './timerPage';
 import ConverterPage from './converterPage';
 
+// --- DARK BRANDING COLORS ---
+const BRAND = {
+  bg: "#0A0A0A",        // Deep Midnight
+  surface: "#1E1E1E",   // Elevated Grey
+  accent: "#D4AF37",    // Vibrant Amber/Gold
+  textMain: "#FFFFFF",
+  textMuted: "#A0A0A0",
+  border: "#333333",
+};
+
 export default function ToolsMain() {
-  // This state keeps track of which tool to show. Default is 'timer'.
+  // State to track which tool to show
   const [activeTab, setActiveTab] = useState<'timer' | 'converter'>('timer');
 
   return (
     <View style={styles.container}>
-      {/* 1. The Toggle Button at the Top */}
+      <StatusBar barStyle="light-content" />
+
+      {/* 1. Styled Segmented Toggle */}
       <View style={styles.toggleContainer}>
         <TouchableOpacity 
+          activeOpacity={0.8}
           style={[styles.button, activeTab === 'timer' && styles.activeButton]} 
           onPress={() => setActiveTab('timer')}
         >
-          <Text style={activeTab === 'timer' ? styles.activeText : styles.inactiveText}>Timer</Text>
+          <Text style={[
+            styles.buttonText, 
+            activeTab === 'timer' ? styles.activeText : styles.inactiveText
+          ]}>Timer</Text>
         </TouchableOpacity>
 
         <TouchableOpacity 
+          activeOpacity={0.8}
           style={[styles.button, activeTab === 'converter' && styles.activeButton]} 
           onPress={() => setActiveTab('converter')}
         >
-          <Text style={activeTab === 'converter' ? styles.activeText : styles.inactiveText}>Converter</Text>
+          <Text style={[
+            styles.buttonText, 
+            activeTab === 'converter' ? styles.activeText : styles.inactiveText
+          ]}>Converter</Text>
         </TouchableOpacity>
       </View>
 
-      {/* 2. The Dynamic Content Area */}
+      {/* 2. Content Area */}
       <View style={styles.content}>
         {activeTab === 'timer' ? <TimerPage /> : <ConverterPage />}
       </View>
 
       {/* 3. Global Back to Home Link */}
-      <Link href="/" style={styles.homeLink}>
-        Back to Home Page
-      </Link>
+      <View style={styles.footer}>
+        <Link href="/" style={styles.homeLink}>
+          Back to Home Page
+        </Link>
+      </View>
     </View>
   );
 }
@@ -46,40 +68,51 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 60,
-    alignItems: 'center',
-    backgroundColor: '#F2ECE2',
+    backgroundColor: BRAND.bg,
   },
   toggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 20,
+    backgroundColor: BRAND.surface,
+    borderRadius: 25,
+    marginHorizontal: 40,
     marginBottom: 20,
-    borderWidth: 1
+    padding: 5,
+    borderWidth: 1,
+    borderColor: BRAND.border,
   },
   button: {
-    paddingVertical: 10,
-    paddingHorizontal: 30,
-    backgroundColor: '#F2ECE2',
-    borderRadius: 20
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderRadius: 20,
   },
   activeButton: {
-    backgroundColor: "#E0C2A0",
+    backgroundColor: BRAND.accent,
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '900',
+    letterSpacing: 1,
   },
   activeText: {
-    color: 'black',
-    fontWeight: 'bold',
+    color: BRAND.bg, 
   },
   inactiveText: {
-    color: 'black',
-    fontWeight: 'bold',
+    color: BRAND.textMuted,
   },
   content: {
     flex: 1,
     width: '100%',
   },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 30,
+  },
   homeLink: {
-    marginBottom: 40,
-    color: 'blue',
+    color: BRAND.textMuted,
+    fontSize: 13,
+    fontWeight: '700',
     textDecorationLine: 'underline',
+    letterSpacing: 0.5,
   },
 });
