@@ -12,6 +12,7 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
+  Platform
 } from "react-native";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Calendar } from "react-native-calendars";
@@ -138,18 +139,13 @@ const Page = () => {
     }, 4000);
     return () => clearInterval(timer);
   }, [currentIndex, carouselImages.length]);
+
   const handleScroll = (event: NativeSyntheticEvent<NativeScrollEvent>) => {
     const contentOffsetX = event.nativeEvent.contentOffset.x;
-    
-    // Calculate the index based on current scroll position
     const manualIndex = Math.round(contentOffsetX / CAROUSEL_WIDTH);
-    
-    // Update the currentIndex state so the button knows which ID to use
     if (manualIndex !== currentIndex && manualIndex < carouselImages.length) {
       setCurrentIndex(manualIndex);
     }
-
-    // Handle the infinite loop reset
     if (contentOffsetX >= (carouselImages.length - 1) * CAROUSEL_WIDTH) {
       flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       setCurrentIndex(0);
@@ -192,8 +188,7 @@ const Page = () => {
   );
 
   return (
-   
-    <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
+    <SafeAreaView style={[globalStyle.container, { flex: 1, paddingTop: 20 }]}>
        <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -229,7 +224,7 @@ const Page = () => {
                       style={[
                         styles.dayText,
                         state === "disabled"
-                          ? { color: "#d9e1e8" }
+                          ? { color: "#4d4d4d" }
                           : { color: isToday ? "white" : "#cecece" },
                       ]}
                     >
@@ -268,8 +263,6 @@ const Page = () => {
               style={styles.seasonalButton}
               onPress={() => {
                 const currentRecipe = carouselImages[currentIndex];
-
-                // Navigate to the dynamic recipe route using its ID
                 if (currentRecipe && currentRecipe.id) {
                   router.push(`/recipe/${currentRecipe.id}` as any);
                 }
@@ -415,7 +408,7 @@ const Page = () => {
 };
 
 export const calendarStyles: any = {
-  calendarBackground: "#0A0A0A",
+  calendarBackground: "#1A1A1A",
   dayTextColor: "white",
   textDayFontWeight: "bold",
   textMonthFontWeight: "bold",
@@ -423,7 +416,7 @@ export const calendarStyles: any = {
   textSectionTitleColor: "white",
   todayBackgroundColor: "transparent",
   todayTextColor: "#c6a484",
-  arrowColor: "#ce6e32",
+  arrowColor: "#ffcc00",
 };
 
 export const styles = StyleSheet.create({
@@ -435,12 +428,20 @@ export const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingBottom: 40,
   },
-  calendarContainer: { marginTop: 10 },
+  calendarContainer: { 
+    marginTop: Platform.OS === 'ios' ? 50 : 10,
+    backgroundColor: "#1A1A1A", 
+    borderRadius: 25,
+    overflow: "hidden",
+    paddingVertical: 5,
+    width: CAROUSEL_WIDTH, // Match carousel width
+    alignSelf: "center",   // Center on screen
+  },
   dayComponent: {
     alignItems: "center",
     justifyContent: "center",
     width: 45,
-    height: 50,
+    height: 42,
   },
   dayTextContainer: {
     width: 32,
@@ -458,7 +459,7 @@ export const styles = StyleSheet.create({
   },
   plannedIndicator: {
     position: "absolute", 
-    bottom: 2, 
+    bottom: 0,
     backgroundColor: "#FF4D4D",
     borderRadius: 4,
     paddingHorizontal: 4,
