@@ -408,9 +408,9 @@ const Settings = () => {
             </View>
           </View>
           <Switch
-            trackColor={{ false: "#E0E0E0", true: "#4CAF50" }}
-            thumbColor={"#fff"}
-            ios_backgroundColor="#E0E0E0"
+            trackColor={{ false: "#2A2A2A", true: "#D4AF37" }}
+            thumbColor={"#FFFFFF"}
+            ios_backgroundColor="#2A2A2A"
             onValueChange={toggleNotifications}
             value={notificationsEnabled}
           />
