@@ -212,9 +212,7 @@ function HomePage() {
         <View style={{ height: 120 }} />
       </ScrollView>
 
-      <Pressable style={styles.fab} onPress={() => router.push("/menuPlanerPage")}>
-        <MaterialCommunityIcons name="robot" size={28} color="#000" />
-      </Pressable>
+      
     </View>
   );
 }
