@@ -8,7 +8,7 @@ import ConverterPage from './converterPage';
 
 // --- DARK BRANDING COLORS ---
 const BRAND = {
-  bg: "#121212",        // Deep Midnight
+  bg: "#0A0A0A",        // Deep Midnight
   surface: "#1E1E1E",   // Elevated Grey
   accent: "#FFB300",    // Vibrant Amber/Gold
   textMain: "#FFFFFF",
@@ -67,7 +67,7 @@ export default function ToolsMain() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 35,
     backgroundColor: BRAND.bg,
   },
   toggleContainer: {
