@@ -13,6 +13,9 @@ import {
   ActivityIndicator,
   ScrollView,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -29,6 +32,18 @@ const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
+
+const COLORS = {
+  background: "#050505",
+  primaryGold: "#D4AF37",
+  surface: "#121212",
+  surfaceLight: "#1E1E1E",
+  textLight: "#F5F5F5",
+  textMuted: "#888888",
+  border: "#262626",
+  accentRed: "#FF4444",
+  overlayBg: "rgba(20, 20, 20, 0.95)",
+};
 
 interface Post {
   id: string;
@@ -71,6 +86,8 @@ export default function CommunityUserProfile() {
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
   const [showModalComments, setShowModalComments] = useState(false);
+  const [commentText, setCommentText] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currentUser = auth.currentUser;
 
@@ -120,6 +137,36 @@ export default function CommunityUserProfile() {
     }
   };
 
+  const handleCommentSubmit = async () => {
+    if (!commentText.trim() || !currentUser || !selectedPost) return;
+    setIsSubmitting(true);
+    try {
+      const res = await axios.post(
+        `${BASE_URL}/social/${selectedPost.id}/comment`,
+        {
+          userId: currentUser.uid,
+          text: commentText,
+        },
+      );
+      setSelectedPost(res.data);
+      setCommentText("");
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              posts: prev.posts.map((p) =>
+                p.id === selectedPost.id ? res.data : p,
+              ),
+            }
+          : prev,
+      );
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleDeletePost = (postId: string) => {
     Alert.alert(
       "Delete Post",
@@ -131,19 +178,16 @@ export default function CommunityUserProfile() {
           style: "destructive",
           onPress: async () => {
             try {
-              // Assuming your social route handles deletion via DELETE /social/:postId
               await axios.delete(`${BASE_URL}/social/${postId}`, {
                 data: { userId: currentUser?.uid }
               });
-
-              // Update local state to remove the post instantly
               setProfile((prev) =>
                 prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) } : prev
               );
               closeModal();
             } catch (error) {
               console.error("Error deleting post:", error);
-              Alert.alert("Error", "Could not delete post. Please try again.");
+              Alert.alert("Error", "Could not delete post.");
             }
           },
         },
@@ -154,28 +198,23 @@ export default function CommunityUserProfile() {
   const closeModal = () => {
     setSelectedPost(null);
     setShowModalComments(false);
+    setCommentText("");
   };
 
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center" }]}>
-        <ActivityIndicator size="large" color="#522F2F" />
+        <ActivityIndicator size="large" color={COLORS.primaryGold} />
       </View>
     );
   }
 
-  if (!profile) {
-    return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <Text>User not found</Text>
-      </View>
-    );
-  }
+  if (!profile) return null;
 
   const ProfileHeader = () => (
     <View style={styles.header}>
       <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="arrow-back" size={24} color="#5F4436" />
+        <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
       </TouchableOpacity>
       <View style={styles.profileCard}>
         <Image
@@ -190,7 +229,7 @@ export default function CommunityUserProfile() {
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Text style={styles.statNum}>{profile.stats.recipes}</Text>
-            <Text style={styles.statLab}>Cooked</Text>
+            <Text style={styles.statLab}>Recipes</Text>
           </View>
           <View style={styles.stat}>
             <Text style={styles.statNum}>{profile.stats.followers}</Text>
@@ -206,7 +245,7 @@ export default function CommunityUserProfile() {
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
             onPress={handleFollowToggle}
           >
-            <Text style={styles.followBtnText}>
+            <Text style={isFollowing ? styles.followingBtnText : styles.followBtnText}>
               {isFollowing ? "Following" : "Follow"}
             </Text>
           </TouchableOpacity>
@@ -222,20 +261,23 @@ export default function CommunityUserProfile() {
         keyExtractor={(item) => item.id}
         numColumns={COLUMN_COUNT}
         ListHeaderComponent={ProfileHeader}
-        contentContainerStyle={{ paddingHorizontal: 20 }}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
         columnWrapperStyle={{ gap: GAP, marginBottom: GAP }}
         renderItem={({ item }: ListRenderItemInfo<Post>) => (
           <TouchableOpacity onPress={() => setSelectedPost(item)}>
             <Image
               source={{ uri: item.uri }}
-              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8 }}
+              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, backgroundColor: COLORS.surface }}
             />
           </TouchableOpacity>
         )}
       />
 
-      <Modal visible={!!selectedPost} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
+      <Modal visible={!!selectedPost} transparent animationType="fade">
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={styles.modalOverlay}
+        >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
@@ -243,123 +285,144 @@ export default function CommunityUserProfile() {
                 source={{ uri: profile.profilePic }}
                 style={styles.modalAvatar}
               />
-              <Text style={{ fontWeight: "bold" }}>{profile.username}</Text>
+              <Text style={styles.modalUserTitle}>{profile.username}</Text>
               
               <View style={{ flexDirection: 'row', marginLeft: 'auto', alignItems: 'center', gap: 15 }}>
-                {/* Trash Icon: Only visible if the profile belongs to the current user */}
                 {currentUser?.uid === CommunityUserid && (
                   <TouchableOpacity onPress={() => selectedPost && handleDeletePost(selectedPost.id)}>
-                    <Ionicons name="trash-outline" size={22} color="#FF6B6B" />
+                    <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
                   </TouchableOpacity>
                 )}
-                
                 <TouchableOpacity onPress={closeModal}>
-                  <Ionicons name="close" size={24} />
+                  <Ionicons name="close" size={24} color={COLORS.textLight} />
                 </TouchableOpacity>
               </View>
             </View>
 
             {selectedPost && (
               <View>
-                <View style={styles.imageWrapper}>
-                  <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
+                <ScrollView bounces={false} >
+                  <View style={styles.imageWrapper}>
+                    <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
 
-                  {showModalComments && (
-                    <View style={styles.commentOverlay}>
-                      <View style={styles.overlayHeader}>
-                        <Text style={styles.overlayTitle}>Recent Comments</Text>
-                        <TouchableOpacity onPress={() => setShowModalComments(false)}>
-                          <Ionicons name="chevron-down" size={22} color="#FF6B6B" />
-                        </TouchableOpacity>
+                    {showModalComments && (
+                      <View style={styles.commentOverlay}>
+                        <View style={styles.overlayHeader}>
+                          <Text style={styles.overlayTitle}>Recent Comments</Text>
+                          <TouchableOpacity onPress={() => setShowModalComments(false)}>
+                            <Ionicons name="chevron-down" size={22} color={COLORS.primaryGold} />
+                          </TouchableOpacity>
+                        </View>
+                        <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
+                          {selectedPost.comments.length > 0 ? (
+                            selectedPost.comments.map((c, index) => (
+                              <View key={index} style={styles.commentLine}>
+                                <Text style={styles.cUser}>{c.user?.username} </Text>
+                                <Text style={styles.cText}>{c.text}</Text>
+                              </View>
+                            ))
+                          ) : (
+                            <Text style={styles.noCommentsText}>No comments yet.</Text>
+                          )}
+                        </ScrollView>
                       </View>
-                      <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
-                        {selectedPost.comments.length > 0 ? (
-                          selectedPost.comments.map((c, index) => (
-                            <View key={index} style={styles.commentLine}>
-                              <Text style={styles.cUser}>{c.user?.username} </Text>
-                              <Text style={styles.cText}>{c.text}</Text>
-                            </View>
-                          ))
-                        ) : (
-                          <Text style={styles.noCommentsText}>Be the first to comment!</Text>
-                        )}
-                      </ScrollView>
-                    </View>
-                  )}
-                </View>
+                    )}
+                  </View>
 
-                <View style={styles.modalActionRow}>
-                  <TouchableOpacity style={styles.actionBtn}>
-                    <Ionicons
-                      name={selectedPost.likes.includes(currentUser?.uid || "") ? "heart" : "heart-outline"}
-                      size={24}
-                      color={selectedPost.likes.includes(currentUser?.uid || "") ? "#FF6B6B" : "#444"}
-                    />
-                    <Text style={styles.actionText}>{selectedPost.likes.length}</Text>
-                  </TouchableOpacity>
+                  <View style={styles.modalActionRow}>
+                    <TouchableOpacity style={styles.actionBtn}>
+                      <Ionicons
+                        name={selectedPost.likes.includes(currentUser?.uid || "") ? "heart" : "heart-outline"}
+                        size={24}
+                        color={selectedPost.likes.includes(currentUser?.uid || "") ? COLORS.accentRed : COLORS.textLight}
+                      />
+                      <Text style={styles.actionText}>{selectedPost.likes.length}</Text>
+                    </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={styles.actionBtn}
-                    onPress={() => setShowModalComments(!showModalComments)}
-                  >
-                    <Ionicons
-                      name={showModalComments ? "chatbubble" : "chatbubble-outline"}
-                      size={22}
-                      color="#444"
-                    />
-                    <Text style={styles.actionText}>{selectedPost.comments.length}</Text>
-                  </TouchableOpacity>
-                </View>
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={() => setShowModalComments(!showModalComments)}
+                    >
+                      <Ionicons
+                        name={showModalComments ? "chatbubble" : "chatbubble-outline"}
+                        size={22}
+                        color={COLORS.textLight}
+                      />
+                      <Text style={styles.actionText}>{selectedPost.comments.length}</Text>
+                    </TouchableOpacity>
+                  </View>
 
-                {selectedPost.caption && (
                   <View style={styles.captionArea}>
-                    <Text style={styles.modalCaption}>
-                      <Text style={{ fontWeight: "bold" }}>{profile.username} </Text>
-                      {selectedPost.caption}
-                    </Text>
+                    {selectedPost.caption && (
+                      <Text style={styles.modalCaption}>
+                        <Text style={styles.cUser}>{profile.username} </Text>
+                        {selectedPost.caption}
+                      </Text>
+                    )}
+                  </View>
+                </ScrollView>
+
+                {showModalComments && (
+                  <View style={styles.bottomInputContainer}>
+                    <TextInput
+                      style={styles.bottomInput}
+                      placeholder="Add a comment..."
+                      placeholderTextColor="#666"
+                      value={commentText}
+                      onChangeText={setCommentText}
+                    />
+                    <TouchableOpacity onPress={handleCommentSubmit} disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <ActivityIndicator size="small" color={COLORS.primaryGold} />
+                      ) : (
+                        <Ionicons name="send" size={20} color={COLORS.primaryGold} />
+                      )}
+                    </TouchableOpacity>
                   </View>
                 )}
               </View>
             )}
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#f2ece2" },
+  container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
   backBtn: {
     width: 40,
     height: 40,
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    elevation: 2,
     marginTop: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   profileCard: {
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 30,
     padding: 20,
     alignItems: "center",
     marginTop: 15,
-    elevation: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   avatar: {
     width: 100,
     height: 100,
     borderRadius: 50,
     borderWidth: 2,
-    borderColor: "#E8C28E",
+    borderColor: COLORS.primaryGold,
     marginBottom: 10,
   },
-  userName: { fontSize: 24, fontWeight: "800" },
-  handle: { color: "#B86D2A", fontWeight: "600" },
-  bioText: { textAlign: "center", marginTop: 5, color: "#666" },
+  userName: { fontSize: 24, fontWeight: "800", color: COLORS.textLight },
+  handle: { color: COLORS.primaryGold, fontWeight: "600" },
+  bioText: { textAlign: "center", marginTop: 8, color: COLORS.textMuted, paddingHorizontal: 20 },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -367,47 +430,55 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderTopWidth: 1,
     borderBottomWidth: 1,
-    borderColor: "#f0f0f0",
+    borderColor: COLORS.border,
     marginVertical: 15,
   },
   stat: { alignItems: "center" },
-  statNum: { fontWeight: "bold", fontSize: 18 },
-  statLab: { fontSize: 12, color: "#999" },
+  statNum: { fontWeight: "bold", fontSize: 18, color: COLORS.textLight },
+  statLab: { fontSize: 12, color: COLORS.textMuted },
   followBtn: {
-    backgroundColor: "#522F2F",
+    backgroundColor: COLORS.primaryGold,
     width: "100%",
     padding: 15,
     borderRadius: 15,
     alignItems: "center",
   },
-  followingBtn: { backgroundColor: "#A0A0A0" },
-  followBtnText: { color: "#fff", fontWeight: "bold" },
+  followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
+  followingBtnText: { color: "green", fontWeight: "bold" },
+  followBtnText: { color: "COLORS.background", fontWeight: "bold" },
   modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: "rgba(0,0,0,0.9)",
     justifyContent: "center",
     alignItems: "center",
   },
   modalCard: {
     width: "92%",
-    backgroundColor: "#fff",
+    backgroundColor: COLORS.surface,
     borderRadius: 25,
     overflow: "hidden",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  modalHeader: { flexDirection: "row", alignItems: "center", padding: 15 },
-  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
-  imageWrapper: { width: "100%", height: 350, position: "relative" },
+  modalHeader: { 
+    flexDirection: "row", 
+    alignItems: "center", 
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border 
+  },
+  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: COLORS.primaryGold },
+  modalUserTitle: { color: COLORS.textLight, fontWeight: "bold" },
+  imageWrapper: { width: "100%", height: width * 0.9, position: "relative", backgroundColor: "#000" },
   modalImg: { width: "100%", height: "100%" },
   commentOverlay: {
     position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: "80%",
-    backgroundColor: "rgba(59, 50, 50, 0.9)",
+    height: "100%",
+    backgroundColor: COLORS.overlayBg,
     padding: 15,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
     zIndex: 10,
   },
   overlayHeader: {
@@ -415,18 +486,17 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: 10,
     borderBottomWidth: 0.5,
-    borderBottomColor: "#555",
-    paddingBottom: 5,
+    borderBottomColor: COLORS.border,
+    paddingBottom: 8,
   },
-  overlayTitle: { color: "white", fontWeight: "bold", fontSize: 14 },
+  overlayTitle: { color: COLORS.textLight, fontWeight: "bold", fontSize: 14 },
   overlayScroll: { flex: 1 },
   commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: "wrap" },
-  cUser: { color: "#FF6B6B", fontWeight: "bold", fontSize: 13 },
-  cText: { color: "#ede5d7", fontSize: 15, lineHeight: 20 },
+  cUser: { color: COLORS.primaryGold, fontWeight: "bold", fontSize: 13 },
+  cText: { color: COLORS.textLight, fontSize: 14, lineHeight: 18 },
   noCommentsText: {
-    color: "#AAA",
+    color: COLORS.textMuted,
     fontSize: 13,
-    fontStyle: "italic",
     textAlign: "center",
     marginTop: 40,
   },
@@ -434,11 +504,22 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     padding: 15,
     gap: 20,
-    borderBottomWidth: 0.5,
-    borderBottomColor: "#EEE",
   },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
-  actionText: { fontWeight: "700", color: "#666" },
-  captionArea: { padding: 15 },
-  modalCaption: { fontSize: 14, color: "#333", lineHeight: 18 },
+  actionText: { fontWeight: "700", color: COLORS.textLight },
+  captionArea: { paddingHorizontal: 15, paddingBottom: 15 },
+  modalCaption: { fontSize: 14, color: COLORS.textLight, lineHeight: 18 },
+  bottomInputContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: COLORS.surfaceLight,
+    borderRadius: 20,
+    paddingHorizontal: 15,
+    marginHorizontal: 15,
+    marginBottom: 15,
+    height: 50,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  bottomInput: { flex: 1, color: COLORS.textLight, fontSize: 14 },
 });
