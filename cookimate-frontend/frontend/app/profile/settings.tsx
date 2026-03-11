@@ -399,8 +399,8 @@ const Settings = () => {
         {/* Notifications Card with Toggle */}
         <View style={styles.settingCard}>
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <Ionicons name="notifications-outline" size={24} color="#923d0a" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Ionicons name="notifications-outline" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Notifications</Text>
@@ -422,8 +422,8 @@ const Settings = () => {
           onPress={() => setDietaryModalVisible(true)}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <MaterialCommunityIcons name="food-apple" size={24} color="#923d0a" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <MaterialCommunityIcons name="food-apple" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Dietary Preferences</Text>
@@ -443,8 +443,8 @@ const Settings = () => {
           onPress={() => setAllergyModalVisible(true)}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <MaterialCommunityIcons name="food-off" size={24} color="#923d0a" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <MaterialCommunityIcons name="food-off" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Allergies & Intolerances</Text>
@@ -464,8 +464,8 @@ const Settings = () => {
           onPress={() => setCustomPreferenceModal(true)}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <Feather name="edit" size={24} color="#923d0a" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Feather name="edit" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Custom Preferences</Text>
@@ -485,8 +485,8 @@ const Settings = () => {
           onPress={() => router.push("../profile/change-password")}
         >
           <View style={styles.cardContent}>
-            <View style={[styles.iconContainer, { backgroundColor: '#923d0a20' }]}>
-              <Feather name="lock" size={24} color="#923d0a" />
+            <View style={[styles.iconContainer, { backgroundColor: 'rgba(212, 175, 55, 0.15)' }]}>
+              <Feather name="lock" size={24} color="#D4AF37" />
             </View>
             <View style={styles.textContainer}>
               <Text style={styles.cardTitle}>Change Password</Text>
@@ -604,12 +604,12 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FFFFFF', // Changed to Crisp White
+    color: '#FFFFFF',
     marginBottom: 4,
   },
   cardSubtitle: {
     fontSize: 12,
-    color: '#A6A6A6', // Changed to Champagne Gray
+    color: '#A6A6A6',
   },
   logoutCard: {
     marginTop: 20,
