@@ -23,7 +23,7 @@ import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 3;
-const GAP = 8; // Increased gap for a more "designed" boutique look
+const GAP = 8; 
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -31,9 +31,9 @@ const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
 
 const COLORS = {
-  background: "#050505", // Deeper black
+  background: "#050505",
   primaryGold: "#D4AF37",
-  surface: "#121212", // Elevation color
+  surface: "#121212",
   surfaceLight: "#1E1E1E",
   textLight: "#F5F5F5",
   textMuted: "#888888",
@@ -274,9 +274,20 @@ export default function CommunityUserProfile() {
                 style={styles.modalAvatar}
               />
               <Text style={styles.modalUserTitle}>{profile.username}</Text>
-              <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
-                <Ionicons name="close" size={24} color={COLORS.textLight} />
-              </TouchableOpacity>
+              
+              <View style={styles.modalHeaderActions}>
+                {currentUser?.uid === CommunityUserid && (
+                  <TouchableOpacity
+                    onPress={() => selectedPost && handleDeletePost(selectedPost.id)}
+                    style={styles.deleteTopBtn}
+                  >
+                    <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
+                  </TouchableOpacity>
+                )}
+                <TouchableOpacity onPress={closeModal} style={styles.closeBtn}>
+                  <Ionicons name="close" size={26} color={COLORS.textLight} />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {selectedPost && (
@@ -322,18 +333,6 @@ export default function CommunityUserProfile() {
                       </Text>
                     </TouchableOpacity>
                   </View>
-
-                  {currentUser?.uid === CommunityUserid && (
-                    <TouchableOpacity
-                      onPress={() => handleDeletePost(selectedPost.id)}
-                    >
-                      <Ionicons
-                        name="trash-outline"
-                        size={22}
-                        color={COLORS.textMuted}
-                      />
-                    </TouchableOpacity>
-                  )}
                 </View>
 
                 <View style={styles.detailsArea}>
@@ -502,6 +501,15 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  modalHeaderActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginLeft: "auto",
+    gap: 15,
+  },
+  deleteTopBtn: {
+    padding: 6,
+  },
   modalAvatar: {
     width: 34,
     height: 34,
@@ -511,7 +519,7 @@ const styles = StyleSheet.create({
     borderColor: COLORS.primaryGold,
   },
   modalUserTitle: { color: COLORS.textLight, fontWeight: "700", fontSize: 16 },
-  closeBtn: { marginLeft: "auto" },
+  closeBtn: { padding: 4 },
   modalImageContainer: {
     width: "100%",
     height: width,
