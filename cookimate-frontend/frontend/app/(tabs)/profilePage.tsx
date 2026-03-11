@@ -81,7 +81,7 @@ const ProfilePage = () => {
                 activeOpacity={0.7}
                 onPress={() => router.push("/profile/settings")}
               >
-                <Feather name="settings" size={18} color="#D4AF37" />
+                <Feather name="settings" size={18} color="#000000" />
               </TouchableOpacity>
             </View>
           </View>
@@ -201,11 +201,11 @@ const styles = StyleSheet.create({
   
   // Top Profile Card
   topSubContainer: {
-    backgroundColor: '#1A1A1A',
+    backgroundColor: '#000000',
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#D4AF37',
+    borderColor: '#ffffff',
     marginTop: 20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     gap: 10 
   },
   editBtn: { 
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    backgroundColor: '#D4AF37',
     paddingHorizontal: 15, 
     paddingVertical: 8, 
     borderRadius: 12,
@@ -270,10 +270,10 @@ const styles = StyleSheet.create({
   editBtnText: { 
     fontSize: 12, 
     fontWeight: 'bold', 
-    color: '#D4AF37' 
+    color: '#000000' 
   },
   settingsBtn: { 
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    backgroundColor: '#D4AF37',
     width: 35, 
     height: 35, 
     borderRadius: 12, 
