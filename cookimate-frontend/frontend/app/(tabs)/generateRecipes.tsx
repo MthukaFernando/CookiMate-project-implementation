@@ -15,34 +15,32 @@ import {
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
 import { Ionicons } from "@expo/vector-icons";
-import { globalStyle } from "../globalStyleSheet.style";
 
-const TAB_BAR_HEIGHT = 65;
-const PEEK_HEIGHT = 180;
+// --- DARK BRANDING COLORS ---
+const BRAND = {
+  bg: "#121212",
+  surface: "#1E1E1E",
+  accent: "#FFB300",
+  textMain: "#FFFFFF",
+  textMuted: "#A0A0A0",
+  inputBg: "#2A2A2A",
+  border: "#333333",
+};
 
+// --- RESTORED DATA ---
 const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic", "Chicken", "Shrimp"];
-
 const CUISINES = [
   "American",
   "Asian",
   "British",
-  "Caribbean",
   "French",
   "Indian",
   "Italian",
   "Japanese",
   "Korean",
-  "Louisiana",
-  "Mediterranean",
   "Mexican",
-  "New-Orleans",
-  "South-American",
-  "Sri Lankan",
-  "Swiss",
-  "Texan",
   "Western",
 ];
-
 const MEAL_TYPES = [
   "Appetizer",
   "Breakfast",
@@ -57,8 +55,9 @@ const SERVINGS = ["1", "2", "4", "6+"];
 
 export default function GenerateRecipesPage() {
   const { height } = useWindowDimensions();
-
   const TOP_MARGIN = 96;
+  const PEEK_HEIGHT = 180;
+  const TAB_BAR_HEIGHT = 65;
   const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
   const EXPANDED_Y = TOP_MARGIN;
 
@@ -72,38 +71,16 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
-  // --- INTERPOLATIONS ---
-
-  // 1. Glassy to Solid Background
+  // --- ANIMATIONS ---
   const panelBgColor = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
-    outputRange: ["rgba(248, 244, 239, 1)", "rgba(255, 255, 255, 0.4)"],
-    extrapolate: "clamp",
-  });
-
-  // 2. Animate Border Radius
-  const panelBorderRadius = slideAnim.interpolate({
-    inputRange: [EXPANDED_Y, COLLAPSED_Y],
-    outputRange: [0, 35],
-    extrapolate: "clamp",
-  });
-
-  // 3. Subtle Glass Border (fade out when expanded)
-  const panelBorderWidth = slideAnim.interpolate({
-    inputRange: [EXPANDED_Y, EXPANDED_Y + 50],
-    outputRange: [0, 1],
+    outputRange: [BRAND.bg, "rgba(30, 30, 30, 0.9)"],
     extrapolate: "clamp",
   });
 
   const contentOpacity = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, EXPANDED_Y + 150],
     outputRange: [1, 0],
-    extrapolate: "clamp",
-  });
-
-  const peekOpacity = slideAnim.interpolate({
-    inputRange: [COLLAPSED_Y - 100, COLLAPSED_Y],
-    outputRange: [0, 1],
     extrapolate: "clamp",
   });
 
@@ -126,6 +103,16 @@ export default function GenerateRecipesPage() {
     setIngredientInput("");
   };
 
+  const addIngredient = (name: string) => {
+    if (!name.trim()) return;
+    const formatted =
+      name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
+    if (!selectedIngredients.includes(formatted)) {
+      setSelectedIngredients([...selectedIngredients, formatted]);
+    }
+    setIngredientInput("");
+  };
+
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) =>
@@ -141,18 +128,8 @@ export default function GenerateRecipesPage() {
     }),
   ).current;
 
-  const addIngredient = (name: string) => {
-    if (!name.trim()) return;
-    const formatted =
-      name.trim().charAt(0).toUpperCase() + name.trim().slice(1);
-    if (!selectedIngredients.includes(formatted)) {
-      setSelectedIngredients([...selectedIngredients, formatted]);
-    }
-    setIngredientInput("");
-  };
-
   return (
-    <View style={[styles.container, globalStyle?.container]}>
+    <View style={styles.container}>
       <Video
         source={require("../../assets/videos/generate.mp4")}
         style={StyleSheet.absoluteFill}
@@ -161,11 +138,10 @@ export default function GenerateRecipesPage() {
         isLooping
         isMuted
       />
-
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(0,0,0,0.15)" },
+          { backgroundColor: "rgba(0,0,0,0.4)" },
         ]}
       />
 
@@ -179,50 +155,42 @@ export default function GenerateRecipesPage() {
           {
             height: height - TOP_MARGIN,
             transform: [{ translateY: slideAnim }],
-            borderTopLeftRadius: panelBorderRadius,
-            borderTopRightRadius: panelBorderRadius,
-            backgroundColor: panelBgColor, // Animated Background
-            borderWidth: panelBorderWidth, // Subtle glass edge
-            borderColor: "rgba(255, 255, 255, 0.3)",
+            backgroundColor: panelBgColor,
+            borderColor: BRAND.border,
+            borderTopWidth: 1,
           },
         ]}
       >
-        {/* --- PEEK BUTTON SECTION --- */}
-        <Animated.View
-          style={[styles.peekButtonWrapper, { opacity: peekOpacity }]}
-        >
-          <TouchableOpacity
-            style={styles.peekButton}
-            onPress={() => togglePanel(true)}
-            activeOpacity={0.9}
-            disabled={isExpanded}
-          >
-            <View style={styles.flexRow}>
-              <Ionicons name="sparkles" size={20} color="#4A3B2C" />
-              <Text style={styles.peekTitle}>Generate Recipes</Text>
-            </View>
-            <Ionicons name="chevron-up" size={20} color="#4A3B2C" />
-          </TouchableOpacity>
-        </Animated.View>
+        {/* --- PEEK BUTTON --- */}
+        {!isExpanded && (
+          <View style={styles.peekButtonWrapper}>
+            <TouchableOpacity
+              style={styles.peekButton}
+              onPress={() => togglePanel(true)}
+            >
+              <View style={styles.flexRow}>
+                <Ionicons name="sparkles" size={20} color={BRAND.bg} />
+                <Text style={styles.peekTitle}>Generate Recipes</Text>
+              </View>
+              <Ionicons name="chevron-up" size={20} color={BRAND.bg} />
+            </TouchableOpacity>
+          </View>
+        )}
 
-        {/* --- EXPANDED CONTENT SECTION --- */}
+        {/* --- EXPANDED CONTENT --- */}
         <Animated.View
-          style={{ flex: 1, opacity: contentOpacity, marginTop: 10 }}
+          style={{ flex: 1, opacity: contentOpacity }}
           pointerEvents={isExpanded ? "auto" : "none"}
         >
           <View {...panResponder.panHandlers} style={styles.headerArea}>
             <View style={styles.dragHandle} />
             <View style={styles.headerRow}>
-              <TouchableOpacity onPress={() => togglePanel(false)} hitSlop={20}>
-                <Ionicons name="close" size={26} color="#9CA3AF" />
+              <TouchableOpacity onPress={() => togglePanel(false)}>
+                <Ionicons name="close" size={26} color={BRAND.textMuted} />
               </TouchableOpacity>
-              <Text style={styles.headerTitle}>Recipe Builder</Text>
-              <TouchableOpacity
-                onPress={handleReset}
-                style={styles.resetContainer}
-                hitSlop={20}
-              >
-                <Text style={styles.resetText}>Reset</Text>
+              <Text style={styles.headerTitle}>RECIPE BUILDER</Text>
+              <TouchableOpacity onPress={handleReset}>
+                <Text style={styles.resetText}>RESET</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -234,13 +202,13 @@ export default function GenerateRecipesPage() {
             <ScrollView
               contentContainerStyle={styles.scrollBody}
               showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
             >
+              {/* Ingredient Input */}
               <View style={styles.searchSection}>
                 <Ionicons
                   name="search"
                   size={20}
-                  color="#9CA3AF"
+                  color={BRAND.accent}
                   style={{ marginRight: 10 }}
                 />
                 <View style={styles.chipContainer}>
@@ -260,6 +228,7 @@ export default function GenerateRecipesPage() {
                   <TextInput
                     style={styles.textInput}
                     placeholder="Add ingredients..."
+                    placeholderTextColor={BRAND.textMuted}
                     value={ingredientInput}
                     onChangeText={setIngredientInput}
                     onSubmitEditing={() => addIngredient(ingredientInput)}
@@ -279,7 +248,7 @@ export default function GenerateRecipesPage() {
                     style={styles.quickAddBtn}
                     onPress={() => addIngredient(item)}
                   >
-                    <Ionicons name="add" size={14} color="#4A3B2C" />
+                    <Ionicons name="add" size={14} color={BRAND.accent} />
                     <Text style={styles.quickAddText}>{item}</Text>
                   </TouchableOpacity>
                 ))}
@@ -287,6 +256,7 @@ export default function GenerateRecipesPage() {
 
               <View style={styles.divider} />
 
+              {/* RESTORED FILTERS */}
               <FilterRow
                 title="Cuisine"
                 icon="restaurant-outline"
@@ -319,18 +289,23 @@ export default function GenerateRecipesPage() {
               <TouchableOpacity
                 style={styles.generateBtn}
                 activeOpacity={0.8}
-                onPress={() => {
-                  console.log("Generating...");
-                  togglePanel(false);
-                }}
+                onPress={() =>
+                  console.log("Generating with:", {
+                    cuisine,
+                    mealType,
+                    prepTime,
+                    servings,
+                    selectedIngredients,
+                  })
+                }
               >
                 <Ionicons
                   name="flash"
-                  size={18}
-                  color="#4A3B2C"
+                  size={20}
+                  color={BRAND.bg}
                   style={{ marginRight: 8 }}
                 />
-                <Text style={styles.generateBtnText}>Create My Menu</Text>
+                <Text style={styles.generateBtnText}>CREATE MY MENU</Text>
               </TouchableOpacity>
             </ScrollView>
           </KeyboardAvoidingView>
@@ -343,7 +318,7 @@ export default function GenerateRecipesPage() {
 const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
   <View style={styles.filterRowContainer}>
     <View style={styles.filterHeader}>
-      <Ionicons name={icon} size={16} color="#4A3B2C" />
+      <Ionicons name={icon} size={16} color={BRAND.accent} />
       <Text style={styles.filterTitle}>{title}</Text>
     </View>
     <ScrollView
@@ -375,10 +350,10 @@ const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
 );
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, backgroundColor: BRAND.bg },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.1)",
+    backgroundColor: "rgba(0,0,0,0.6)",
     zIndex: 9998,
   },
   slidingPanel: {
@@ -387,41 +362,37 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    // Note: BackgroundColor and BorderRadius are handled by Animated.View styles
+    borderTopLeftRadius: 35,
+    borderTopRightRadius: 35,
   },
   peekButtonWrapper: {
-    position: "absolute",
-    top: 0,
-    height: PEEK_HEIGHT,
-    width: "100%",
+    height: 180,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 10,
   },
   peekButton: {
-    backgroundColor: "#EBC390",
+    backgroundColor: BRAND.accent,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingVertical: 15,
-    paddingHorizontal: 20,
-    marginBottom: 45,
+    paddingHorizontal: 25,
     borderRadius: 50,
-    width: "60%",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 5,
+    width: "75%",
   },
-  flexRow: { flexDirection: "row", alignItems: "center", gap: 10 },
-  peekTitle: { fontSize: 17, fontWeight: "bold", color: "#4A3B2C" },
-  headerArea: { paddingTop: 15, paddingBottom: 15, alignItems: "center" },
+  peekTitle: {
+    fontSize: 16,
+    fontWeight: "900",
+    color: BRAND.bg,
+    marginLeft: 10,
+  },
+  flexRow: { flexDirection: "row", alignItems: "center" },
+  headerArea: { paddingVertical: 15, alignItems: "center" },
   dragHandle: {
-    width: 45,
-    height: 5,
-    backgroundColor: "#E5E7EB",
-    borderRadius: 10,
+    width: 40,
+    height: 4,
+    backgroundColor: BRAND.border,
+    borderRadius: 2,
     marginBottom: 15,
   },
   headerRow: {
@@ -429,81 +400,89 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     width: "100%",
-    paddingHorizontal: 20,
+    paddingHorizontal: 25,
   },
-  headerTitle: { fontSize: 24, fontWeight: "900", color: "#4A3B2C" },
-  resetContainer: { padding: 5 },
-  resetText: { color: "#B45309", fontWeight: "800", fontSize: 15 },
-  scrollBody: { paddingHorizontal: 20, paddingBottom: 120 },
+  headerTitle: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: BRAND.textMain,
+    letterSpacing: 2,
+  },
+  resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
+  scrollBody: { paddingHorizontal: 25, paddingBottom: 120 },
   searchSection: {
-    backgroundColor: "#FFF",
+    backgroundColor: BRAND.inputBg,
     borderRadius: 20,
-    padding: 14,
+    padding: 15,
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 10,
-    marginBottom: 35,
+    marginVertical: 20,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: BRAND.border,
   },
-  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 5 },
+  chipContainer: { flexDirection: "row", flexWrap: "wrap", flex: 1, gap: 6 },
   chip: {
-    backgroundColor: "#F3D8B6",
-    paddingVertical: 8,
+    backgroundColor: BRAND.accent,
+    paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 10,
   },
-  chipText: { fontSize: 12, fontWeight: "700", color: "#4A3B2C" },
-  textInput: { flex: 1, minWidth: 100, fontSize: 16 },
+  chipText: { fontSize: 12, fontWeight: "800", color: BRAND.bg },
+  textInput: { flex: 1, minWidth: 120, fontSize: 16, color: BRAND.textMain },
   label: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#9CA3AF",
+    fontSize: 10,
+    fontWeight: "900",
+    color: BRAND.textMuted,
     textTransform: "uppercase",
-    marginBottom: 10,
-    paddingLeft: 5,
+    marginBottom: 12,
+    letterSpacing: 1,
   },
-  quickAddScroll: { marginBottom: 35 },
+  quickAddScroll: { marginBottom: 30 },
   quickAddBtn: {
-    backgroundColor: "#FFF",
+    backgroundColor: BRAND.surface,
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 10,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     borderRadius: 15,
-    marginRight: 8,
+    marginRight: 10,
     borderWidth: 1,
-    borderColor: "#E5E7EB",
+    borderColor: BRAND.border,
   },
-  quickAddText: { fontWeight: "600", color: "#4A3B2C" },
-  divider: { height: 1, backgroundColor: "#E5E7EB", marginBottom: 35 },
-  filterRowContainer: { marginBottom: 35 },
+  quickAddText: { fontWeight: "700", color: BRAND.textMain, marginLeft: 5 },
+  divider: { height: 1, backgroundColor: BRAND.border, marginBottom: 35 },
+  filterRowContainer: { marginBottom: 30 },
   filterHeader: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 15,
   },
-  filterTitle: { fontSize: 17, fontWeight: "800", color: "#4A3B2C" },
+  filterTitle: { fontSize: 16, fontWeight: "800", color: BRAND.textMain },
   filterTag: {
-    backgroundColor: "#FFF",
-    paddingVertical: 11,
-    paddingHorizontal: 18,
+    backgroundColor: BRAND.surface,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#F3F4F6",
+    borderColor: BRAND.border,
   },
-  filterTagActive: { backgroundColor: "#167730", borderColor: "#167730" },// changed the colour of the filter button
-  filterTagText: { color: "#6B7280", fontWeight: "700", fontSize: 14 },
-  filterTagTextActive: { color: "#FFF" },
+  filterTagActive: { backgroundColor: BRAND.accent, borderColor: BRAND.accent },
+  filterTagText: { color: BRAND.textMuted, fontWeight: "700", fontSize: 14 },
+  filterTagTextActive: { color: BRAND.bg },
   generateBtn: {
-    backgroundColor: "#EBC390",
+    backgroundColor: BRAND.accent,
     flexDirection: "row",
     justifyContent: "center",
     alignItems: "center",
     paddingVertical: 20,
-    borderRadius: 22,
+    borderRadius: 25,
     marginTop: 10,
   },
-  generateBtnText: { color: "#4A3B2C", fontSize: 18, fontWeight: "900" },
+  generateBtnText: {
+    color: BRAND.bg,
+    fontSize: 16,
+    fontWeight: "900",
+    letterSpacing: 1,
+  },
 });
