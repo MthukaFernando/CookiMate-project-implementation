@@ -8,9 +8,9 @@ import ConverterPage from './converterPage';
 
 // --- DARK BRANDING COLORS ---
 const BRAND = {
-  bg: "#121212",        // Deep Midnight
+  bg: "#0A0A0A",        // Deep Midnight
   surface: "#1E1E1E",   // Elevated Grey
-  accent: "#FFB300",    // Vibrant Amber/Gold
+  accent: "#D4AF37",    // Vibrant Amber/Gold
   textMain: "#FFFFFF",
   textMuted: "#A0A0A0",
   border: "#333333",
