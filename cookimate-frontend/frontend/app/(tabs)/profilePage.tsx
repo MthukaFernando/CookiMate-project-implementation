@@ -77,7 +77,9 @@ const ProfilePage = () => {
                 >
                   <Text style={styles.editBtnText}>Edit Profile</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.settingsBtn}>
+                <TouchableOpacity style={styles.settingsBtn}
+                onPress={() => router.push("/profile/settings")}>
+                  
                   <Feather name="settings" size={18} color="#5F4436" />
                 </TouchableOpacity>
               </View>
