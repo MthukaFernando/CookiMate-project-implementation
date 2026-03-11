@@ -23,8 +23,8 @@ import Constants from "expo-constants";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Video dimensions (75% of width)
-const VIDEO_SIZE = SCREEN_WIDTH * 0.75;
+// Video dimensions set to 50% of width
+const VIDEO_SIZE = SCREEN_WIDTH * 0.60;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
 
@@ -93,7 +93,7 @@ function HomePage() {
     Animated.loop(
       Animated.sequence([
         Animated.timing(floatAnim, {
-          toValue: -15, 
+          toValue: -10, 
           duration: 2000,
           useNativeDriver: true,
         }),
@@ -224,13 +224,13 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 30,
-    backgroundColor: theme.headerBg,
+    paddingVertical: 20,
+    backgroundColor: theme.mainBg, 
   },
   videoSection: {
     width: VIDEO_SIZE,
-    height: VIDEO_SIZE * 0.8, // Slightly shorter than wide for a nice oval feel
-    borderRadius: 40, // High border radius for circular look
+    height: VIDEO_SIZE, 
+    borderRadius: VIDEO_SIZE / 2, 
     overflow: 'hidden',
     borderWidth: 2,
     borderColor: theme.gold,
@@ -243,44 +243,44 @@ const styles = StyleSheet.create({
 
   bubbleWrapper: {
     position: 'absolute',
-    top: 10, 
-    right: '10%', 
-    width: '50%',
+    top: 20, 
+    right: '12%', 
+    width: '40%',
     zIndex: 10,
   },
   bubbleBody: { 
     backgroundColor: "#fff", 
-    paddingHorizontal: 12,
-    paddingVertical: 10, 
-    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 8, 
+    borderRadius: 18,
     borderBottomLeftRadius: 2,
-    borderWidth: 3,
+    borderWidth: 2.5,
     borderColor: '#000',
     shadowColor: "#000",
-    shadowOffset: { width: 4, height: 4 },
+    shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 0.8,
     shadowRadius: 0,
     elevation: 5,
     zIndex: 2,
   },
   bubbleText: { 
-    fontSize: 12, 
+    fontSize: 10, 
     fontWeight: "900", 
     color: "#000", 
-    lineHeight: 16, 
+    lineHeight: 13, 
     textAlign: 'center',
     textTransform: 'uppercase',
   },
   comicTailBorder: {
     position: 'absolute',
-    bottom: -15,
-    left: -2, 
+    bottom: -12,
+    left: -1, 
     width: 0,
     height: 0,
     borderStyle: 'solid',
-    borderLeftWidth: 12,
-    borderRightWidth: 12,
-    borderTopWidth: 20,
+    borderLeftWidth: 10,
+    borderRightWidth: 10,
+    borderTopWidth: 18,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#000',
@@ -289,14 +289,14 @@ const styles = StyleSheet.create({
   },
   comicTailInner: {
     position: 'absolute',
-    bottom: -10,
+    bottom: -8,
     left: 1, 
     width: 0,
     height: 0,
     borderStyle: 'solid',
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 18,
+    borderLeftWidth: 8,
+    borderRightWidth: 8,
+    borderTopWidth: 15,
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
     borderTopColor: '#fff',
@@ -307,7 +307,7 @@ const styles = StyleSheet.create({
   contentBody: { 
     backgroundColor: theme.mainBg, 
   },
-  sectionHeading: { fontSize: 22, fontWeight: "800", color: "#fff", marginLeft: 25, marginTop: 25, marginBottom: 15 },
+  sectionHeading: { fontSize: 22, fontWeight: "800", color: "#fff", marginLeft: 25, marginTop: 15, marginBottom: 15 },
   
   navCard: { width: CARD_WIDTH, height: 320, borderRadius: 30, marginHorizontal: SPACING, overflow: "hidden", backgroundColor: theme.card },
   navImage: { width: "100%", height: "70%" },
