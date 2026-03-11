@@ -390,7 +390,7 @@ const Settings = () => {
       >
         {/* Header with back button */}
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#5F4436" />
+          <Ionicons name="arrow-back" size={24} color="#D4AF37" /> {/* Changed to Metallic Gold */}
         </TouchableOpacity>
 
         {/* Settings Title */}
@@ -549,7 +549,7 @@ const Settings = () => {
 const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
-    backgroundColor: '#0A0A0A', // Changed to Deep Midnight
+    backgroundColor: '#0A0A0A',
   },
   scrollContent: {
     paddingHorizontal: 25,
@@ -565,7 +565,7 @@ const styles = StyleSheet.create({
   settingsTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#5D4037',
+    color: '#FFFFFF', // Changed to Crisp White
     marginBottom: 20,
     marginTop: 5,
   },
