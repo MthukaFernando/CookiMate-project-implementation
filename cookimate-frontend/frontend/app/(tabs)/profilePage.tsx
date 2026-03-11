@@ -71,12 +71,16 @@ const ProfilePage = () => {
             <View style={styles.actionRow}>
               <TouchableOpacity 
                 style={styles.editBtn} 
+                activeOpacity={0.7}
                 onPress={() => router.push("/profile/editprofile")}
               >
                 <Text style={styles.editBtnText}>Edit Profile</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.settingsBtn}
-                onPress={() => router.push("/profile/settings")}>
+              <TouchableOpacity 
+                style={styles.settingsBtn}
+                activeOpacity={0.7}
+                onPress={() => router.push("/profile/settings")}
+              >
                 <Feather name="settings" size={18} color="#D4AF37" />
               </TouchableOpacity>
             </View>
@@ -149,7 +153,7 @@ const ProfilePage = () => {
 
 const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity 
-    activeOpacity={0.4}
+    activeOpacity={0.7}
     style={styles.statCard} 
     onPress={onPress}
   >
@@ -164,7 +168,11 @@ const StatItem = ({ icon, label, value, onPress }: any) => (
 );
 
 const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => (
-  <View style={styles.badgeCard}>
+  <TouchableOpacity 
+    style={styles.badgeCard}
+    activeOpacity={0.7}
+    onPress={() => console.log("Achievement pressed")}
+  >
     <View style={styles.badgeIconCircle}>
       <Image 
         source={{ uri: imageUrl }} 
@@ -173,7 +181,7 @@ const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => 
       />
     </View>
     <Text style={styles.badgeTitle}>{title}</Text>
-  </View>
+  </TouchableOpacity>
 );
 
 /* --- STYLES --- */
