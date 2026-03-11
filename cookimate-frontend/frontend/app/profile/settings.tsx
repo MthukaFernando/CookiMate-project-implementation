@@ -390,7 +390,7 @@ const Settings = () => {
       >
         {/* Header with back button */}
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#D4AF37" /> {/* Changed to Metallic Gold */}
+          <Ionicons name="arrow-back" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
         {/* Settings Title */}
@@ -565,20 +565,20 @@ const styles = StyleSheet.create({
   settingsTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#FFFFFF', // Changed to Crisp White
+    color: '#FFFFFF',
     marginBottom: 20,
     marginTop: 5,
   },
   settingCard: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1A1A1A', // Changed to Charcoal Glow
     borderRadius: 20,
     padding: 16,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    borderWidth: 2,
-    borderColor: '#E8C28E',
+    borderWidth: 1, // Changed from 2 to 1
+    borderColor: '#2A2A2A', // Changed to Subtle Dark Border
     elevation: 4,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
