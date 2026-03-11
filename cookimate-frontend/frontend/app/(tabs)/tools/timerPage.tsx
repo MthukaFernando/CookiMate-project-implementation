@@ -12,7 +12,7 @@ const { width } = Dimensions.get("window");
 
 const UI_COLORS = {
   background: "#0A0A0A",
-  primaryGold: "#FFB300",
+  primaryGold: "#D4AF37",
   surface: "#1A1A1A",
   textLight: "#FFFFFF",
   textMuted: "#A6A6A6",
@@ -123,7 +123,7 @@ export default function Timer({
 
       <View style={styles.progressWrapper}>
         <AnimatedCircularProgress
-          size={width * 0.7}
+          size={width * 0.65}
           width={10}
           fill={totalSeconds > 0 ? (secondsLeft / totalSeconds) * 100 : 0}
           tintColor={UI_COLORS.primaryGold}
@@ -159,7 +159,7 @@ export default function Timer({
       </View>
 
       <View style={styles.dropdownContainerWrapper}>
-        <Text style={styles.label}>ALARM TONE</Text>
+        <Text style={styles.label}>TIMER TONE</Text>
         <DropDownPicker
         open={open}
         value={selectedAlarmValue}
@@ -217,9 +217,8 @@ const styles = StyleSheet.create({
   timerContainer: {
     flex: 1,
     alignItems: "center",
-    justifyContent: "center",
     backgroundColor: UI_COLORS.background,
-    padding: 24,
+    paddingHorizontal: 24,
   },
   closeIcon: {
     position: "absolute",
@@ -266,7 +265,7 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: "row",
     gap: 20,
-    marginTop: 40,
+    marginTop: 20,
   },
   mainButton: {
     flex: 1,
@@ -305,7 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: "800",
     color: UI_COLORS.textMuted,
-    marginBottom: 10,
+    marginBottom: 5,
     marginLeft: 4,
     letterSpacing: 1,
   },
