@@ -1,10 +1,10 @@
 import express from "express";
-import { 
-  createPost, 
-  getFeed, 
-  likePost, 
-  addComment, 
-  deletePost 
+import {
+  createPost,
+  getFeed,
+  likePost,
+  addComment,
+  deletePost,
 } from "../controllers/socialController.js";
 
 const router = express.Router();
