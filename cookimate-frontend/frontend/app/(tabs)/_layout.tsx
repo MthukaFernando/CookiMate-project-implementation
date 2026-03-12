@@ -1,9 +1,15 @@
-import { Stack,Tabs } from 'expo-router';
+import React from "react";
+import { Tabs } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function RootLayout() {
   return (
-    <>
-      <Tabs></Tabs>
-    </>
+    <SafeAreaView style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          headerShown: false, 
+        }}
+      />
+    </SafeAreaView>
   );
 }
