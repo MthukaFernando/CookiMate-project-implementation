@@ -383,7 +383,7 @@ const Page = () => {
                         setIsModalVisible(false);
                         const categoryType = item.label.split(" ")[0].trim();
                         router.push({
-                          pathname: "/myRecipes",
+                          pathname: "/details/myRecipes",
                           params: {
                             selectedCategory: categoryType,
                             selectedDate: selectedDate,
