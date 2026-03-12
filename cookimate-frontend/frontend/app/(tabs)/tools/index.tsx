@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView, Platform } from 'react-native';
 import { Link } from 'expo-router';
 
 // Importing your updated pages
@@ -21,7 +21,7 @@ export default function ToolsMain() {
   const [activeTab, setActiveTab] = useState<'timer' | 'converter'>('timer');
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
 
       {/* 1. Styled Segmented Toggle */}
@@ -60,21 +60,23 @@ export default function ToolsMain() {
           Back to Home Page
         </Link>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 35,
     backgroundColor: BRAND.bg,
+    // This adds extra padding on Android to clear the status bar
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
   },
   toggleContainer: {
     flexDirection: 'row',
     backgroundColor: BRAND.surface,
     borderRadius: 25,
     marginHorizontal: 40,
+    marginTop: 15, // Space between top of screen/safe area and the toggle
     marginBottom: 20,
     padding: 5,
     borderWidth: 1,
