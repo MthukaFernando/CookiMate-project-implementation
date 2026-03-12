@@ -95,7 +95,7 @@ const NavCard = ({
 
 function HomePage() {
   const [message, setMessage] = useState(
-    "Hi! What would you like to cook today?",
+    "What would you like to cook?",
   );
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -213,14 +213,14 @@ function HomePage() {
             <NavCard
               title="Find Recipes"
               imageSource={require("../../assets/images/recipes.png")}
-              href="/menuPlanerPage"
+              href="/myRecipes"
               badgeText="100+ recipes"
               iconName="silverware-fork-knife"
             />
             <NavCard
               title="AI Generator"
               imageSource={require("../../assets/images/ai.png")}
-              href="/menuPlanerPage"
+              href="/generateRecipes"
               badgeText="AI powered"
               iconName="robot"
             />
