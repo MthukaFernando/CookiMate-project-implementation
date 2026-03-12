@@ -1,17 +1,16 @@
 import express from "express";
-import { 
-  createPost, 
-  getFeed, 
-  likePost, 
-  addComment, 
-  deletePost 
+import {
+  createPost,
+  getFeed,
+  likePost,
+  addComment,
+  deletePost,
 } from "../controllers/socialController.js";
-import { upload } from "../config/cloudinary.js";
 
 const router = express.Router();
 
 // Create a post with image upload
-router.post("/", upload.single("image"), createPost);
+router.post("/", createPost);
 
 // Get the community feed
 router.get("/feed", getFeed);
