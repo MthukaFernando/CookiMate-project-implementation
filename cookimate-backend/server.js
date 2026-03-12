@@ -30,6 +30,7 @@ app.get("/", (req, res) => {
 app.use("/api/users", userRoutes);
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/social", socialRoutes);
+app.use("/api/gamification", gamificationRoutes); // ONLY THIS LINE ADDED
 
 // --- 4. START SERVER ---
 const PORT = process.env.PORT || 5000;

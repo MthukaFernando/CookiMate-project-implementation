@@ -96,7 +96,7 @@ const EditProfile = () => {
         >
           
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#5F4436" />
+            <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
           </TouchableOpacity>
 
           
@@ -180,25 +180,27 @@ const styles = StyleSheet.create({
 
   topSubContainer: {
     borderWidth: 1,
-    borderColor: "#f0871f45",
     padding: 15,
     alignItems: "center",
     borderRadius: 20,
-    backgroundColor: '#E0C2A0',
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
   },
   mascotCircle: {
     width: 140, 
     height: 140,
     borderWidth: 3,
-    borderColor: '#EBEBEB',
+    borderColor: '#ffc106',
     borderRadius: 70,
     overflow: "hidden",
-    backgroundColor: "#fff",
+    backgroundColor: "#ffff",
+    marginTop: 20,
+    marginBottom: 10,
   },
-  mascotImg: { width: "100%", height: "100%" },
-  welcomemsg: { marginRight: "auto", marginBottom: 10, fontSize: 22, fontWeight: '600', color: "#5D4037" },
+  mascotImg: { width: "100%", height: "100%"},
+  welcomemsg: { marginRight: "auto", marginBottom: 10, fontSize: 22, fontWeight: '600', color: "#ffb700"},
   bubble: {
-    backgroundColor: "#ffffff",
+    backgroundColor: "#D4AF37",
     padding: 12,
     borderRadius: 20,
     marginTop: 10,
@@ -210,14 +212,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 2,
   },
-  bubbleText: { fontSize: 14, color: "#5D4037", textAlign: "center" },
+  bubbleText: { fontSize: 14, color: "#000000", textAlign: "center", fontWeight: "bold" },
   bubbleTail: {
     position: "absolute",
     top: -8,
-    left: "20%",
+    left: "50%",
     width: 20,
     height: 20,
-    backgroundColor: "#fff",
+    backgroundColor: "#d4a537",
     transform: [{ rotate: "45deg" }],
     zIndex: -1,
   },
@@ -225,14 +227,14 @@ const styles = StyleSheet.create({
   bottomSubContainer: {
     padding: 20,
     marginVertical: 20,
-    backgroundColor: '#fff',
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
     borderRadius: 20,
     elevation: 4,
     borderWidth: 2,
-    borderColor: '#E8C28E',
-    marginBottom: 40, // Space so button isn't cramped at bottom
+    marginBottom: 40, 
   },
-  label: { fontSize: 14, fontWeight: 'bold', color: '#5D4037', marginBottom: 8, marginTop: 10 },
+  label: { fontSize: 14, fontWeight: 'bold', color: "#ffb700", marginBottom: 8, marginTop: 10 },
   avatarRow: { paddingVertical: 10, gap: 15 },
   avatarBox: {
     width: 70,
@@ -246,16 +248,16 @@ const styles = StyleSheet.create({
   avatarImg: { width: '100%', height: '100%', borderRadius: 35 },
   
   input: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: '#2A2A2A',
     borderRadius: 12,
     padding: 12,
     fontSize: 16,
     marginBottom: 10,
-    color: '#333'
+    color: "#ffffff"
   },
 
   saveBtn: {
-    backgroundColor: '#B86D2A', 
+    backgroundColor: "#ffb700", 
     padding: 15,
     borderRadius: 15,
     alignItems: 'center',

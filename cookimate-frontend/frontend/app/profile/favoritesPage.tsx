@@ -13,12 +13,11 @@ import {
   ScrollView,
   Alert,
 } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
-import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { Ionicons, Feather } from "@expo/vector-icons";
+import { useRouter, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
@@ -80,168 +79,100 @@ const dietOptions = [
   { label: "Healthy 🥗", value: "healthy" },
 ];
 
-const MyRecipesPage = () => {
+const FavoritesPage = () => {
   const router = useRouter();
-  const { selectedCategory, selectedDate } = useLocalSearchParams();
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
-  const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
+  const uid = auth.currentUser?.uid;
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-
-  const [meal, setMeal] = useState((selectedCategory as string) || "All");
+  const [meal, setMeal] = useState("All");
   const [cuisine, setCuisine] = useState("All");
   const [diet, setDiet] = useState("All");
   const [time, setTime] = useState("All");
-  const [favorites, setFavorites] = useState<string[]>([]);
-
   const [activeFilterCount, setActiveFilterCount] = useState(0);
-
-  useFocusEffect(
-    useCallback(() => {
-      loadFavorites();
-    }, []),
-  );
-
-  useEffect(() => {
-    if (selectedCategory) {
-      setMeal(selectedCategory as string);
-    } else {
-      setMeal("All");
-    }
-  }, [selectedCategory]);
-
-  useEffect(() => {
-    return () => {
-      router.setParams({
-        selectedCategory: undefined,
-        selectedDate: undefined,
-      });
-    };
-  }, []);
 
   useEffect(() => {
     let count = 0;
     if (searchQuery) count++;
     if (cuisine !== "All") count++;
-    if (meal !== "All" && meal !== selectedCategory) count++;
+    if (meal !== "All") count++;
     if (diet !== "All") count++;
     if (time !== "All") count++;
     setActiveFilterCount(count);
-  }, [searchQuery, cuisine, meal, diet, time, selectedCategory]);
+  }, [searchQuery, cuisine, meal, diet, time]);
 
-  const loadFavorites = async () => {
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
-      const response = await axios.get(`${API_URL}/api/users/${uid}`);
-      const favIds = response.data.favorites.map((f: any) => f.id);
-      setFavorites(favIds);
-    } catch (error) {
-      console.error("Error loading favorites from DB:", error);
-    }
-  };
-
-  const handleRemoveFavorite = async (recipeId: string) => {
-    const uid = auth.currentUser?.uid;
-    try {
-      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
-        recipeId,
-      });
-      setFavorites((prev) => prev.filter((id) => id !== recipeId));
-    } catch (error) {
-      console.error("Error removing favorite:", error);
-      Alert.alert("Error", "Could not remove from favorites.");
-    }
-  };
-
-  const toggleFavorite = async (recipeId: string) => {
-    const uid = auth.currentUser?.uid;
-    if (!uid) {
-      Alert.alert("Error", "You must be logged in to save favorites");
-      return;
-    }
-
-    const isCurrentlyFavorite = favorites.includes(recipeId);
-
-    if (isCurrentlyFavorite) {
-      Alert.alert(
-        "Remove Favorite",
-        "Are you sure you want to remove this recipe from your favorites?",
-        [
-          { text: "Cancel", style: "cancel" },
-          {
-            text: "Remove",
-            style: "destructive",
-            onPress: () => handleRemoveFavorite(recipeId),
-          },
-        ],
-      );
-    } else {
-      try {
-        await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
-        setFavorites((prev) => [...prev, recipeId]);
-      } catch (error) {
-        Alert.alert("Error", "Could not add to favorites :<");
-      }
-    }
-  };
-
-  const fetchRecipes = async () => {
+  const fetchFavorites = async () => {
     setLoading(true);
     try {
-      const response = await axios.get(`${API_URL}/api/recipes`, {
-        params: {
-          searchQuery: searchQuery,
-          meal: meal !== "All" ? meal : undefined,
-          diet: diet !== "All" ? diet : undefined,
-          cuisine: cuisine !== "All" ? cuisine : undefined,
-          time: time !== "All" ? time : undefined,
-        },
+      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      let favoriteList = response.data.favorites || [];
+
+      let filtered = favoriteList.filter((item: any) => {
+        const matchesSearch = item.name
+          .toLowerCase()
+          .includes(searchQuery.toLowerCase());
+        const matchesMeal =
+          meal === "All" || item.meal_type?.includes(meal.toLowerCase());
+        const matchesCuisine =
+          cuisine === "All" || item.cuisine?.includes(cuisine);
+        const matchesDiet =
+          diet === "All" || item.search_terms?.includes(diet.toLowerCase());
+
+        let matchesTime = true;
+        if (time !== "All" && item.totalTime) {
+          const cookTime = parseInt(item.totalTime);
+          if (time === "15") matchesTime = cookTime < 15;
+          else if (time === "30")
+            matchesTime = cookTime >= 15 && cookTime <= 30;
+          else if (time === "60") matchesTime = cookTime > 30 && cookTime <= 60;
+        }
+
+        return (
+          matchesSearch &&
+          matchesMeal &&
+          matchesCuisine &&
+          matchesDiet &&
+          matchesTime
+        );
       });
-      setRecipes(response.data);
+      setRecipes(filtered);
     } catch (error) {
-      console.error("Backend error:", error);
+      console.error(error);
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchRecipes();
-  }, [searchQuery, meal, diet, cuisine, time]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchFavorites();
+    }, [searchQuery, meal, diet, cuisine, time]),
+  );
 
-  const handleBackToPlanner = () => {
-    const dateToPass = selectedDate;
-    setSelectedRecipeId(null);
-    setSelectedRecipeData(null);
-    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
-    router.push({
-      pathname: "/menuPlanerPage",
-      params: { openModalWithDate: dateToPass },
-    });
+  const confirmRemove = (recipeId: string) => {
+    Alert.alert(
+      "Remove Favorite",
+      "Are you sure you want to remove this recipe from favorites?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: () => handleRemove(recipeId),
+        },
+      ],
+    );
   };
 
-  const handleAddRecipeToPlanner = () => {
-    if (!selectedRecipeData) return;
-    const dateToPass = selectedDate;
-    const recipeData = selectedRecipeData;
-    const category = selectedCategory;
-
-    setSelectedRecipeId(null);
-    setSelectedRecipeData(null);
-    router.setParams({ selectedCategory: undefined, selectedDate: undefined });
-
-    router.push({
-      pathname: "/menuPlanerPage",
-      params: {
-        openModalWithDate: dateToPass,
-        newRecipeId: recipeData.id,
-        newRecipeName: recipeData.name,
-        newRecipeImage: recipeData.image,
-        newRecipeCategory: category,
-      },
-    });
+  const handleRemove = async (recipeId: string) => {
+    try {
+      await axios.put(`${API_URL}/api/users/favorites/remove/${uid}`, {
+        recipeId,
+      });
+      setRecipes((prev) => prev.filter((item: any) => item.id !== recipeId));
+    } catch (err) {
+      Alert.alert("Error", "Could not remove recipe.");
+    }
   };
 
   const clearAllFilters = () => {
@@ -249,37 +180,20 @@ const MyRecipesPage = () => {
     setCuisine("All");
     setDiet("All");
     setTime("All");
-    if (!selectedCategory) {
-      setMeal("All");
-    }
+    setMeal("All");
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
-    const isSelected = selectedRecipeId === item.id;
-
     return (
-      <TouchableOpacity
-        activeOpacity={0.9}
-        onPress={() => {
-          if (selectedCategory) {
-            setSelectedRecipeId(item.id);
-            setSelectedRecipeData(item);
-          }
-        }}
-        style={[styles.card, isSelected && styles.cardSelected]}
-      >
+      <View style={styles.card}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
         <View style={styles.cardContent}>
           <View style={styles.titleRow}>
             <Text style={styles.recipeTitle} numberOfLines={2}>
               {item.name}
             </Text>
-            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
-              <Ionicons
-                name={favorites.includes(item.id) ? "heart" : "heart-outline"}
-                size={24}
-                color={favorites.includes(item.id) ? "#D4AF37" : "#FFFFFF"}
-              />
+            <TouchableOpacity onPress={() => confirmRemove(item.id)}>
+              <Feather name="trash-2" size={20} color="#aa1e0f" />
             </TouchableOpacity>
           </View>
           <Text style={styles.recipeDescription} numberOfLines={2}>
@@ -292,33 +206,26 @@ const MyRecipesPage = () => {
             <Text style={styles.viewButtonText}>View Recipe</Text>
           </TouchableOpacity>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        {selectedCategory && (
-          <TouchableOpacity
-            style={styles.backCircle}
-            onPress={handleBackToPlanner}
-          >
-            <Ionicons name="arrow-back" size={20} color="#D4AF37" />
-          </TouchableOpacity>
-        )}
-
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
+        </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
             style={styles.searchInput}
-            placeholder="Search recipes"
-            placeholderTextColor="#666666"
+            placeholder="Search favorites"
+            placeholderTextColor="#999999"
             value={searchQuery}
             onChangeText={setSearchQuery}
           />
           <Ionicons name="search" size={20} color="#D4AF37" />
         </View>
-
         <TouchableOpacity style={styles.clearButton} onPress={clearAllFilters}>
           <Text style={styles.clearButtonText}>Clear</Text>
           {activeFilterCount > 0 && (
@@ -327,18 +234,7 @@ const MyRecipesPage = () => {
             </View>
           )}
         </TouchableOpacity>
-
-        {selectedCategory && (
-          <TouchableOpacity
-            style={[styles.addButton, !selectedRecipeId && { opacity: 0.4 }]}
-            onPress={handleAddRecipeToPlanner}
-            disabled={!selectedRecipeId}
-          >
-            <Text style={styles.addLetters}>Add</Text>
-          </TouchableOpacity>
-        )}
       </View>
-
       <View style={styles.filterWrapper}>
         <ScrollView
           horizontal
@@ -346,22 +242,19 @@ const MyRecipesPage = () => {
           contentContainerStyle={styles.scrollContent}
         >
           <Dropdown
-            style={[styles.dropdown, selectedCategory && { opacity: 0.6 }]}
+            style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
-            iconColor="white"
             data={mealOptions}
             labelField="label"
             valueField="value"
             value={meal}
-            disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
           />
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
-            iconColor="white"
             data={cuisineOptions}
             labelField="label"
             valueField="value"
@@ -372,7 +265,6 @@ const MyRecipesPage = () => {
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
-            iconColor="white"
             data={timeOptions}
             labelField="label"
             valueField="value"
@@ -383,7 +275,6 @@ const MyRecipesPage = () => {
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
-            iconColor="white"
             data={dietOptions}
             labelField="label"
             valueField="value"
@@ -392,31 +283,23 @@ const MyRecipesPage = () => {
           />
         </ScrollView>
       </View>
-
       {loading ? (
         <ActivityIndicator
           size="large"
-          color="#D4AF37"
+          color="#5F4436"
           style={{ marginTop: 50 }}
         />
       ) : recipes.length === 0 ? (
         <View style={styles.noResultsContainer}>
-          <Ionicons name="sad-outline" size={60} color="#333333" />
-          <Text style={styles.noResultsText}>No recipes found</Text>
-          <Text style={styles.noResultsSubText}>
-            Try adjusting your filters
+          <Ionicons name="heart-dislike-outline" size={60} color="#3c5f3692" />
+          <Text style={styles.noResultsText}>
+            You have no recipes in favorites
           </Text>
-          <TouchableOpacity
-            style={styles.resetFiltersButton}
-            onPress={clearAllFilters}
-          >
-            <Text style={styles.resetFiltersText}>Reset Filters</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <FlatList
           data={recipes}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item: any) => item.id}
           renderItem={renderRecipeItem}
           contentContainerStyle={styles.listContent}
         />
@@ -426,7 +309,11 @@ const MyRecipesPage = () => {
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#000000" },
+  container: {
+    flex: 1,
+    backgroundColor: "#0A0A0A",
+    paddingTop: Constants.statusBarHeight,
+  },
   headerContainer: {
     flexDirection: "row",
     alignItems: "center",
@@ -435,49 +322,23 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     gap: 12,
   },
-  backCircle: {
-    width: 40,
-    height: 40,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#D4AF37",
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 12,
-  },
-  addButton: {
-    width: 70,
-    height: 40,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 20,
-    justifyContent: "center",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D4AF37",
-  },
-  addLetters: {
-    letterSpacing: 1,
-    fontSize: 15,
-    fontWeight: "600",
-    color: "#D4AF37",
-  },
+
   searchBar: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: "#1A1A1A",
+    borderColor: "#333333",
     borderRadius: 25,
     height: 48,
     paddingHorizontal: 18,
+    elevation: 2,
     flex: 1,
-    borderWidth: 1,
-    borderColor: "#333333",
   },
-  searchInput: { flex: 1, fontSize: 16, color: "#FFFFFF" },
+  searchInput: { flex: 1, fontSize: 16, color: "#5F4436" },
   filterWrapper: { height: 50, marginBottom: 10 },
   scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
-    width: 120,
+    width: 110,
     height: 36,
     backgroundColor: "#FF8C00",
     borderRadius: 18,
@@ -486,24 +347,20 @@ const styles = StyleSheet.create({
   },
   dropText: {
     color: "white",
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: "bold",
     textAlign: "center",
   },
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: "#121212",
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#1A1A1A",
-  },
-  cardSelected: {
-    borderColor: "#D4AF37",
-    backgroundColor: "#1A1A1A",
+    elevation: 3,
   },
   cardImage: {
     width: IMAGE_SIZE,
@@ -532,7 +389,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   viewButton: {
-    backgroundColor: "#D4AF37",
+     backgroundColor: "#D4AF37",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
@@ -543,15 +400,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     backgroundColor: "#1A1A1A",
+    borderColor: "#333333",
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: "#333333",
     position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   clearButtonText: {
-    color: "#FFFFFF",
+    color: "#ffffff",
     fontSize: 14,
     fontWeight: "600",
   },
@@ -559,48 +416,29 @@ const styles = StyleSheet.create({
     position: "absolute",
     top: -5,
     right: -5,
-    backgroundColor: "#FF8C00",
+    backgroundColor: "#ff1f06",
     borderRadius: 10,
     minWidth: 18,
     height: 18,
     justifyContent: "center",
     alignItems: "center",
   },
-  badgeText: {
-    color: "white",
-    fontSize: 10,
-    fontWeight: "bold",
-  },
+  badgeText: { color: "white", fontSize: 10, fontWeight: "bold" },
   noResultsContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     paddingHorizontal: 40,
+    marginBottom: 100,
   },
   noResultsText: {
     fontSize: 20,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#3c5f3692",
     marginTop: 20,
     marginBottom: 8,
-  },
-  noResultsSubText: {
-    fontSize: 14,
-    color: "#666666",
     textAlign: "center",
-    marginBottom: 30,
-  },
-  resetFiltersButton: {
-    backgroundColor: "#FF8C00",
-    paddingVertical: 12,
-    paddingHorizontal: 30,
-    borderRadius: 25,
-  },
-  resetFiltersText: {
-    color: "white",
-    fontWeight: "bold",
-    fontSize: 16,
   },
 });
 
-export default MyRecipesPage;
+export default FavoritesPage;

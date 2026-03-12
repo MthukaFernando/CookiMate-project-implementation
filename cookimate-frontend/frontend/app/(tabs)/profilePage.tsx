@@ -15,9 +15,9 @@ import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
 
- const debuggerHost = Constants.expoConfig?.hostUri;
-        const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-        const API_URL = `http://${address}:5000`
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`
 const DEFAULT_AVATAR = "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
 
 const ProfilePage = () => {
@@ -47,120 +47,118 @@ const ProfilePage = () => {
   if (loading) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" color="#923d0a" />
+        <ActivityIndicator size="large" color="#D4AF37" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={[globalStyle.container,styles.scrollContent]}>
+    <ScrollView style={[globalStyle.container, styles.scrollContent]}>
      
-      
-        
-        {/* 1. TOP PROFILE CARD (The Header) */}
-        <View style={styles.topSubContainer}>
-          <View style={styles.profileHeader}>
-            <View style={styles.mascotCircle}>
-              <Image
-                source={{ uri: user?.profilePic || DEFAULT_AVATAR }}
-                style={styles.mascotImg}
-              />
-            </View>
-            <View style={styles.headerTextContainer}>
-              <Text style={styles.nameText}>{user?.name}</Text>
-              <Text style={styles.usernameText}>@{user?.username}</Text>
-              
-              <View style={styles.actionRow}>
-                <TouchableOpacity 
-                  style={styles.editBtn} 
-                  onPress={() => router.push("/profile/editprofile")}
-                >
-                  <Text style={styles.editBtnText}>Edit Profile</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.settingsBtn}>
-                  <Feather name="settings" size={18} color="#5F4436" />
-                </TouchableOpacity>
-              </View>
-            </View>
+      {/* 1. TOP PROFILE CARD (The Header) */}
+      <View style={styles.topSubContainer}>
+        <View style={styles.profileHeader}>
+          <View style={styles.mascotCircle}>
+            <Image
+              source={{ uri: user?.profilePic || DEFAULT_AVATAR }}
+              style={styles.mascotImg}
+            />
           </View>
-
-          {/* Level Progress */}
-          <View style={styles.levelContainer}>
-             <View style={styles.levelLabelRow}>
-                <Text style={styles.levelLabel}>Level {user?.level || 1}</Text>
-                <Text style={styles.pointsLabel}>{user?.points || 0} XP</Text>
-             </View>
-             <View style={styles.progressBar}>
-                <View style={[styles.progressFill, { width: `${(user?.points % 100) || 20}%` }]} />
-             </View>
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.nameText}>{user?.name}</Text>
+            <Text style={styles.usernameText}>@{user?.username}</Text>
+            
+            <View style={styles.actionRow}>
+              <TouchableOpacity 
+                style={styles.editBtn} 
+                activeOpacity={0.7}
+                onPress={() => router.push("/profile/editprofile")}
+              >
+                <Text style={styles.editBtnText}>Edit Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.settingsBtn}
+                activeOpacity={0.7}
+                onPress={() => router.push("/profile/settings")}
+              >
+                <Feather name="settings" size={18} color="#000000" />
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
 
-        {/* 2. STATS SECTION (3D White Cards) */}
-        <View style={styles.bottomSubContainer}>
-        <Text style={styles.sectionTitle}>Cooking Journey</Text>
-        <View style={styles.statsGrid}>
-           <StatItem 
-              icon="coffee" 
-              label="Cooked" 
-              value={user?.recipesCookedCount || 0} 
-              bColor="#c3924e" 
-              onPress={() => console.log("Route to Cooked List")}
-           />
-           <StatItem 
-              icon="heart" 
-              label="Favs" 
-              value={user?.favorites?.length || 0} 
-              bColor="#B86D2A" 
-              onPress={() => console.log("Route to Favorites")}
-           />
-           <StatItem 
-              icon="award" 
-              label="Levels" 
-              value={user?.level || 1} 
-              bColor="#612D25" 
-              onPress={() => console.log("Route to Ranks")}
-           />
-           <StatItem 
-              icon="users" 
-              label="Fans" 
-              value={user?.followers || 0} 
-              bColor="#923d0a" 
-              onPress={() => console.log("Route to Followers")}
-           />
+        {/* Level Progress */}
+        <View style={styles.levelContainer}>
+          <View style={styles.levelLabelRow}>
+            <Text style={styles.levelLabel}>Level {user?.level || 1}</Text>
+            <Text style={styles.pointsLabel}>{user?.points || 0} XP</Text>
+          </View>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: `${(user?.points % 100) || 20}%` }]} />
+          </View>
         </View>
       </View>
 
-        {/* 3. ACHIEVEMENTS (Horizontally Scrollable) */}
-        <View style={styles.bottomSubContainer}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false} 
-            contentContainerStyle={styles.badgeScroll}
-          >
-            <BadgeItem 
-  imageUrl="https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png" 
-  title="Social" 
-/>
-          </ScrollView>
+      {/* 2. STATS SECTION */}
+      <View style={styles.bottomSubContainer}>
+        <Text style={styles.sectionTitle}>Cooking Journey</Text>
+        <View style={styles.statsGrid}>
+          <StatItem 
+            icon="coffee" 
+            label="Cooked" 
+            value={user?.recipesCookedCount || 0} 
+            onPress={() => console.log("Route to Cooked List")}
+          />
+          <StatItem 
+            icon="heart" 
+            label="Favs" 
+            value={user?.favorites?.length || 0} 
+            onPress={() => router.push("/profile/favoritesPage")}
+          />
+          <StatItem 
+            icon="award" 
+            label="Levels" 
+            value={user?.level || 1} 
+            onPress={() => router.push("/profile/levelsPage")}
+          />
+          <StatItem 
+            icon="users" 
+            label="Fans" 
+            value={user?.followers || 0} 
+            onPress={() => console.log("Route to Followers")}
+          />
         </View>
-        
-      </ScrollView>
-    
+      </View>
+
+      {/* 3. ACHIEVEMENTS */}
+      <View style={styles.bottomSubContainer}>
+        <Text style={styles.sectionTitle}>Achievements</Text>
+        <ScrollView 
+          horizontal 
+          showsHorizontalScrollIndicator={false} 
+          contentContainerStyle={styles.badgeScroll}
+        >
+          <BadgeItem 
+            imageUrl="https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png" 
+            title="Social" 
+          />
+        </ScrollView>
+      </View>
+      
+    </ScrollView>
   );
 };
 
 /* --- SUB-COMPONENTS --- */
 
-const StatItem = ({ icon, label, value, bColor, onPress }: any) => (
+const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity 
-    activeOpacity={0.4}
-    style={[styles.statCard, { borderColor: bColor, borderBottomColor: bColor }]} 
+    activeOpacity={0.7}
+    style={styles.statCard} 
     onPress={onPress}
   >
     <View style={styles.statIconCircle}>
-      <Feather name={icon} size={18} color="#5F4436" />
+      <Feather name={icon} size={18} color="#D4AF37" />
     </View>
     <View style={styles.statTextColumn}>
       <Text style={styles.statValue}>{value}</Text>
@@ -168,8 +166,13 @@ const StatItem = ({ icon, label, value, bColor, onPress }: any) => (
     </View>
   </TouchableOpacity>
 );
+
 const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => (
-  <View style={styles.badgeCard}>
+  <TouchableOpacity 
+    style={styles.badgeCard}
+    activeOpacity={0.7}
+    onPress={() => console.log("Achievement pressed")}
+  >
     <View style={styles.badgeIconCircle}>
       <Image 
         source={{ uri: imageUrl }} 
@@ -178,137 +181,245 @@ const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => 
       />
     </View>
     <Text style={styles.badgeTitle}>{title}</Text>
-  </View>
+  </TouchableOpacity>
 );
 
 /* --- STYLES --- */
 
 const styles = StyleSheet.create({
-  center: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "#f2ece2" },
-  scrollContent: { paddingHorizontal: 25, paddingBottom: 40 },
-  backBtn: { marginHorizontal: 25, marginTop: 10, width: 40, height: 40, justifyContent: 'center' },
-  badgeIconCircle: {
-    width: 60,
-    height: 60,
-    borderRadius: 20,
-    backgroundColor: '#f8f0de',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    borderWidth: 1,
-    borderColor: '#E8C28E',
-    overflow: 'hidden', // ✅ Important: Clips the image to the border radius
+  center: { 
+    flex: 1, 
+    justifyContent: "center", 
+    alignItems: "center", 
+    backgroundColor: "#0A0A0A" 
   },
-  badgeImage: {
-    width: '75%', // Leaves a little "breathing room" inside the circle
-    height: '75%',
+  scrollContent: { 
+    paddingHorizontal: 25, 
+    paddingBottom: 40,
+    backgroundColor: "#0A0A0A"
   },
-  badgeTitle: { 
-    fontSize: 11, 
-    fontWeight: '600', 
-    color: '#5D4037',
-    textAlign: 'center' 
-  },
-
-  // Top Mascot-style Container
+  
+  // Top Profile Card
   topSubContainer: {
-    backgroundColor: '#E0C2A0',
+    backgroundColor: '#000000',
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#f0871f45",
-    elevation: 4,
+    borderColor: '#ffffff',
+    marginTop: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  profileHeader: { flexDirection: 'row', alignItems: 'center', gap: 20 },
+  profileHeader: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    gap: 20 
+  },
   mascotCircle: {
     width: 90,
     height: 90,
     borderRadius: 45,
-    backgroundColor: '#fff',
-    borderWidth: 3,
-    borderColor: '#EBEBEB',
-    overflow: 'hidden'
+    backgroundColor: '#1E1E1E',
+    borderWidth: 2,
+    borderColor: '#D4AF37',
+    overflow: 'hidden',
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 5,
   },
-  mascotImg: { width: '100%', height: '100%' },
-  headerTextContainer: { flex: 1 },
-  nameText: { fontSize: 22, fontWeight: 'bold', color: '#333' },
-  usernameText: { fontSize: 14, color: '#5D4037', marginBottom: 10 },
+  mascotImg: { 
+    width: '100%', 
+    height: '100%' 
+  },
+  headerTextContainer: { 
+    flex: 1 
+  },
+  nameText: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
+  usernameText: { 
+    fontSize: 14, 
+    color: '#A6A6A6', 
+    marginBottom: 10 
+  },
   
-  actionRow: { flexDirection: 'row', gap: 10 },
+  actionRow: { 
+    flexDirection: 'row', 
+    gap: 10 
+  },
   editBtn: { 
-    backgroundColor: '#fff', 
+    backgroundColor: '#D4AF37',
     paddingHorizontal: 15, 
     paddingVertical: 8, 
     borderRadius: 12,
-    elevation: 2 
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
-  editBtnText: { fontSize: 12, fontWeight: 'bold', color: '#5D4037' },
+  editBtnText: { 
+    fontSize: 12, 
+    fontWeight: 'bold', 
+    color: '#000000' 
+  },
   settingsBtn: { 
-    backgroundColor: '#fff', 
+    backgroundColor: '#D4AF37',
     width: 35, 
     height: 35, 
     borderRadius: 12, 
     justifyContent: 'center', 
     alignItems: 'center',
-    elevation: 2 
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
   },
 
   // Level Bar
-  levelContainer: { marginTop: 20 },
-  levelLabelRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
-  levelLabel: { fontWeight: 'bold', color: '#5D4037' },
-  pointsLabel: { fontSize: 12, color: '#5D4037' },
-  progressBar: { height: 10, backgroundColor: '#fff', borderRadius: 5, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: '#923d0a' },
+  levelContainer: { 
+    marginTop: 20 
+  },
+  levelLabelRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 5 
+  },
+  levelLabel: { 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
+  pointsLabel: { 
+    fontSize: 12, 
+    color: '#A6A6A6' 
+  },
+  progressBar: { 
+    height: 10, 
+    backgroundColor: '#1E1E1E', 
+    borderRadius: 5, 
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+  },
+  progressFill: { 
+    height: '100%', 
+    backgroundColor: '#D4AF37' 
+  },
 
-  // Bottom 3D Cards
+  // Bottom Cards
   bottomSubContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#1A1A1A',
     borderRadius: 25,
-    padding: 30,
-    
+    padding: 20,
     marginTop: 20,
-    borderWidth: 2,
-    borderColor: '#E8C28E',
-    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#D4AF37',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 8,
   },
-  sectionTitle: { fontSize: 18, fontWeight: 'bold', color: '#5D4037', marginBottom: 15 },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF', 
+    marginBottom: 15 
+  },
   
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 5 },
+  statsGrid: { 
+    flexDirection: 'row', 
+    flexWrap: 'wrap', 
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   statCard: {
-   width: '48%',
-  flexDirection: 'row',
-  alignItems: 'center',
-  backgroundColor: '#eee8dd', // Your requested color
-  padding: 12,
-  borderRadius: 18,
-  borderWidth: 1.5,
-  borderBottomWidth: 5, 
-  gap: 0,
-  
-  
-  shadowColor: "#000",
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.15,
-  shadowRadius: 4,
-  
-  // Elevation for Android
-  elevation: 6,
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E1E1E',
+    padding: 12,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#2A2A2A',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 4,
   },
-  statTextColumn: { flex: 1, marginLeft: 8 },
-  statIconCircle: { width: 35, height: 35, borderRadius: 10, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center' },
-  statValue: { fontSize: 16, fontWeight: 'bold', color: '#333' },
-  statLabel: { fontSize: 14, color: '#777' },
+  statIconCircle: { 
+    width: 35, 
+    height: 35, 
+    borderRadius: 10, 
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    justifyContent: 'center', 
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+  },
+  statTextColumn: { 
+    flex: 1 
+  },
+  statValue: { 
+    fontSize: 16, 
+    fontWeight: 'bold', 
+    color: '#FFFFFF' 
+  },
+  statLabel: { 
+    fontSize: 14, 
+    color: '#A6A6A6' 
+  },
 
-  // Achievements Scroll
-  badgeScroll: { gap: 15, paddingRight: 10 },
-  badgeCard: { alignItems: 'center', width: 80 },
-  
-  
+  // Achievements
+  badgeScroll: { 
+    gap: 15, 
+    paddingRight: 10 
+  },
+  badgeCard: { 
+    alignItems: 'center', 
+    width: 80 
+  },
+  badgeIconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 20,
+    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#D4AF37',
+    overflow: 'hidden',
+    shadowColor: '#D4AF37',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  badgeImage: {
+    width: '75%', 
+    height: '75%',
+  },
+  badgeTitle: { 
+    fontSize: 11, 
+    fontWeight: '600', 
+    color: '#FFFFFF',
+    textAlign: 'center' 
+  },
 });
 
 export default ProfilePage;
