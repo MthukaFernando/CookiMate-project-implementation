@@ -214,8 +214,13 @@ export default function CommunityFeed() {
       <StatusBar barStyle="light-content" />
       <SafeAreaView style={styles.searchHeaderContainer}>
         <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.push('/')} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={28} color={theme.text} />
+          {/* New arrow-back button placed back in the header row */}
+          <TouchableOpacity 
+            style={styles.backBtnAction} 
+            onPress={() => router.push('/')}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="arrow-back" size={26} color={theme.gold} />
           </TouchableOpacity>
 
           <View style={styles.searchBar}>
@@ -269,7 +274,17 @@ const styles = StyleSheet.create({
 
   searchHeaderContainer: { zIndex: 100, backgroundColor: theme.bg, padding: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  backBtn: { marginRight: 10, padding: 5 },
+  backBtnAction: {
+    width: 40,
+    height: 40,
+    backgroundColor: theme.card,
+    borderRadius: 22.5,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+  },
 
   searchBar: { 
     flex: 1, 

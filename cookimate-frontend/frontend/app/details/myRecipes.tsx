@@ -299,14 +299,19 @@ const MyRecipesPage = () => {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
-        {selectedCategory && (
-          <TouchableOpacity
-            style={styles.backCircle}
-            onPress={handleBackToPlanner}
-          >
-            <Ionicons name="arrow-back" size={20} color="#D4AF37" />
-          </TouchableOpacity>
-        )}
+        {/* If we came from the Planner, go back there. Otherwise, go Home */}
+        <TouchableOpacity
+          style={styles.backCircle}
+          onPress={() => {
+            if (selectedCategory) {
+              handleBackToPlanner();
+            } else {
+              router.push("/"); // Navigates to index.tsx
+            }
+          }}
+        >
+          <Ionicons name="arrow-back" size={20} color="#D4AF37" />
+        </TouchableOpacity>
 
         <View style={styles.searchBar}>
           <TextInput
