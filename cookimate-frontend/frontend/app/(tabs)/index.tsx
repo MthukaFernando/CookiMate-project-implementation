@@ -213,14 +213,14 @@ function HomePage() {
             <NavCard
               title="Find Recipes"
               imageSource={require("../../assets/images/recipes.png")}
-              href="/myRecipes"
+              href="/details/myRecipes"
               badgeText="100+ recipes"
               iconName="silverware-fork-knife"
             />
             <NavCard
               title="AI Generator"
               imageSource={require("../../assets/images/ai.png")}
-              href="/generateRecipes"
+              href="/details/generateRecipes"
               badgeText="AI powered"
               iconName="robot"
             />
