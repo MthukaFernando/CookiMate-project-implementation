@@ -121,7 +121,7 @@ function HomePage() {
 
     const messages = [
       "Let's cook!",
-      "AI recipes ready!",
+      "AI Chef is active.",
       "What's in the fridge?",
       "I'm hungry!",
     ];
@@ -173,9 +173,9 @@ function HomePage() {
       <StatusBar barStyle="light-content" />
 
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-          <SafeAreaView>
-            <Text style={styles.welcome}>Welcome Back</Text>
-          </SafeAreaView>
+        <SafeAreaView>
+          <Text style={styles.welcome}>Welcome Back</Text>
+        </SafeAreaView>
         <View style={styles.heroContainer}>
           <View style={styles.videoSection}>
             <Video
@@ -195,11 +195,10 @@ function HomePage() {
               { transform: [{ translateY: floatAnim }] },
             ]}
           >
-            <View style={styles.comicTailBorder} />
             <View style={styles.bubbleBody}>
+              <View style={styles.statusDot} />
               <Text style={styles.bubbleText}>{message}</Text>
             </View>
-            <View style={styles.comicTailInner} />
           </Animated.View>
         </View>
 
@@ -234,7 +233,9 @@ function HomePage() {
             />
           </ScrollView>
 
-          <Text style={styles.sectionHeadingRecommend}>Recommended For You</Text>
+          <Text style={styles.sectionHeadingRecommend}>
+            Recommended For You
+          </Text>
           {loading ? (
             <ActivityIndicator size="large" color={theme.accent} />
           ) : (
@@ -258,7 +259,13 @@ function HomePage() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.mainBg },
 
-  welcome: { fontSize: 28, fontWeight: "900", color: "#ffe100", paddingHorizontal: 25, paddingTop: 20, },
+  welcome: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: "#ffe100",
+    paddingHorizontal: 25,
+    paddingTop: 20,
+  },
 
   heroContainer: {
     width: SCREEN_WIDTH,
@@ -283,66 +290,37 @@ const styles = StyleSheet.create({
   },
 
   bubbleWrapper: {
-    position: "absolute",
-    top: 20,
-    right: "12%",
-    width: "40%",
+    marginTop: -10, // Moves it partially over the bottom of the video for that overlay look
     zIndex: 10,
+    alignItems: "center",
   },
   bubbleBody: {
-    backgroundColor: "#fff",
-    paddingHorizontal: 10,
-    paddingVertical: 8,
-    borderRadius: 18,
-    borderBottomLeftRadius: 2,
-    borderWidth: 2.5,
-    borderColor: "#000",
+    backgroundColor: "rgb(39, 39, 39)", // Dark pill background
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    borderRadius: 100, // Full pill shape
+    borderWidth: 1,
+    borderColor: "rgba(255, 255, 255, 0.1)",
     shadowColor: "#000",
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 0.8,
-    shadowRadius: 0,
-    elevation: 5,
-    zIndex: 2,
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 15,
+    elevation: 8,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: "#4CAF50", // Green status dot
+    marginRight: 12,
   },
   bubbleText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#000",
-    lineHeight: 13,
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
     textAlign: "center",
-    textTransform: "uppercase",
-  },
-  comicTailBorder: {
-    position: "absolute",
-    bottom: -12,
-    left: -1,
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderLeftWidth: 10,
-    borderRightWidth: 10,
-    borderTopWidth: 18,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#000",
-    transform: [{ rotate: "25deg" }],
-    zIndex: 1,
-  },
-  comicTailInner: {
-    position: "absolute",
-    bottom: -8,
-    left: 1,
-    width: 0,
-    height: 0,
-    borderStyle: "solid",
-    borderLeftWidth: 8,
-    borderRightWidth: 8,
-    borderTopWidth: 15,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
-    borderTopColor: "#fff",
-    transform: [{ rotate: "25deg" }],
-    zIndex: 3,
   },
 
   contentBody: {
