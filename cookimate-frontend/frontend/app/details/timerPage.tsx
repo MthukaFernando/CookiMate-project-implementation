@@ -34,12 +34,12 @@ export default function Timer({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const alarms = [
-    { name: "🛎️   Classic", file: require('../../../assets/sounds/classic.mp3') },
-    { name: "🔊   Beep", file: require('../../../assets/sounds/beep.mp3') },
-    { name: "⏰   Chime", file: require('../../../assets/sounds/chime.mp3') },
-    { name: "📳   Buzz", file: require('../../../assets/sounds/buzz.mp3') },
-    { name: "🎵   Melody", file: require('../../../assets/sounds/melody.mp3') },
-    { name: "🎹   Tune", file: require('../../../assets/sounds/tune.mp3') },
+    { name: "🛎️   Classic", file: require('../../assets/sounds/classic.mp3') },
+    { name: "🔊   Beep", file: require('../../assets/sounds/beep.mp3') },
+    { name: "⏰   Chime", file: require('../../assets/sounds/chime.mp3') },
+    { name: "📳   Buzz", file: require('../../assets/sounds/buzz.mp3') },
+    { name: "🎵   Melody", file: require('../../assets/sounds/melody.mp3') },
+    { name: "🎹   Tune", file: require('../../assets/sounds/tune.mp3') },
   ];
 
   // Dropdown state

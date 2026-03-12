@@ -1,16 +1,22 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, StatusBar } from 'react-native';
-import { Link } from 'expo-router';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  StatusBar,
+} from "react-native";
+import { Link } from "expo-router";
 
 // Importing your updated pages
-import TimerPage from './timerPage';
-import ConverterPage from './converterPage';
+import TimerPage from "../../details/timerPage";
+import ConverterPage from "../../details/converterPage";
 
 // --- DARK BRANDING COLORS ---
 const BRAND = {
-  bg: "#0A0A0A",        // Deep Midnight
-  surface: "#1E1E1E",   // Elevated Grey
-  accent: "#D4AF37",    // Vibrant Amber/Gold
+  bg: "#0A0A0A", // Deep Midnight
+  surface: "#1E1E1E", // Elevated Grey
+  accent: "#D4AF37", // Vibrant Amber/Gold
   textMain: "#FFFFFF",
   textMuted: "#A0A0A0",
   border: "#333333",
@@ -18,7 +24,7 @@ const BRAND = {
 
 export default function ToolsMain() {
   // State to track which tool to show
-  const [activeTab, setActiveTab] = useState<'timer' | 'converter'>('timer');
+  const [activeTab, setActiveTab] = useState<"timer" | "converter">("timer");
 
   return (
     <View style={styles.container}>
@@ -26,32 +32,45 @@ export default function ToolsMain() {
 
       {/* 1. Styled Segmented Toggle */}
       <View style={styles.toggleContainer}>
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.8}
-          style={[styles.button, activeTab === 'timer' && styles.activeButton]} 
-          onPress={() => setActiveTab('timer')}
+          style={[styles.button, activeTab === "timer" && styles.activeButton]}
+          onPress={() => setActiveTab("timer")}
         >
-          <Text style={[
-            styles.buttonText, 
-            activeTab === 'timer' ? styles.activeText : styles.inactiveText
-          ]}>Timer</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              activeTab === "timer" ? styles.activeText : styles.inactiveText,
+            ]}
+          >
+            Timer
+          </Text>
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           activeOpacity={0.8}
-          style={[styles.button, activeTab === 'converter' && styles.activeButton]} 
-          onPress={() => setActiveTab('converter')}
+          style={[
+            styles.button,
+            activeTab === "converter" && styles.activeButton,
+          ]}
+          onPress={() => setActiveTab("converter")}
         >
-          <Text style={[
-            styles.buttonText, 
-            activeTab === 'converter' ? styles.activeText : styles.inactiveText
-          ]}>Converter</Text>
+          <Text
+            style={[
+              styles.buttonText,
+              activeTab === "converter"
+                ? styles.activeText
+                : styles.inactiveText,
+            ]}
+          >
+            Converter
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* 2. Content Area */}
       <View style={styles.content}>
-        {activeTab === 'timer' ? <TimerPage /> : <ConverterPage />}
+        {activeTab === "timer" ? <TimerPage /> : <ConverterPage />}
       </View>
 
       {/* 3. Global Back to Home Link */}
@@ -71,7 +90,7 @@ const styles = StyleSheet.create({
     backgroundColor: BRAND.bg,
   },
   toggleContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     backgroundColor: BRAND.surface,
     borderRadius: 25,
     marginHorizontal: 40,
@@ -83,7 +102,7 @@ const styles = StyleSheet.create({
   button: {
     flex: 1,
     paddingVertical: 12,
-    alignItems: 'center',
+    alignItems: "center",
     borderRadius: 20,
   },
   activeButton: {
@@ -91,28 +110,28 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     fontSize: 14,
-    fontWeight: '900',
+    fontWeight: "900",
     letterSpacing: 1,
   },
   activeText: {
-    color: BRAND.bg, 
+    color: BRAND.bg,
   },
   inactiveText: {
     color: BRAND.textMuted,
   },
   content: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   footer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingBottom: 30,
   },
   homeLink: {
     color: BRAND.textMuted,
     fontSize: 13,
-    fontWeight: '700',
-    textDecorationLine: 'underline',
+    fontWeight: "700",
+    textDecorationLine: "underline",
     letterSpacing: 0.5,
   },
 });
