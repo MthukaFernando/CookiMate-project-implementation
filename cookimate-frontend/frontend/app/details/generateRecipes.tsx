@@ -22,14 +22,14 @@ import { useRouter } from "expo-router";
 const BRAND = {
   bg: "#121212",
   surface: "#1E1E1E",
-  accent: "#FFB300", // Gold/Amber
+  accent: "#FFB300",
   textMain: "#FFFFFF",
   textMuted: "#A0A0A0",
   inputBg: "#2A2A2A",
   border: "#333333",
 };
 
-// --- DATA ARRAYS ---
+// ... (Keep your DATA ARRAYS: QUICK_ADDS, CUISINES, etc. here) ...
 const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic", "Chicken", "Shrimp"];
 const CUISINES = [
   "American",
@@ -59,11 +59,11 @@ export default function GenerateRecipesPage() {
   const router = useRouter();
   const { height } = useWindowDimensions();
 
+  // --- ADJUSTED CONSTANTS FOR FULL SCREEN ---
   const TAB_BAR_HEIGHT = 65;
   const PEEK_HEIGHT = 180;
-  const TOP_MARGIN = 96;
+  const EXPANDED_Y = 0; // No margin at the top
   const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
-  const EXPANDED_Y = TOP_MARGIN;
 
   const [isExpanded, setIsExpanded] = useState(false);
   const [ingredientInput, setIngredientInput] = useState("");
@@ -79,12 +79,18 @@ export default function GenerateRecipesPage() {
   // --- ANIMATIONS ---
   const panelBgColor = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
-    outputRange: [BRAND.bg, "rgba(30, 30, 30, 0.9)"],
+    outputRange: [BRAND.bg, "rgba(30, 30, 30, 0.95)"],
+    extrapolate: "clamp",
+  });
+
+  const borderRadiusAnim = slideAnim.interpolate({
+    inputRange: [EXPANDED_Y, EXPANDED_Y + 50],
+    outputRange: [0, 35], // Flatten corners when it hits the top
     extrapolate: "clamp",
   });
 
   const contentOpacity = slideAnim.interpolate({
-    inputRange: [EXPANDED_Y, EXPANDED_Y + 150],
+    inputRange: [EXPANDED_Y, COLLAPSED_Y - 50],
     outputRange: [1, 0],
     extrapolate: "clamp",
   });
@@ -95,7 +101,7 @@ export default function GenerateRecipesPage() {
       toValue: open ? EXPANDED_Y : COLLAPSED_Y,
       useNativeDriver: false,
       tension: 40,
-      friction: 8,
+      friction: 9,
     }).start();
   };
 
@@ -122,14 +128,22 @@ export default function GenerateRecipesPage() {
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) =>
-        isExpanded && gestureState.dy > 5,
+        (isExpanded && gestureState.dy > 5) ||
+        (!isExpanded && gestureState.dy < -5),
       onPanResponderMove: (_, gestureState) => {
-        const newY = EXPANDED_Y + gestureState.dy;
+        const newY = isExpanded
+          ? EXPANDED_Y + gestureState.dy
+          : COLLAPSED_Y + gestureState.dy;
         if (newY >= EXPANDED_Y) slideAnim.setValue(newY);
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dy > 120) togglePanel(false);
-        else togglePanel(true);
+        if (isExpanded) {
+          if (gestureState.dy > 120) togglePanel(false);
+          else togglePanel(true);
+        } else {
+          if (gestureState.dy < -50) togglePanel(true);
+          else togglePanel(false);
+        }
       },
     }),
   ).current;
@@ -146,37 +160,32 @@ export default function GenerateRecipesPage() {
         isLooping
         isMuted
       />
+
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(0,0,0,0.2)" },
+          { backgroundColor: "rgba(0,0,0,0.3)" },
         ]}
       />
 
-      {/* --- BACK TO HOME BUTTON --- */}
       {!isExpanded && (
-        <TouchableOpacity 
-          style={styles.backButton} 
+        <TouchableOpacity
+          style={styles.backButton}
           onPress={() => router.push("/")}
-          activeOpacity={0.7}
         >
           <Ionicons name="arrow-back" size={24} color={BRAND.accent} />
         </TouchableOpacity>
-      )}
-
-      {isExpanded && (
-        <Pressable style={styles.backdrop} onPress={() => togglePanel(false)} />
       )}
 
       <Animated.View
         style={[
           styles.slidingPanel,
           {
-            height: height - TOP_MARGIN,
+            height: height, // Panel now matches screen height
             transform: [{ translateY: slideAnim }],
             backgroundColor: panelBgColor,
-            borderColor: BRAND.border,
-            borderTopWidth: 1,
+            borderTopLeftRadius: borderRadiusAnim,
+            borderTopRightRadius: borderRadiusAnim,
           },
         ]}
       >
@@ -200,14 +209,15 @@ export default function GenerateRecipesPage() {
           style={{ flex: 1, opacity: contentOpacity }}
           pointerEvents={isExpanded ? "auto" : "none"}
         >
+          {/* Header area remains draggable to close */}
           <View {...panResponder.panHandlers} style={styles.headerArea}>
             <View style={styles.dragHandle} />
             <View style={styles.headerRow}>
-              <TouchableOpacity onPress={() => togglePanel(false)} hitSlop={20}>
-                <Ionicons name="close" size={26} color={BRAND.textMuted} />
+              <TouchableOpacity onPress={() => togglePanel(false)}>
+                <Ionicons name="close" size={28} color={BRAND.textMain} />
               </TouchableOpacity>
               <Text style={styles.headerTitle}>RECIPE BUILDER</Text>
-              <TouchableOpacity onPress={handleReset} hitSlop={20}>
+              <TouchableOpacity onPress={handleReset}>
                 <Text style={styles.resetText}>RESET</Text>
               </TouchableOpacity>
             </View>
@@ -220,9 +230,7 @@ export default function GenerateRecipesPage() {
             <ScrollView
               contentContainerStyle={styles.scrollBody}
               showsVerticalScrollIndicator={false}
-              keyboardShouldPersistTaps="handled"
             >
-              {/* 1. Ingredient Display */}
               <Text style={styles.label}>Ingredients</Text>
               <View style={styles.ingredientDisplayArea}>
                 {selectedIngredients.length === 0 ? (
@@ -230,11 +238,7 @@ export default function GenerateRecipesPage() {
                     No ingredients added yet...
                   </Text>
                 ) : (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.chipScroll}
-                  >
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                     {selectedIngredients.map((item) => (
                       <TouchableOpacity
                         key={item}
@@ -258,7 +262,6 @@ export default function GenerateRecipesPage() {
                 )}
               </View>
 
-              {/* 2. Manual Search Bar */}
               <View style={styles.searchBarWrapper}>
                 <Ionicons name="search" size={20} color={BRAND.accent} />
                 <TextInput
@@ -268,22 +271,9 @@ export default function GenerateRecipesPage() {
                   value={ingredientInput}
                   onChangeText={setIngredientInput}
                   onSubmitEditing={() => addIngredient(ingredientInput)}
-                  returnKeyType="done"
                 />
-                {ingredientInput.length > 0 && (
-                  <TouchableOpacity
-                    onPress={() => addIngredient(ingredientInput)}
-                  >
-                    <Ionicons
-                      name="add-circle"
-                      size={28}
-                      color={BRAND.accent}
-                    />
-                  </TouchableOpacity>
-                )}
               </View>
 
-              {/* 3. Quick Add Section (MOVED UP) */}
               <Text style={styles.label}>Quick Add</Text>
               <ScrollView
                 horizontal
@@ -302,31 +292,20 @@ export default function GenerateRecipesPage() {
                 ))}
               </ScrollView>
 
-              {/* 4. Description Prompt Field */}
               <Text style={styles.label}>What are we making?</Text>
               <View style={styles.descriptionWrapper}>
                 <TextInput
                   style={styles.descriptionInput}
-                  placeholder="e.g. 'Make a ribbon cake' or 'Something spicy'..."
+                  placeholder="e.g. 'Make a ribbon cake'..."
                   placeholderTextColor="#555"
                   multiline
-                  numberOfLines={3}
                   value={culinaryPrompt}
                   onChangeText={setCulinaryPrompt}
-                  textAlignVertical="top"
                 />
-                <View style={styles.descriptionIcon}>
-                  <Ionicons
-                    name="pencil-outline"
-                    size={16}
-                    color={BRAND.accent}
-                  />
-                </View>
               </View>
 
               <View style={styles.divider} />
 
-              {/* Filters */}
               <FilterRow
                 title="Cuisine"
                 icon="restaurant-outline"
@@ -356,17 +335,7 @@ export default function GenerateRecipesPage() {
                 onSelect={setServings}
               />
 
-              <TouchableOpacity
-                style={styles.generateBtn}
-                activeOpacity={0.8}
-                onPress={() =>
-                  console.log("Generating...", {
-                    culinaryPrompt,
-                    selectedIngredients,
-                    cuisine,
-                  })
-                }
-              >
+              <TouchableOpacity style={styles.generateBtn}>
                 <Ionicons
                   name="flash"
                   size={20}
@@ -383,6 +352,7 @@ export default function GenerateRecipesPage() {
   );
 }
 
+// ... (FilterRow component stays same as your original) ...
 const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
   <View style={styles.filterRowContainer}>
     <View style={styles.filterHeader}>
@@ -431,12 +401,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#D4AF37",
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.6)",
-    zIndex: 9998,
+    borderColor: BRAND.accent,
   },
   slidingPanel: {
     position: "absolute",
@@ -444,8 +409,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
+    // Radius is now animated via borderRadiusAnim
   },
   peekButtonWrapper: {
     height: 180,
@@ -461,10 +425,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
     borderRadius: 50,
     width: "75%",
-    elevation: 10,
-    shadowColor: BRAND.accent,
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
   },
   peekTitle: {
     fontSize: 16,
@@ -473,7 +433,11 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   flexRow: { flexDirection: "row", alignItems: "center" },
-  headerArea: { paddingVertical: 15, alignItems: "center" },
+  headerArea: {
+    paddingVertical: 15,
+    alignItems: "center",
+    marginTop: Platform.OS === "ios" ? 40 : 10,
+  },
   dragHandle: {
     width: 40,
     height: 4,
@@ -495,19 +459,13 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
-  scrollBody: { paddingHorizontal: 25, paddingBottom: 120 },
+  scrollBody: { paddingHorizontal: 25, paddingBottom: 60 },
   ingredientDisplayArea: {
     height: 50,
     marginBottom: 10,
     justifyContent: "center",
   },
-  emptyText: {
-    color: BRAND.textMuted,
-    fontSize: 14,
-    fontStyle: "italic",
-    paddingLeft: 5,
-  },
-  chipScroll: { alignItems: "center", gap: 8 },
+  emptyText: { color: BRAND.textMuted, fontSize: 14, fontStyle: "italic" },
   chip: {
     backgroundColor: BRAND.accent,
     flexDirection: "row",
@@ -515,13 +473,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     borderRadius: 20,
+    marginRight: 8,
   },
   chipText: { fontSize: 13, fontWeight: "800", color: BRAND.bg },
   searchBarWrapper: {
     backgroundColor: BRAND.inputBg,
     borderRadius: 18,
     paddingLeft: 15,
-    paddingRight: 8,
     height: 60,
     flexDirection: "row",
     alignItems: "center",
@@ -540,18 +498,7 @@ const styles = StyleSheet.create({
     borderStyle: "dashed",
     marginBottom: 25,
   },
-  descriptionInput: {
-    flex: 1,
-    fontSize: 15,
-    color: BRAND.textMain,
-    lineHeight: 22,
-  },
-  descriptionIcon: {
-    position: "absolute",
-    bottom: 12,
-    right: 12,
-    opacity: 0.5,
-  },
+  descriptionInput: { flex: 1, fontSize: 15, color: BRAND.textMain },
   label: {
     fontSize: 10,
     fontWeight: "900",
