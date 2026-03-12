@@ -9,8 +9,8 @@ import {
 import { Link } from "expo-router";
 
 // Importing your updated pages
-import TimerPage from "../../details/timerPage";
-import ConverterPage from "../../details/converterPage";
+import TimerPage from "../details/timerPage";
+import ConverterPage from "../details/converterPage";
 
 // --- DARK BRANDING COLORS ---
 const BRAND = {
