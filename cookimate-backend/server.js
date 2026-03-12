@@ -1,10 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
-import express from "express";
-import cors from "cors";
-import connectDB from "./config/db.js"; // Ensure the path is correct
-import recipeRoutes from "./routes/recipeRoutes.js";
-import socialRoutes from "./routes/socialRoutes.js";
+import express from 'express';
+import cors from 'cors';
+import connectDB from './config/db.js'; // Ensure the path is correct
+import recipeRoutes from './routes/recipeRoutes.js';
+import socialRoutes from './routes/socialRoutes.js';
+import gamificationRoutes from "./routes/gamificationRoutes.js"; // ONLY THIS LINE ADDED
 
 console.log("Current Directory:", process.cwd());
 console.log("Mongo URI is:", process.env.MONGO_URI);

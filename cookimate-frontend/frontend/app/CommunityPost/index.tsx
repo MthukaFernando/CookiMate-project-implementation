@@ -1,268 +1,215 @@
-import React, { useState } from 'react';
-import { 
-  View, Text, Image, TextInput, TouchableOpacity, StyleSheet, 
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, 
-  ScrollView, Dimensions 
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import axios from 'axios';
-import { auth } from "../../config/firebase"; // Verified path
-import Constants from 'expo-constants';
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  Image,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy"; // Fix for SDK 54
+import axios from "axios";
+import Constants from "expo-constants";
+import { auth } from "../../config/firebase";
 
-const { width } = Dimensions.get('window');
+const CreatePostScreen: React.FC = () => {
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [caption, setCaption] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-// BACKEND CONFIG
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const BASE_URL = `http://${address}:5000/api`;
-
-// CLOUDINARY CONFIG - Replace with your actual details
-const CLOUDINARY_URL = "https://api.cloudinary.com/v1_1/YOUR_CLOUD_NAME/image/upload";
-const UPLOAD_PRESET = "YOUR_UNSIGNED_PRESET";
-
-export default function CommunityUploadPost() {
-  const router = useRouter();
-  const [image, setImage] = useState<string | null>(null);
-  const [caption, setCaption] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
+  // --- Dynamic IP Detection for Backend ---
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+  const API_URL = `http://${address}:5000`;
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert("Permission Denied", "We need gallery access to post photos.");
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "Gallery access is needed to post.");
       return;
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // Using string literal instead of Enum to fix the 'Property does not exist' error
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5,
     });
 
     if (!result.canceled) {
-      setImage(result.assets[0].uri);
+      setImage(result.assets[0]);
     }
   };
 
-  const handleShare = async () => {
-    if (!image) return Alert.alert("Wait!", "Please select a photo first.");
-    if (!caption.trim()) return Alert.alert("Caption needed", "Share a thought about your post.");
+  const handleUpload = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert("Error", "You must be logged in to share a post.");
+      return;
+    }
+    if (!image) {
+      Alert.alert("Error", "Please select an image first.");
+      return;
+    }
 
-    setIsUploading(true);
+    setLoading(true);
 
     try {
-      // 1. UPLOAD TO CLOUDINARY
-      const formData = new FormData();
-      // @ts-ignore
-      formData.append('file', {
-        uri: image,
-        type: 'image/jpeg',
-        name: 'upload.jpg',
+      // 1. Convert to Base64 using the legacy API to bypass SDK 54 errors
+      const base64 = await FileSystem.readAsStringAsync(image.uri, {
+        encoding: "base64",
       });
-      formData.append('upload_preset', UPLOAD_PRESET);
+      const base64Image = `data:image/jpeg;base64,${base64}`;
 
-      const cloudRes = await fetch(CLOUDINARY_URL, {
-        method: 'POST',
-        body: formData,
-      });
+      // 2. Prepare JSON Payload
+      const payload = {
+        user: currentUser.uid,
+        caption: caption,
+        image: base64Image,
+      };
 
-      const cloudData = await cloudRes.json();
-      
-      if (!cloudData.secure_url) {
-        throw new Error("Cloudinary upload failed");
+      // 3. Execute Request
+      const response = await axios.post(`${API_URL}/api/social`, payload);
+
+      if (response.status === 201) {
+        Alert.alert(
+          "Success!",
+          "Post shared! +10 Points added to your profile."
+        );
+        setImage(null);
+        setCaption("");
       }
-
-      // 2. SAVE URL TO MONGODB
-      await axios.post(`${BASE_URL}/social/create`, {
-        user: auth.currentUser?.uid,
-        imageUrl: cloudData.secure_url, // URL from Cloudinary
-        caption: caption.trim(),
-      });
-
-      Alert.alert("Success!", "Post shared to the community.");
-      router.replace('/Community/CommunityFeed'); // Navigate back to feed
-    } catch (error) {
-      console.error("Upload Error:", error);
-      Alert.alert("Error", "Could not upload post. Check your connection or Cloudinary settings.");
+    } catch (error: any) {
+      console.log("--- UPLOAD ERROR ---");
+      console.log(error.response?.data || error.message);
+      const errorMessage =
+        error.response?.data?.message || "Server error. Check your connection.";
+      Alert.alert("Upload Failed", errorMessage);
     } finally {
-      setIsUploading(false);
+      setLoading(false);
     }
   };
 
+  // --- FIX: The return statement must be here inside the main component function ---
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      style={styles.container}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      style={{ flex: 1, backgroundColor: "#fff" }}
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Ionicons name="close" size={28} color="#333" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>New Post</Text>
-        <TouchableOpacity 
-          onPress={handleShare} 
-          disabled={isUploading || !image}
-          style={[styles.shareBtn, (!image || isUploading) && styles.disabledBtn]}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.shareBtnText}>Share</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.header}>Share Your Cooking</Text>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
-        
-        {/* PHOTO SELECTOR */}
-        <View style={styles.imageContainer}>
+        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
           {image ? (
-            <View style={styles.previewWrapper}>
-              <Image source={{ uri: image }} style={styles.previewImage} />
-              <TouchableOpacity style={styles.editIcon} onPress={pickImage}>
-                <Ionicons name="camera-reverse" size={22} color="#fff" />
-              </TouchableOpacity>
-            </View>
+            <Image source={{ uri: image.uri }} style={styles.previewImage} />
           ) : (
-            <TouchableOpacity style={styles.placeholder} onPress={pickImage}>
-              <View style={styles.iconCircle}>
-                <Ionicons name="image-outline" size={40} color="#FF6B6B" />
-              </View>
-              <Text style={styles.placeholderMainText}>Select a Photo</Text>
-              <Text style={styles.placeholderSubText}>Square (1:1) is recommended</Text>
-            </TouchableOpacity>
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>Tap to select a photo</Text>
+            </View>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {/* CAPTION BOX */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.userRow}>
-             <Image 
-               source={{ uri: auth.currentUser?.photoURL || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }} 
-               style={styles.userAvatar} 
-             />
-             <Text style={styles.username}>@{auth.currentUser?.displayName || 'User'}</Text>
-          </View>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="What's on your mind?..."
-            placeholderTextColor="#999"
-            multiline
-            maxLength={200}
-            value={caption}
-            onChangeText={setCaption}
-          />
-          <Text style={styles.charCount}>{caption.length}/200</Text>
-        </View>
+        <TextInput
+          style={styles.captionInput}
+          placeholder="What's the secret ingredient?..."
+          value={caption}
+          onChangeText={setCaption}
+          multiline
+        />
+
+        <TouchableOpacity
+          style={[styles.postButton, loading && styles.disabledButton]}
+          onPress={handleUpload}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.postButtonText}>Post to Feed</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          Posting as: {auth.currentUser?.email || "Unknown User"}
+        </Text>
       </ScrollView>
-
-      {/* OVERLAY WHILE UPLOADING */}
-      {isUploading && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderCard}>
-            <ActivityIndicator size="large" color="#FF6B6B" />
-            <Text style={styles.loaderText}>Sharing your post...</Text>
-          </View>
-        </View>
-      )}
     </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FDFCFB' },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
-    backgroundColor: '#fff',
-    borderBottomWidth: 0.5,
-    borderBottomColor: '#eee',
-  },
-  closeBtn: { padding: 5 },
-  headerTitle: { fontSize: 18, fontWeight: '700', color: '#333' },
-  shareBtn: {
-    backgroundColor: '#FF6B6B',
-    paddingHorizontal: 25,
-    paddingVertical: 10,
-    borderRadius: 25,
-  },
-  disabledBtn: { backgroundColor: '#FFB5B5' },
-  shareBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 14 },
-  scrollContent: { paddingBottom: 40 },
-  imageContainer: {
-    width: width,
-    height: width,
-    backgroundColor: '#F5F5F5',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewWrapper: { width: '100%', height: '100%' },
-  previewImage: { width: '100%', height: '100%' },
-  editIcon: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  placeholder: { alignItems: 'center' },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#fff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 15,
-  },
-  placeholderMainText: { fontSize: 16, fontWeight: '600', color: '#444' },
-  placeholderSubText: { fontSize: 12, color: '#999', marginTop: 5 },
-  inputWrapper: {
+  container: {
+    flexGrow: 1,
     padding: 20,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    marginTop: -30,
-    minHeight: 300,
+    alignItems: "center",
   },
-  userRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 15 },
-  userAvatar: { width: 34, height: 34, borderRadius: 17, marginRight: 10 },
-  username: { fontWeight: '600', color: '#555', fontSize: 15 },
+  header: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    color: "#333",
+    marginTop: 40,
+  },
+  imageBox: {
+    width: "100%",
+    height: 300,
+    backgroundColor: "#f5f5f5",
+    borderRadius: 15,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    overflow: "hidden",
+  },
+  placeholderContainer: {
+    alignItems: "center",
+  },
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeholderText: {
+    color: "#999",
+  },
   captionInput: {
-    fontSize: 17,
-    color: '#333',
-    minHeight: 120,
-    textAlignVertical: 'top',
+    width: "100%",
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+    textAlignVertical: "top",
+    color: "#333",
   },
-  charCount: {
-    textAlign: 'right',
-    color: '#BBB',
+  postButton: {
+    backgroundColor: "#FF6347",
+    width: "100%",
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
+  },
+  postButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  footerText: {
+    marginTop: 20,
     fontSize: 12,
+    color: "#bbb",
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2000,
-  },
-  loaderCard: {
-    backgroundColor: '#fff',
-    padding: 40,
-    borderRadius: 25,
-    alignItems: 'center',
-  },
-  loaderText: { marginTop: 15, fontWeight: '700', color: '#333' },
 });
+
+export default CreatePostScreen;
