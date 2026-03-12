@@ -20,6 +20,7 @@ import Constants from "expo-constants";
 import { globalStyle } from "../globalStyleSheet.style";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // Recommended for notch handling
 
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
@@ -41,6 +42,7 @@ const defaultImages = [
 ];
 
 const Page = () => {
+  const insets = useSafeAreaInsets();
   const [isSeasonal, setIsSeasonal] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -50,6 +52,7 @@ const Page = () => {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
+  
   const {
     openModalWithDate,
     newRecipeId,
@@ -126,13 +129,11 @@ const Page = () => {
     if (carouselImages.length === 0) return;
     const timer = setInterval(() => {
       const nextIndex = currentIndex + 1;
-      
       if (nextIndex < carouselImages.length) {
         flatListRef.current?.scrollToIndex({
           index: nextIndex,
           animated: true,
         });
-       
       }
     }, 4000);
     return () => clearInterval(timer);
@@ -158,7 +159,7 @@ const Page = () => {
   const handleDeleteRecipe = (uniqueId: string) => {
     Alert.alert(
       "Remove Recipe",
-      "Are you sure you want to delete this recipe from your planner :3?",
+      "Are you sure you want to delete this recipe from your planner?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -186,10 +187,11 @@ const Page = () => {
   );
 
   return (
-    <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
+    <View style={[globalStyle.container, { flex: 1, backgroundColor: '#000', paddingTop: insets.top }]}>
        <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        bounces={false}
        >
       <View style={styles.mainContent}>
         <View style={styles.calendarContainer}>
@@ -212,20 +214,8 @@ const Page = () => {
                   }}
                   style={styles.dayComponent}
                 >
-                  <View
-                    style={[
-                      styles.dayTextContainer,
-                      isToday && styles.todayCircle,
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.dayText,
-                        state === "disabled"
-                          ? { color: "#4d4d4d" }
-                          : { color: isToday ? "white" : "#cecece" },
-                      ]}
-                    >
+                  <View style={[styles.dayTextContainer, isToday && styles.todayCircle]}>
+                    <Text style={[styles.dayText, state === "disabled" ? { color: "#4d4d4d" } : { color: isToday ? "white" : "#cecece" }]}>
                       {date.day}
                     </Text>
                   </View>
@@ -273,49 +263,31 @@ const Page = () => {
       </View>
       </ScrollView>
 
+      {/* Modal logic remains unchanged for brevity */}
       <Modal
         animationType="slide"
         transparent={true}
         visible={isModalVisible}
         onRequestClose={handleCloseModal}
       >
-        <TouchableOpacity
-          style={styles.modalOverlay}
-          activeOpacity={1}
-          onPress={handleCloseModal}
-        >
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleCloseModal}>
           <TouchableOpacity activeOpacity={1} style={styles.formContainer}>
             {!isAddingMeal ? (
               <View style={styles.initialContent}>
-                <TouchableOpacity
-                  style={styles.addButton}
-                  onPress={() => setIsAddingMeal(true)}
-                >
+                <TouchableOpacity style={styles.addButton} onPress={() => setIsAddingMeal(true)}>
                   <Text style={styles.addButtonText}>+</Text>
                 </TouchableOpacity>
                 <View style={styles.dateContainer}>
                   <Text style={styles.popupBoxDate}>{selectedDate}</Text>
                 </View>
-                <ScrollView
-                  style={{ marginTop: 20 }}
-                  showsVerticalScrollIndicator={false}
-                >
+                <ScrollView style={{ marginTop: 20 }} showsVerticalScrollIndicator={false}>
                   {(() => {
-                    const dailyRecipes = plannedRecipes.filter(
-                      (r) => r.date === selectedDate,
-                    );
+                    const dailyRecipes = plannedRecipes.filter((r) => r.date === selectedDate);
                     if (dailyRecipes.length === 0) {
                       return (
                         <View style={styles.emptyStateContainer}>
-                          <Ionicons
-                            name="restaurant-outline"
-                            size={40}
-                            color="#ffff"
-                            style={{ opacity: 0.3 }}
-                          />
-                          <Text style={styles.emptyStateText}>
-                            You have no meals planned on this date
-                          </Text>
+                          <Ionicons name="restaurant-outline" size={40} color="#ffff" style={{ opacity: 0.3 }} />
+                          <Text style={styles.emptyStateText}>You have no meals planned on this date</Text>
                         </View>
                       );
                     }
@@ -327,37 +299,15 @@ const Page = () => {
                           setIsModalVisible(false);
                           router.push(`/recipe/${recipe.id}` as any);
                         }}
-                        style={[
-                          styles.plannedCard,
-                          {
-                            backgroundColor: getCategoryColor(recipe.category),
-                          },
-                        ]}
+                        style={[styles.plannedCard, { backgroundColor: getCategoryColor(recipe.category) }]}
                       >
-                        <Image
-                          source={{ uri: recipe.image }}
-                          style={styles.plannedImage}
-                        />
+                        <Image source={{ uri: recipe.image }} style={styles.plannedImage} />
                         <View style={{ flex: 1 }}>
-                          <Text style={styles.plannedCategoryText}>
-                            {recipe.category}
-                          </Text>
-                          <Text
-                            style={styles.plannedRecipeName}
-                            numberOfLines={1}
-                          >
-                            {recipe.name}
-                          </Text>
+                          <Text style={styles.plannedCategoryText}>{recipe.category}</Text>
+                          <Text style={styles.plannedRecipeName} numberOfLines={1}>{recipe.name}</Text>
                         </View>
-                        <TouchableOpacity
-                          style={styles.deleteButton}
-                          onPress={() => handleDeleteRecipe(recipe.uniqueId)}
-                        >
-                          <Ionicons
-                            name="trash-outline"
-                            size={22}
-                            color="#522F2F"
-                          />
+                        <TouchableOpacity style={styles.deleteButton} onPress={() => handleDeleteRecipe(recipe.uniqueId)}>
+                          <Ionicons name="trash-outline" size={22} color="#522F2F" />
                         </TouchableOpacity>
                       </TouchableOpacity>
                     ));
@@ -367,32 +317,21 @@ const Page = () => {
             ) : (
               <View style={styles.addMealContainer}>
                 <Text style={styles.addMealHeader}>Select Category</Text>
-                <ScrollView
-                  style={styles.categoryScrollView}
-                  showsVerticalScrollIndicator={false}
-                >
+                <ScrollView style={styles.categoryScrollView} showsVerticalScrollIndicator={false}>
                   {mealCategories.map((item) => (
                     <TouchableOpacity
                       key={item.label}
-                      style={[
-                        styles.categoryButton,
-                        { backgroundColor: item.color },
-                      ]}
+                      style={[styles.categoryButton, { backgroundColor: item.color }]}
                       onPress={() => {
                         setIsModalVisible(false);
                         const categoryType = item.label.split(" ")[0].trim();
                         router.push({
                           pathname: "/details/myRecipes",
-                          params: {
-                            selectedCategory: categoryType,
-                            selectedDate: selectedDate,
-                          },
+                          params: { selectedCategory: categoryType, selectedDate: selectedDate },
                         });
                       }}
                     >
-                      <Text style={styles.categoryButtonText}>
-                        {item.label}
-                      </Text>
+                      <Text style={styles.categoryButtonText}>{item.label}</Text>
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
@@ -401,7 +340,7 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -420,14 +359,14 @@ export const calendarStyles: any = {
 export const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 80, // High padding to ensure View Recipe btn clears nav bar
+    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Dynamic padding to clear nav bar
   },
   mainContent: {
-    // flex: 1 removed to allow content to expand naturally
-    justifyContent: "space-between",
+    flex: 1,
+    paddingHorizontal: 15,
   },
   calendarContainer: { 
-    marginTop: Platform.OS === 'ios' ? 50 : 20,
+    marginTop: 10,
     backgroundColor: "#1A1A1A", 
     borderRadius: 25,
     overflow: "hidden",
@@ -471,14 +410,13 @@ export const styles = StyleSheet.create({
   carouselShadowContainer: {
     alignSelf: "center",
     width: CAROUSEL_WIDTH,
-    height: 260,
+    aspectRatio: 1.4, // Responsive aspect ratio instead of fixed height
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 12,
     marginTop: 20,
-    marginBottom: 20, // Bottom margin to separate from end of view
   },
   carouselWrapper: {
     flex: 1,
