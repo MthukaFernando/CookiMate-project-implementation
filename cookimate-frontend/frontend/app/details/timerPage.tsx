@@ -34,15 +34,14 @@ export default function Timer({
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const alarms = [
-    { name: "🛎️   Classic", file: require('../../assets/sounds/classic.mp3') },
-    { name: "🔊   Beep", file: require('../../assets/sounds/beep.mp3') },
-    { name: "⏰   Chime", file: require('../../assets/sounds/chime.mp3') },
-    { name: "📳   Buzz", file: require('../../assets/sounds/buzz.mp3') },
-    { name: "🎵   Melody", file: require('../../assets/sounds/melody.mp3') },
-    { name: "🎹   Tune", file: require('../../assets/sounds/tune.mp3') },
+    { name: "🛎️    Classic", file: require('../../assets/sounds/classic.mp3') },
+    { name: "🔊    Beep", file: require('../../assets/sounds/beep.mp3') },
+    { name: "⏰    Chime", file: require('../../assets/sounds/chime.mp3') },
+    { name: "📳    Buzz", file: require('../../assets/sounds/buzz.mp3') },
+    { name: "🎵    Melody", file: require('../../assets/sounds/melody.mp3') },
+    { name: "🎹    Tune", file: require('../../assets/sounds/tune.mp3') },
   ];
 
-  // Dropdown state
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState(
     alarms.map((alarm, index) => ({
@@ -88,12 +87,10 @@ export default function Timer({
 
   const playAlarm = async () => {
     if (!selectedAlarm) return;
-
     if (sound) {
       await sound.stopAsync();
       await sound.unloadAsync();
     }
-
     const { sound: newSound } = await Audio.Sound.createAsync(
       selectedAlarm.file
     );
@@ -161,37 +158,33 @@ export default function Timer({
       <View style={styles.dropdownContainerWrapper}>
         <Text style={styles.label}>TIMER TONE</Text>
         <DropDownPicker
-        open={open}
-        value={selectedAlarmValue}
-        items={items}
-        setOpen={setOpen}
-        setValue={(callback) => {
-          const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
-          setSelectedAlarmValue(value);
-        }}
-        setItems={setItems}
-        placeholder="Select Tone"
-        placeholderStyle={{ color: UI_COLORS.textMuted }}
-        style={styles.dropdown}
-        dropDownContainerStyle={styles.dropdownList}
-        textStyle={styles.dropdownText}
-        listMode="SCROLLVIEW"
-        maxHeight={300}
-        disabled={running}
-        
-        // 1. Custom Arrow Icons
-        ArrowUpIconComponent={() => (
-          <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
-        )}
-        ArrowDownIconComponent={() => (
-          <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />
-        )}
-        
-        // 2. Custom Tick Icon (shown when an item is selected)
-        TickIconComponent={() => (
-          <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />
-        )}
-      />
+          open={open}
+          value={selectedAlarmValue}
+          items={items}
+          setOpen={setOpen}
+          setValue={(callback) => {
+            const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
+            setSelectedAlarmValue(value);
+          }}
+          setItems={setItems}
+          placeholder="Select Tone"
+          placeholderStyle={{ color: UI_COLORS.textMuted }}
+          style={styles.dropdown}
+          dropDownContainerStyle={styles.dropdownList}
+          textStyle={styles.dropdownText}
+          listMode="SCROLLVIEW"
+          maxHeight={300}
+          disabled={running}
+          ArrowUpIconComponent={() => (
+            <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
+          )}
+          ArrowDownIconComponent={() => (
+            <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />
+          )}
+          TickIconComponent={() => (
+            <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />
+          )}
+        />
       </View>
 
       <TimerPickerModal
@@ -217,8 +210,10 @@ const styles = StyleSheet.create({
   timerContainer: {
     flex: 1,
     alignItems: "center",
+    justifyContent: 'center', // Added to center the content vertically
     backgroundColor: UI_COLORS.background,
     paddingHorizontal: 24,
+    paddingBottom: 20, // Small padding at the bottom for breathing room
   },
   closeIcon: {
     position: "absolute",
@@ -265,7 +260,7 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: "row",
     gap: 20,
-    marginTop: 20,
+    marginTop: 15, // Reduced from 20
   },
   mainButton: {
     flex: 1,
@@ -296,7 +291,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.accentRed,
   },
   dropdownContainerWrapper: {
-    marginTop: 30,
+    marginTop: 15, // Reduced from 30
     width: "100%",
     zIndex: 1000,
   },
