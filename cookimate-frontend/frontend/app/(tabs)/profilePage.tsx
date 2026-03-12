@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
+  SafeAreaView, // Added for better device compatibility
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -53,104 +54,109 @@ const ProfilePage = () => {
   }
 
   return (
-    <ScrollView style={[globalStyle.container, styles.scrollContent]}>
-     
-      {/* 1. TOP PROFILE CARD (The Header) */}
-      <View style={styles.topSubContainer}>
-        <View style={styles.profileHeader}>
-          <View style={styles.mascotCircle}>
-            <Image
-              source={{ uri: user?.profilePic || DEFAULT_AVATAR }}
-              style={styles.mascotImg}
-            />
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={globalStyle.container} 
+        contentContainerStyle={styles.scrollContent} // Applied centering here
+        showsVerticalScrollIndicator={false}
+      >
+      
+        {/* 1. TOP PROFILE CARD (The Header) */}
+        <View style={styles.topSubContainer}>
+          <View style={styles.profileHeader}>
+            <View style={styles.mascotCircle}>
+              <Image
+                source={{ uri: user?.profilePic || DEFAULT_AVATAR }}
+                style={styles.mascotImg}
+              />
+            </View>
+            <View style={styles.headerTextContainer}>
+              <Text style={styles.nameText}>{user?.name}</Text>
+              <Text style={styles.usernameText}>@{user?.username}</Text>
+              
+              <View style={styles.actionRow}>
+                <TouchableOpacity 
+                  style={styles.editBtn} 
+                  activeOpacity={0.7}
+                  onPress={() => router.push("/profile/editprofile")}
+                >
+                  <Text style={styles.editBtnText}>Edit Profile</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.settingsBtn}
+                  activeOpacity={0.7}
+                  onPress={() => router.push("/profile/settings")}
+                >
+                  <Feather name="settings" size={18} color="#000000" />
+                </TouchableOpacity>
+              </View>
+            </View>
           </View>
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.nameText}>{user?.name}</Text>
-            <Text style={styles.usernameText}>@{user?.username}</Text>
-            
-            <View style={styles.actionRow}>
-              <TouchableOpacity 
-                style={styles.editBtn} 
-                activeOpacity={0.7}
-                onPress={() => router.push("/profile/editprofile")}
-              >
-                <Text style={styles.editBtnText}>Edit Profile</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.settingsBtn}
-                activeOpacity={0.7}
-                onPress={() => router.push("/profile/settings")}
-              >
-                <Feather name="settings" size={18} color="#000000" />
-              </TouchableOpacity>
+
+          {/* Level Progress */}
+          <View style={styles.levelContainer}>
+            <View style={styles.levelLabelRow}>
+              <Text style={styles.levelLabel}>Level {user?.level || 1}</Text>
+              <Text style={styles.pointsLabel}>{user?.points || 0} XP</Text>
+            </View>
+            <View style={styles.progressBar}>
+              <View style={[styles.progressFill, { width: `${(user?.points % 100) || 20}%` }]} />
             </View>
           </View>
         </View>
 
-        {/* Level Progress */}
-        <View style={styles.levelContainer}>
-          <View style={styles.levelLabelRow}>
-            <Text style={styles.levelLabel}>Level {user?.level || 1}</Text>
-            <Text style={styles.pointsLabel}>{user?.points || 0} XP</Text>
-          </View>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${(user?.points % 100) || 20}%` }]} />
+        {/* 2. STATS SECTION */}
+        <View style={styles.bottomSubContainer}>
+          <Text style={styles.sectionTitle}>Cooking Journey</Text>
+          <View style={styles.statsGrid}>
+            <StatItem 
+              icon="coffee" 
+              label="Cooked" 
+              value={user?.recipesCookedCount || 0} 
+              onPress={() => console.log("Route to Cooked List")}
+            />
+            <StatItem 
+              icon="heart" 
+              label="Favs" 
+              value={user?.favorites?.length || 0} 
+              onPress={() => router.push("/profile/favoritesPage")}
+            />
+            <StatItem 
+              icon="award" 
+              label="Levels" 
+              value={user?.level || 1} 
+              onPress={() => router.push("/profile/levelsPage")}
+            />
+            <StatItem 
+              icon="users" 
+              label="Fans" 
+              value={user?.followers || 0} 
+              onPress={() => console.log("Route to Followers")}
+            />
           </View>
         </View>
-      </View>
 
-      {/* 2. STATS SECTION */}
-      <View style={styles.bottomSubContainer}>
-        <Text style={styles.sectionTitle}>Cooking Journey</Text>
-        <View style={styles.statsGrid}>
-          <StatItem 
-            icon="coffee" 
-            label="Cooked" 
-            value={user?.recipesCookedCount || 0} 
-            onPress={() => console.log("Route to Cooked List")}
-          />
-          <StatItem 
-            icon="heart" 
-            label="Favs" 
-            value={user?.favorites?.length || 0} 
-            onPress={() => router.push("/profile/favoritesPage")}
-          />
-          <StatItem 
-            icon="award" 
-            label="Levels" 
-            value={user?.level || 1} 
-            onPress={() => router.push("/profile/levelsPage")}
-          />
-          <StatItem 
-            icon="users" 
-            label="Fans" 
-            value={user?.followers || 0} 
-            onPress={() => console.log("Route to Followers")}
-          />
+        {/* 3. ACHIEVEMENTS */}
+        <View style={styles.bottomSubContainer}>
+          <Text style={styles.sectionTitle}>Achievements</Text>
+          <ScrollView 
+            horizontal 
+            showsHorizontalScrollIndicator={false} 
+            contentContainerStyle={styles.badgeScroll}
+          >
+            <BadgeItem 
+              imageUrl="https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png" 
+              title="Social" 
+            />
+          </ScrollView>
         </View>
-      </View>
-
-      {/* 3. ACHIEVEMENTS */}
-      <View style={styles.bottomSubContainer}>
-        <Text style={styles.sectionTitle}>Achievements</Text>
-        <ScrollView 
-          horizontal 
-          showsHorizontalScrollIndicator={false} 
-          contentContainerStyle={styles.badgeScroll}
-        >
-          <BadgeItem 
-            imageUrl="https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png" 
-            title="Social" 
-          />
-        </ScrollView>
-      </View>
-      
-    </ScrollView>
+        
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
-/* --- SUB-COMPONENTS --- */
-
+/* --- SUB-COMPONENTS REMAINED UNCHANGED --- */
 const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity 
     activeOpacity={0.7}
@@ -187,6 +193,10 @@ const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => 
 /* --- STYLES --- */
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#0A0A0A",
+  },
   center: { 
     flex: 1, 
     justifyContent: "center", 
@@ -194,8 +204,11 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A0A0A" 
   },
   scrollContent: { 
+    flexGrow: 1,           
+    justifyContent: "center", 
     paddingHorizontal: 25, 
-    paddingBottom: 40,
+    paddingTop: 5,       // Small fixed buffer for the top
+    paddingBottom: 60,    // Extra space at bottom to balance the visual center
     backgroundColor: "#0A0A0A"
   },
   
@@ -206,7 +219,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: '#ffffff',
-    marginTop: 20,
+    // Removed marginTop: 20 so it centers properly
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

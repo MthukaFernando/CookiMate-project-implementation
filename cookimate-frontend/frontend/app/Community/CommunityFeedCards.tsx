@@ -2,8 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { 
   View, Text, Image, FlatList, TouchableOpacity, StyleSheet, 
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
-  Platform, ActivityIndicator, StatusBar, SafeAreaView 
+  Platform, ActivityIndicator, StatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -29,6 +30,7 @@ const theme = {
 
 export default function CommunityFeed() {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -212,9 +214,9 @@ export default function CommunityFeed() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <StatusBar barStyle="light-content" />
-      <SafeAreaView style={styles.searchHeaderContainer}>
+      {/* Container now uses dynamic padding top for all phones */}
+      <View style={[styles.searchHeaderContainer, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
-          {/* New arrow-back button placed back in the header row */}
           <TouchableOpacity 
             style={styles.backBtnAction} 
             onPress={() => router.push('/')}
@@ -240,7 +242,7 @@ export default function CommunityFeed() {
         </View>
 
         {isSearching && searchResults.length > 0 && (
-          <View style={styles.dropdown}>
+          <View style={[styles.dropdown, { top: insets.top + 65 }]}>
             {searchResults.map((u) => (
               <TouchableOpacity 
                 key={u._id} 
@@ -253,7 +255,7 @@ export default function CommunityFeed() {
             ))}
           </View>
         )}
-      </SafeAreaView>
+      </View>
 
       <FlatList 
         data={posts} 
@@ -261,7 +263,7 @@ export default function CommunityFeed() {
         keyExtractor={p => p._id} 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchFeed} tintColor={theme.gold} />}
         onScrollBeginDrag={() => setIsSearching(false)}
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
     </KeyboardAvoidingView>
   );
@@ -272,7 +274,7 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bg },
   loadingText: { marginTop: 10, color: theme.gold, fontWeight: '600' },
 
-  searchHeaderContainer: { zIndex: 100, backgroundColor: theme.bg, padding: 10 },
+  searchHeaderContainer: { zIndex: 100, backgroundColor: theme.bg, paddingHorizontal: 10, paddingBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backBtnAction: {
     width: 40,
@@ -299,7 +301,7 @@ const styles = StyleSheet.create({
     borderColor: theme.border
   },
   input: { flex: 1, color: theme.text },
-  dropdown: { position: 'absolute', top: 65, left: 10, right: 10, backgroundColor: theme.card, borderRadius: 15, elevation: 5, padding: 10, zIndex: 1000, borderWidth: 1, borderColor: theme.border },
+  dropdown: { position: 'absolute', left: 10, right: 10, backgroundColor: theme.card, borderRadius: 15, elevation: 5, padding: 10, zIndex: 1000, borderWidth: 1, borderColor: theme.border },
   resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: theme.border },
   resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
   resName: { fontWeight: '600', color: theme.text },
