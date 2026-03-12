@@ -1,320 +1,215 @@
-import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
-import * as ImagePicker from "expo-image-picker";
-import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ActivityIndicator,
-  Alert,
-  Dimensions,
+  View,
+  Text,
   Image,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+  Alert,
+  ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system/legacy"; // Fix for SDK 54
+import axios from "axios";
+import Constants from "expo-constants";
 import { auth } from "../../config/firebase";
 
-const { width } = Dimensions.get("window");
+const CreatePostScreen: React.FC = () => {
+  const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
+  const [caption, setCaption] = useState<string>("");
+  const [loading, setLoading] = useState<boolean>(false);
 
-export default function CommunityUploadPost() {
-  const router = useRouter();
-  const [image, setImage] = useState<string | null>(null);
-  const [caption, setCaption] = useState("");
-  const [isUploading, setIsUploading] = useState(false);
+  // --- Dynamic IP Detection for Backend ---
+  const debuggerHost = Constants.expoConfig?.hostUri;
+  const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+  const API_URL = `http://${address}:5000`;
 
-  // OPTION 1: Pick from Gallery
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted")
-      return Alert.alert(
-        "Permission Needed",
-        "We need gallery access to share your recipes.",
-      );
+    if (status !== "granted") {
+      Alert.alert("Permission Denied", "Gallery access is needed to post.");
+      return;
+    }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      // Using string literal instead of Enum to fix the 'Property does not exist' error
+      mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.5,
     });
 
-    if (!result.canceled) setImage(result.assets[0].uri);
+    if (!result.canceled) {
+      setImage(result.assets[0]);
+    }
   };
 
-  // OPTION 2: Take New Photo (Camera)
-  const takePhoto = async () => {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== "granted")
-      return Alert.alert(
-        "Permission Needed",
-        "We need camera access to snap your creation!",
-      );
+  const handleUpload = async () => {
+    const currentUser = auth.currentUser;
+    if (!currentUser) {
+      Alert.alert("Error", "You must be logged in to share a post.");
+      return;
+    }
+    if (!image) {
+      Alert.alert("Error", "Please select an image first.");
+      return;
+    }
 
-    const result = await ImagePicker.launchCameraAsync({
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.8,
-    });
+    setLoading(true);
 
-    if (!result.canceled) setImage(result.assets[0].uri);
+    try {
+      // 1. Convert to Base64 using the legacy API to bypass SDK 54 errors
+      const base64 = await FileSystem.readAsStringAsync(image.uri, {
+        encoding: "base64",
+      });
+      const base64Image = `data:image/jpeg;base64,${base64}`;
+
+      // 2. Prepare JSON Payload
+      const payload = {
+        user: currentUser.uid,
+        caption: caption,
+        image: base64Image,
+      };
+
+      // 3. Execute Request
+      const response = await axios.post(`${API_URL}/api/social`, payload);
+
+      if (response.status === 201) {
+        Alert.alert(
+          "Success!",
+          "Post shared! +10 Points added to your profile."
+        );
+        setImage(null);
+        setCaption("");
+      }
+    } catch (error: any) {
+      console.log("--- UPLOAD ERROR ---");
+      console.log(error.response?.data || error.message);
+      const errorMessage =
+        error.response?.data?.message || "Server error. Check your connection.";
+      Alert.alert("Upload Failed", errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  // SIMULATED SHARE (Frontend Only for now)
-  const handleShare = () => {
-    if (!image)
-      return Alert.alert("Chef!", "Don't forget the photo of your dish!");
-    if (!caption.trim())
-      return Alert.alert("Recipe thoughts?", "Tell us what you cooked!");
-
-    setIsUploading(true);
-
-    // Simulated "Upload" delay so you can see the loading state
-    setTimeout(() => {
-      setIsUploading(false);
-      Alert.alert(
-        "Compliments to the Chef!",
-        "Frontend is ready! (Backend connection skipped as requested)",
-        [
-          {
-            text: "Great!",
-            onPress: () => router.replace("/Community/CommunityFeed"),
-          },
-        ],
-      );
-    }, 2000);
-  };
-
+  // --- FIX: The return statement must be here inside the main component function ---
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: "#fff" }}
     >
-      {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Ionicons name="close-outline" size={30} color="#522F2F" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Share your Dish</Text>
-        <TouchableOpacity
-          onPress={handleShare}
-          disabled={isUploading || !image}
-          style={[
-            styles.shareBtn,
-            (!image || isUploading) && styles.disabledBtn,
-          ]}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text style={styles.shareBtnText}>Post</Text>
-          )}
-        </TouchableOpacity>
-      </View>
+      <ScrollView contentContainerStyle={styles.container}>
+        <Text style={styles.header}>Share Your Cooking</Text>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-      >
-        {/* PHOTO SECTION */}
-        <View style={styles.imageSection}>
+        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
           {image ? (
-            <View style={styles.previewWrapper}>
-              <Image source={{ uri: image }} style={styles.previewImage} />
-              <View style={styles.editControls}>
-                <TouchableOpacity style={styles.miniBtn} onPress={takePhoto}>
-                  <Ionicons name="camera" size={20} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.miniBtn} onPress={pickImage}>
-                  <Ionicons name="images" size={20} color="#fff" />
-                </TouchableOpacity>
-              </View>
-            </View>
+            <Image source={{ uri: image.uri }} style={styles.previewImage} />
           ) : (
-            <View style={styles.selectorContainer}>
-              
-              <Text style={styles.selectorTitle}>Select a image</Text>
-              <View style={styles.buttonRow}>
-                <TouchableOpacity
-                  style={styles.selectorBtn}
-                  onPress={takePhoto}
-                >
-                  <Ionicons name="camera" size={24} color="#fff" />
-                  <Text style={styles.selectorBtnText}>Camera</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.selectorBtn, { backgroundColor: "#B86D2A" }]}
-                  onPress={pickImage}
-                >
-                  <Ionicons name="images" size={24} color="#fff" />
-                  <Text style={styles.selectorBtnText}>Gallery</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.placeholderContainer}>
+              <Text style={styles.placeholderText}>Tap to select a photo</Text>
             </View>
           )}
-        </View>
+        </TouchableOpacity>
 
-        {/* CAPTION SECTION */}
-        <View style={styles.inputWrapper}>
-          <View style={styles.userRow}>
-            <Image
-              source={{
-                uri:
-                  auth.currentUser?.photoURL ||
-                  "https://cdn-icons-png.flaticon.com/512/149/149071.png",
-              }}
-              style={styles.userAvatar}
-            />
-            <Text style={styles.username}>Caption</Text>
-          </View>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="Tell us about the recipe, the taste, or your cooking process..."
-            placeholderTextColor="#A0A0A0"
-            multiline
-            maxLength={300}
-            value={caption}
-            onChangeText={setCaption}
-          />
-          <Text style={styles.charCount}>{caption.length}/300</Text>
-        </View>
+        <TextInput
+          style={styles.captionInput}
+          placeholder="What's the secret ingredient?..."
+          value={caption}
+          onChangeText={setCaption}
+          multiline
+        />
+
+        <TouchableOpacity
+          style={[styles.postButton, loading && styles.disabledButton]}
+          onPress={handleUpload}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.postButtonText}>Post to Feed</Text>
+          )}
+        </TouchableOpacity>
+
+        <Text style={styles.footerText}>
+          Posting as: {auth.currentUser?.email || "Unknown User"}
+        </Text>
       </ScrollView>
-
-      {/* LOADING OVERLAY */}
-      {isUploading && (
-        <View style={styles.overlay}>
-          <View style={styles.loaderCard}>
-            <MaterialCommunityIcons
-              name="pot-steam"
-              size={50}
-              color="#B86D2A"
-            />
-            <Text style={styles.loaderText}>Serving your post...</Text>
-          </View>
-        </View>
-      )}
     </KeyboardAvoidingView>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#FDFCFB" },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 60,
-    paddingBottom: 15,
-    backgroundColor: "#fff",
-    borderBottomWidth: 1,
-    borderBottomColor: "#F2ECE2",
-  },
-  headerTitle: { fontSize: 20, fontWeight: "800", color: "#522F2F" },
-  closeBtn: { padding: 5 },
-  shareBtn: {
-    backgroundColor: "#B86D2A",
-    paddingHorizontal: 25,
-    paddingVertical: 10,
-    borderRadius: 12,
-  },
-  disabledBtn: { backgroundColor: "#E0C8B0" },
-  shareBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  scrollContent: { paddingBottom: 40 },
-  imageSection: { width: width, height: width, backgroundColor: "#FAF7F2" },
-  previewWrapper: { width: "100%", height: "100%" },
-  previewImage: { width: "100%", height: "100%" },
-  editControls: {
-    position: "absolute",
-    bottom: 15,
-    right: 15,
-    flexDirection: "row",
-    gap: 10,
-  },
-  miniBtn: {
-    backgroundColor: "rgba(82, 47, 47, 0.8)",
-    width: 45,
-    height: 45,
-    borderRadius: 23,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  selectorContainer: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+  container: {
+    flexGrow: 1,
     padding: 20,
-  },
-  selectorTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#522F2F",
-    marginBottom: 25,
-  },
-  buttonRow: { flexDirection: "row", gap: 15 },
-  selectorBtn: {
-    backgroundColor: "#522F2F",
-    flexDirection: "row",
     alignItems: "center",
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingVertical: 15,
+  },
+  header: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    color: "#333",
+    marginTop: 40,
+  },
+  imageBox: {
+    width: "100%",
+    height: 300,
+    backgroundColor: "#f5f5f5",
     borderRadius: 15,
-    elevation: 3,
-  },
-  selectorBtnText: { color: "#fff", fontWeight: "bold", fontSize: 16 },
-  inputWrapper: {
-    padding: 25,
-    backgroundColor: "#fff",
-    borderTopLeftRadius: 35,
-    borderTopRightRadius: 35,
-    marginTop: -35,
-    minHeight: 400,
-  },
-  userRow: { flexDirection: "row", alignItems: "center", marginBottom: 20 },
-  userAvatar: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    marginRight: 12,
-    borderWidth: 1,
-    borderColor: "#B86D2A",
-  },
-  username: { fontWeight: "700", color: "#522F2F", fontSize: 16 },
-  captionInput: {
-    fontSize: 16,
-    color: "#444",
-    minHeight: 150,
-    textAlignVertical: "top",
-    lineHeight: 24,
-  },
-  charCount: {
-    textAlign: "right",
-    color: "#B86D2A",
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(82, 47, 47, 0.4)",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 2000,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: "#ddd",
+    overflow: "hidden",
   },
-  loaderCard: {
-    backgroundColor: "#fff",
-    padding: 40,
-    borderRadius: 30,
+  placeholderContainer: {
     alignItems: "center",
-    elevation: 10,
   },
-  loaderText: {
-    marginTop: 15,
-    fontWeight: "800",
-    color: "#522F2F",
+  previewImage: {
+    width: "100%",
+    height: "100%",
+  },
+  placeholderText: {
+    color: "#999",
+  },
+  captionInput: {
+    width: "100%",
+    minHeight: 80,
+    borderWidth: 1,
+    borderColor: "#eee",
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 20,
+    textAlignVertical: "top",
+    color: "#333",
+  },
+  postButton: {
+    backgroundColor: "#FF6347",
+    width: "100%",
+    padding: 16,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  disabledButton: {
+    backgroundColor: "#ccc",
+  },
+  postButtonText: {
+    color: "#fff",
     fontSize: 16,
+    fontWeight: "bold",
+  },
+  footerText: {
+    marginTop: 20,
+    fontSize: 12,
+    color: "#bbb",
   },
 });
+
+export default CreatePostScreen;
