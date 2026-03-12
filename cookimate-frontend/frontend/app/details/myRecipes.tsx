@@ -8,17 +8,18 @@ import {
   StyleSheet,
   Dimensions,
   TextInput,
-  SafeAreaView,
   ActivityIndicator,
   ScrollView,
   Alert,
+  Platform,
 } from "react-native";
+import { StatusBar } from "expo-status-bar"; // Added for status bar control
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // Better safe area handling
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
@@ -82,6 +83,7 @@ const dietOptions = [
 
 const MyRecipesPage = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets(); // Get precise safe area values
   const { selectedCategory, selectedDate } = useLocalSearchParams();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
@@ -94,7 +96,6 @@ const MyRecipesPage = () => {
   const [diet, setDiet] = useState("All");
   const [time, setTime] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
-
   const [activeFilterCount, setActiveFilterCount] = useState(0);
 
   useFocusEffect(
@@ -124,7 +125,7 @@ const MyRecipesPage = () => {
     let count = 0;
     if (searchQuery) count++;
     if (cuisine !== "All") count++;
-    if (meal !== "All" && meal !== selectedCategory) count++;
+    if (meal !== "All" && meal !== (selectedCategory as string)) count++;
     if (diet !== "All") count++;
     if (time !== "All") count++;
     setActiveFilterCount(count);
@@ -217,7 +218,7 @@ const MyRecipesPage = () => {
     setSelectedRecipeData(null);
     router.setParams({ selectedCategory: undefined, selectedDate: undefined });
     router.push({
-      pathname: "/menuPlanerPage",
+      pathname: "/menuPlanerPage" as any,
       params: { openModalWithDate: dateToPass },
     });
   };
@@ -233,7 +234,7 @@ const MyRecipesPage = () => {
     router.setParams({ selectedCategory: undefined, selectedDate: undefined });
 
     router.push({
-      pathname: "/menuPlanerPage",
+      pathname: "/menuPlanerPage" as any,
       params: {
         openModalWithDate: dateToPass,
         newRecipeId: recipeData.id,
@@ -297,16 +298,16 @@ const MyRecipesPage = () => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar style="light" />
       <View style={styles.headerContainer}>
-        {/* If we came from the Planner, go back there. Otherwise, go Home */}
         <TouchableOpacity
           style={styles.backCircle}
           onPress={() => {
             if (selectedCategory) {
               handleBackToPlanner();
             } else {
-              router.push("/"); // Navigates to index.tsx
+              router.push("/");
             }
           }}
         >
@@ -423,10 +424,13 @@ const MyRecipesPage = () => {
           data={recipes}
           keyExtractor={(item) => item.id}
           renderItem={renderRecipeItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -436,9 +440,9 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 15,
+    paddingTop: 10, // Reduced as insets handle the bulk
     marginBottom: 10,
-    gap: 12,
+    gap: 8,
   },
   backCircle: {
     width: 40,
@@ -449,10 +453,9 @@ const styles = StyleSheet.create({
     borderColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
-    marginRight: 12,
   },
   addButton: {
-    width: 70,
+    minWidth: 60,
     height: 40,
     backgroundColor: "#1A1A1A",
     borderRadius: 20,
@@ -460,10 +463,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#D4AF37",
+    paddingHorizontal: 10,
   },
   addLetters: {
     letterSpacing: 1,
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "600",
     color: "#D4AF37",
   },
@@ -472,13 +476,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#1A1A1A",
     borderRadius: 25,
-    height: 48,
-    paddingHorizontal: 18,
-    flex: 1,
+    height: 44,
+    paddingHorizontal: 15,
+    flex: 2,
     borderWidth: 1,
     borderColor: "#333333",
   },
-  searchInput: { flex: 1, fontSize: 16, color: "#FFFFFF" },
+  searchInput: { flex: 1, fontSize: 14, color: "#FFFFFF" },
   filterWrapper: { height: 50, marginBottom: 10 },
   scrollContent: { paddingHorizontal: 15, alignItems: "center" },
   dropdown: {
@@ -495,7 +499,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     textAlign: "center",
   },
-  listContent: { paddingHorizontal: 20, paddingBottom: 40 },
+  listContent: { paddingHorizontal: 20 },
   card: {
     flexDirection: "row",
     backgroundColor: "#121212",
@@ -524,7 +528,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   recipeTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: "bold",
     color: "#FFFFFF",
     flex: 1,
@@ -545,19 +549,18 @@ const styles = StyleSheet.create({
   },
   viewButtonText: { color: "#000000", fontWeight: "bold", fontSize: 12 },
   clearButton: {
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 8,
     backgroundColor: "#1A1A1A",
     borderRadius: 20,
     borderWidth: 1,
     borderColor: "#333333",
-    position: "relative",
     justifyContent: "center",
     alignItems: "center",
   },
   clearButtonText: {
     color: "#FFFFFF",
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
   },
   badge: {
