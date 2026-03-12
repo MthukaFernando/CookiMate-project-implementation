@@ -56,6 +56,7 @@ const TIMES = ["< 15m", "< 30m", "< 45m", "1h+"];
 const SERVINGS = ["1", "2", "4", "6+"];
 
 export default function GenerateRecipesPage() {
+  const router = useRouter();
   const { height } = useWindowDimensions();
 
   const TAB_BAR_HEIGHT = 65;
@@ -151,6 +152,17 @@ export default function GenerateRecipesPage() {
           { backgroundColor: "rgba(0,0,0,0.2)" },
         ]}
       />
+
+      {/* --- BACK TO HOME BUTTON --- */}
+      {!isExpanded && (
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => router.push("/")}
+          activeOpacity={0.7}
+        >
+          <Ionicons name="arrow-back" size={24} color={BRAND.accent} />
+        </TouchableOpacity>
+      )}
 
       {isExpanded && (
         <Pressable style={styles.backdrop} onPress={() => togglePanel(false)} />
@@ -407,6 +419,20 @@ const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: BRAND.bg },
+  backButton: {
+    position: "absolute",
+    top: Platform.OS === "ios" ? 60 : 40,
+    left: 20,
+    zIndex: 10,
+    backgroundColor: "rgba(30, 30, 30, 0.7)",
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+  },
   backdrop: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.6)",
