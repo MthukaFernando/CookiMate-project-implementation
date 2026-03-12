@@ -22,7 +22,7 @@ import { getAuth } from "firebase/auth";
 import { auth } from "../../config/firebase";
 
 // Adjusted import to your provided path
-import Timer from "../(tabs)/tools/timerPage";
+import Timer from "../details/timerPage";
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";

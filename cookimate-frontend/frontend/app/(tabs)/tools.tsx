@@ -3,8 +3,8 @@ import { View, Text, StyleSheet, TouchableOpacity, StatusBar, SafeAreaView, Plat
 import { Link } from 'expo-router';
 
 // Importing your updated pages
-import TimerPage from './timerPage';
-import ConverterPage from './converterPage';
+import TimerPage from '../details/timerPage';
+import ConverterPage from '../details/converterPage';
 
 // --- DARK BRANDING COLORS ---
 const BRAND = {
@@ -54,12 +54,6 @@ export default function ToolsMain() {
         {activeTab === 'timer' ? <TimerPage /> : <ConverterPage />}
       </View>
 
-      {/* 3. Global Back to Home Link */}
-      <View style={styles.footer}>
-        <Link href="/" style={styles.homeLink}>
-          Back to Home Page
-        </Link>
-      </View>
     </SafeAreaView>
   );
 }
