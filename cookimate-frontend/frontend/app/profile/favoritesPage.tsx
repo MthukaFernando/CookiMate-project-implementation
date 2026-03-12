@@ -354,8 +354,8 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: "#121212",
-    borderColor: "#1A1A1A",
+    backgroundColor: '#1b1b1b',
+    borderColor: '#1A1A1A',
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,

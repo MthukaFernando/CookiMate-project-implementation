@@ -67,7 +67,7 @@ export default function ToolsMain() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 35,
     backgroundColor: BRAND.bg,
   },
   toggleContainer: {

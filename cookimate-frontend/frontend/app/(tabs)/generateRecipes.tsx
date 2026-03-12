@@ -147,7 +147,7 @@ export default function GenerateRecipesPage() {
       <View
         style={[
           StyleSheet.absoluteFill,
-          { backgroundColor: "rgba(0,0,0,0.5)" },
+          { backgroundColor: "rgba(0,0,0,0.2)" },
         ]}
       />
 
@@ -167,7 +167,6 @@ export default function GenerateRecipesPage() {
           },
         ]}
       >
-        {/* --- PEEK BUTTON (Only visible when collapsed) --- */}
         {!isExpanded && (
           <View style={styles.peekButtonWrapper}>
             <TouchableOpacity
@@ -184,7 +183,6 @@ export default function GenerateRecipesPage() {
           </View>
         )}
 
-        {/* --- EXPANDED CONTENT --- */}
         <Animated.View
           style={{ flex: 1, opacity: contentOpacity }}
           pointerEvents={isExpanded ? "auto" : "none"}
@@ -211,7 +209,7 @@ export default function GenerateRecipesPage() {
               showsVerticalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
             >
-              {/* Ingredient Section */}
+              {/* 1. Ingredient Display */}
               <Text style={styles.label}>Ingredients</Text>
               <View style={styles.ingredientDisplayArea}>
                 {selectedIngredients.length === 0 ? (
@@ -247,6 +245,7 @@ export default function GenerateRecipesPage() {
                 )}
               </View>
 
+              {/* 2. Manual Search Bar */}
               <View style={styles.searchBarWrapper}>
                 <Ionicons name="search" size={20} color={BRAND.accent} />
                 <TextInput
@@ -271,7 +270,26 @@ export default function GenerateRecipesPage() {
                 )}
               </View>
 
-              {/* Description Prompt Field */}
+              {/* 3. Quick Add Section (MOVED UP) */}
+              <Text style={styles.label}>Quick Add</Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.quickAddScroll}
+              >
+                {QUICK_ADDS.map((item) => (
+                  <TouchableOpacity
+                    key={item}
+                    style={styles.quickAddBtn}
+                    onPress={() => addIngredient(item)}
+                  >
+                    <Ionicons name="add" size={14} color={BRAND.accent} />
+                    <Text style={styles.quickAddText}>{item}</Text>
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+
+              {/* 4. Description Prompt Field */}
               <Text style={styles.label}>What are we making?</Text>
               <View style={styles.descriptionWrapper}>
                 <TextInput
@@ -292,24 +310,6 @@ export default function GenerateRecipesPage() {
                   />
                 </View>
               </View>
-
-              <Text style={styles.label}>Quick Add</Text>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.quickAddScroll}
-              >
-                {QUICK_ADDS.map((item) => (
-                  <TouchableOpacity
-                    key={item}
-                    style={styles.quickAddBtn}
-                    onPress={() => addIngredient(item)}
-                  >
-                    <Ionicons name="add" size={14} color={BRAND.accent} />
-                    <Text style={styles.quickAddText}>{item}</Text>
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
 
               <View style={styles.divider} />
 
@@ -469,8 +469,6 @@ const styles = StyleSheet.create({
   },
   resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
   scrollBody: { paddingHorizontal: 25, paddingBottom: 120 },
-
-  // Ingredients Area
   ingredientDisplayArea: {
     height: 50,
     marginBottom: 10,
@@ -500,13 +498,11 @@ const styles = StyleSheet.create({
     height: 60,
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 25,
+    marginBottom: 20,
     borderWidth: 1,
     borderColor: BRAND.border,
   },
   textInput: { flex: 1, fontSize: 16, color: BRAND.textMain, marginLeft: 10 },
-
-  // Description Field
   descriptionWrapper: {
     backgroundColor: BRAND.inputBg,
     borderRadius: 18,
@@ -529,7 +525,6 @@ const styles = StyleSheet.create({
     right: 12,
     opacity: 0.5,
   },
-
   label: {
     fontSize: 10,
     fontWeight: "900",
@@ -538,7 +533,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     letterSpacing: 1.5,
   },
-  quickAddScroll: { marginBottom: 30 },
+  quickAddScroll: { marginBottom: 25 },
   quickAddBtn: {
     backgroundColor: BRAND.surface,
     flexDirection: "row",
