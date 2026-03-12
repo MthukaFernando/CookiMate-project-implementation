@@ -67,21 +67,31 @@ const CreatePostScreen: React.FC = () => {
     setLoading(true);
 
     try {
-      // 1. Convert to Base64 using the legacy API to bypass SDK 54 errors
-      const base64 = await FileSystem.readAsStringAsync(image.uri, {
-        encoding: "base64",
+      // 1. Create a FormData object (The "Bag" that holds our data)
+      const formData = new FormData();
+
+      // 2. Prepare the image file for the "Bag"
+      // We extract the filename and type from the uri
+      const uriParts = image.uri.split('.');
+      const fileType = uriParts[uriParts.length - 1];
+
+      formData.append("image", {
+        uri: image.uri,
+        name: `photo.${fileType}`,
+        type: `image/${fileType}`,
+      } as any);
+
+      // 3. Append other text fields
+      formData.append("user", currentUser.uid);
+      formData.append("caption", caption);
+
+      // 4. Execute Request
+      // IMPORTANT: No 'Content-Type' header needed, Axios handles it automatically for FormData
+      const response = await axios.post(`${API_URL}/api/social`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-      const base64Image = `data:image/jpeg;base64,${base64}`;
-
-      // 2. Prepare JSON Payload
-      const payload = {
-        user: currentUser.uid,
-        caption: caption,
-        image: base64Image,
-      };
-
-      // 3. Execute Request
-      const response = await axios.post(`${API_URL}/api/social`, payload);
 
       if (response.status === 201) {
         Alert.alert(
@@ -90,7 +100,6 @@ const CreatePostScreen: React.FC = () => {
           [
             { 
               text: "Great", 
-              // Fixed path based on your file structure
               onPress: () => router.replace("/") 
             }
           ]
@@ -100,6 +109,7 @@ const CreatePostScreen: React.FC = () => {
       }
     } catch (error: any) {
       console.log("--- UPLOAD ERROR ---");
+      // Logging the specific error from the server helps us debug 512MB RAM issues
       console.log(error.response?.data || error.message);
       const errorMessage =
         error.response?.data?.message || "Server error. Check your connection.";

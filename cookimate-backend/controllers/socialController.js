@@ -6,29 +6,27 @@ import dotenv from "dotenv";
 dotenv.config();
 
 // 1. Create Post: Author gets 10 points
+// UPDATED: Now uses req.file.path (Multer) instead of Base64 strings
 export const createPost = async (req, res) => {
   try {
-    const { image, user, caption } = req.body;
+    const { user, caption } = req.body;
 
-    if (!image) {
-      return res.status(400).json({ message: "No image string provided" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No image file provided" });
     }
 
-    // 1. Upload Base64 to Cloudinary
-    const uploadResponse = await cloudinary.uploader.upload(image, {
-      folder: "posts",
-    });
+    const imageUrl = req.file.path;
 
-    // 2. Save Post to MongoDB
+    // Save Post to MongoDB
     const newPost = new Post({
       user: user, // This is the Firebase UID string
       caption: caption,
-      imageUrl: uploadResponse.secure_url,
+      imageUrl: imageUrl,
     });
 
     const savedPost = await newPost.save();
 
-    // 3. Reward the Author with 10 points
+    // Reward the Author with 10 points
     await User.findOneAndUpdate(
       { firebaseUid: user },
       { $inc: { points: 10 } },
@@ -40,6 +38,7 @@ export const createPost = async (req, res) => {
     res.status(500).json({ message: "Upload failed", error: err.message });
   }
 };
+
 // 2. Get Feed: Populate user info correctly
 export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -58,7 +57,7 @@ export const getFeed = async (req, res) => {
         select: "username profilePic firebaseUid",
       })
       .populate({
-        path: "comments.user", // ADDED THIS: Populates comment usernames on refresh
+        path: "comments.user",
         model: "User",
         foreignField: "firebaseUid",
         select: "username profilePic",
@@ -69,18 +68,18 @@ export const getFeed = async (req, res) => {
     res.status(500).json(err);
   }
 };
+
 // 3. Like Post: Author gets 5 points
 export const likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    const { userId } = req.body; // Liker's UID
+    const { userId } = req.body;
 
     if (!post) return res.status(404).json("Post not found");
 
     if (!post.likes.includes(userId)) {
       await post.updateOne({ $push: { likes: userId } });
 
-      // Points to Author using the string UID stored in post.user
       await User.findOneAndUpdate(
         { firebaseUid: post.user },
         { $inc: { points: 5 } },
@@ -99,7 +98,7 @@ export const likePost = async (req, res) => {
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { userId, text } = req.body; // userId is the Firebase UID of the commenter
+    const { userId, text } = req.body;
 
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
@@ -107,13 +106,13 @@ export const addComment = async (req, res) => {
       { new: true },
     )
       .populate({
-        path: "comments.user", // Populate the user inside the comments array
+        path: "comments.user",
         model: "User",
-        foreignField: "firebaseUid", // Match the string UID
+        foreignField: "firebaseUid",
         select: "username profilePic",
       })
       .populate({
-        path: "user", // Also populate the post author
+        path: "user",
         model: "User",
         foreignField: "firebaseUid",
         select: "username firebaseUid",
@@ -121,7 +120,6 @@ export const addComment = async (req, res) => {
 
     if (!updatedPost) return res.status(404).json("Post not found");
 
-    // Reward the POST AUTHOR
     await User.findOneAndUpdate(
       { firebaseUid: updatedPost.user.firebaseUid },
       { $inc: { points: 5 } },
@@ -137,12 +135,11 @@ export const addComment = async (req, res) => {
 export const deletePost = async (req, res) => {
   try {
     const { postId } = req.params;
-    const { userId } = req.body; // Pass the current user's UID for security
+    const { userId } = req.body;
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json("Post not found");
 
-    // Security Check: Ensure the person deleting is the owner
     if (post.user !== userId) {
       return res.status(403).json("You can only delete your own posts!");
     }
