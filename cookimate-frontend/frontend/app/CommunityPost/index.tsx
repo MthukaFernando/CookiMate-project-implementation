@@ -11,14 +11,20 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Dimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy"; // Fix for SDK 54
 import axios from "axios";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router"; // For navigation
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { auth } from "../../config/firebase";
 
+const { width } = Dimensions.get("window");
+
 const CreatePostScreen: React.FC = () => {
+  const router = useRouter();
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [caption, setCaption] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -36,7 +42,6 @@ const CreatePostScreen: React.FC = () => {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      // Using string literal instead of Enum to fix the 'Property does not exist' error
       mediaTypes: "images",
       allowsEditing: true,
       aspect: [1, 1],
@@ -80,8 +85,15 @@ const CreatePostScreen: React.FC = () => {
 
       if (response.status === 201) {
         Alert.alert(
-          "Success!",
-          "Post shared! +10 Points added to your profile."
+          "Success!", 
+          "Post shared! +10 Points added to your profile.",
+          [
+            { 
+              text: "Great", 
+              // Fixed path based on your file structure
+              onPress: () => router.replace("/") 
+            }
+          ]
         );
         setImage(null);
         setCaption("");
@@ -97,76 +109,107 @@ const CreatePostScreen: React.FC = () => {
     }
   };
 
-  // --- FIX: The return statement must be here inside the main component function ---
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={{ flex: 1, backgroundColor: "#fff" }}
+      style={styles.mainContainer}
     >
       <ScrollView contentContainerStyle={styles.container}>
-        <Text style={styles.header}>Share Your Cooking</Text>
+        {/* Header with Back Button */}
+        <View style={styles.headerRow}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name="arrow-back" size={24} color="#FFD700" />
+          </TouchableOpacity>
+          <Text style={styles.header}>New Post</Text>
+          <View style={{ width: 24 }} />
+        </View>
 
-        <TouchableOpacity style={styles.imageBox} onPress={pickImage}>
+        <TouchableOpacity style={styles.imageBox} onPress={pickImage} activeOpacity={0.8}>
           {image ? (
             <Image source={{ uri: image.uri }} style={styles.previewImage} />
           ) : (
             <View style={styles.placeholderContainer}>
-              <Text style={styles.placeholderText}>Tap to select a photo</Text>
+              <MaterialCommunityIcons name="camera-plus" size={40} color="#FFD700" />
+              <Text style={styles.placeholderText}>Select your dish photo</Text>
             </View>
           )}
         </TouchableOpacity>
 
-        <TextInput
-          style={styles.captionInput}
-          placeholder="What's the secret ingredient?..."
-          value={caption}
-          onChangeText={setCaption}
-          multiline
-        />
+        <View style={styles.inputSection}>
+          <Text style={styles.inputLabel}>Caption</Text>
+          <TextInput
+            style={styles.captionInput}
+            placeholder="What's the secret ingredient?..."
+            placeholderTextColor="#888"
+            value={caption}
+            onChangeText={setCaption}
+            multiline
+          />
+        </View>
 
         <TouchableOpacity
-          style={[styles.postButton, loading && styles.disabledButton]}
+          style={[styles.postButton, (loading || !image) && styles.disabledButton]}
           onPress={handleUpload}
-          disabled={loading}
+          disabled={loading || !image}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <ActivityIndicator color="#000" />
           ) : (
-            <Text style={styles.postButtonText}>Post to Feed</Text>
+            <Text style={styles.postButtonText}>Post to Community</Text>
           )}
         </TouchableOpacity>
 
         <Text style={styles.footerText}>
-          Posting as: {auth.currentUser?.email || "Unknown User"}
+          Posting as: <Text style={{color: '#FFD700'}}>{auth.currentUser?.email || "Unknown"}</Text>
         </Text>
       </ScrollView>
+
+      {/* Full Screen Loading Overlay */}
+      {loading && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#FFD700" />
+          <Text style={styles.loadingText}>Uploading to Kitchen...</Text>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 };
 
 const styles = StyleSheet.create({
+  mainContainer: {
+    flex: 1,
+    backgroundColor: "#121212",
+  },
   container: {
     flexGrow: 1,
     padding: 20,
     alignItems: "center",
   },
-  header: {
-    fontSize: 22,
-    fontWeight: "bold",
-    marginBottom: 20,
-    color: "#333",
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
     marginTop: 40,
+    marginBottom: 25,
+  },
+  header: {
+    fontSize: 20,
+    fontWeight: "900",
+    color: "#FFD700",
+    textTransform: "uppercase",
+    letterSpacing: 1,
   },
   imageBox: {
     width: "100%",
-    height: 300,
-    backgroundColor: "#f5f5f5",
-    borderRadius: 15,
+    height: width - 40,
+    backgroundColor: "#1E1E1E",
+    borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 20,
     borderWidth: 1,
-    borderColor: "#ddd",
+    borderColor: "#333",
     overflow: "hidden",
   },
   placeholderContainer: {
@@ -177,38 +220,73 @@ const styles = StyleSheet.create({
     height: "100%",
   },
   placeholderText: {
-    color: "#999",
+    color: "#FFD700",
+    marginTop: 10,
+    fontWeight: "600",
+    opacity: 0.8,
+  },
+  inputSection: {
+    width: "100%",
+    marginBottom: 25,
+  },
+  inputLabel: {
+    color: "#FFD700",
+    fontSize: 14,
+    fontWeight: "700",
+    marginBottom: 8,
+    marginLeft: 5,
   },
   captionInput: {
     width: "100%",
-    minHeight: 80,
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 20,
+    minHeight: 100,
+    backgroundColor: "#1E1E1E",
+    borderRadius: 15,
+    padding: 15,
+    color: "#fff",
     textAlignVertical: "top",
-    color: "#333",
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: "#333",
   },
   postButton: {
-    backgroundColor: "#FF6347",
+    backgroundColor: "#FFD700",
     width: "100%",
-    padding: 16,
-    borderRadius: 10,
+    padding: 18,
+    borderRadius: 15,
     alignItems: "center",
+    shadowColor: "#FFD700",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
+    elevation: 8,
   },
   disabledButton: {
-    backgroundColor: "#ccc",
+    backgroundColor: "#555",
+    shadowOpacity: 0,
+    elevation: 0,
   },
   postButtonText: {
-    color: "#fff",
+    color: "#000",
     fontSize: 16,
-    fontWeight: "bold",
+    fontWeight: "900",
+    textTransform: "uppercase",
   },
   footerText: {
-    marginTop: 20,
+    marginTop: 25,
     fontSize: 12,
-    color: "#bbb",
+    color: "#666",
+  },
+  loadingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    zIndex: 10,
+  },
+  loadingText: {
+    color: "#FFD700",
+    marginTop: 15,
+    fontWeight: "700",
   },
 });
 
