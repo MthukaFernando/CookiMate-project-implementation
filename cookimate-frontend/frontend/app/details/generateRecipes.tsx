@@ -61,7 +61,7 @@ export default function GenerateRecipesPage() {
 
   // --- ADJUSTED CONSTANTS FOR FULL SCREEN ---
   const TAB_BAR_HEIGHT = 65;
-  const PEEK_HEIGHT = 180;
+  const PEEK_HEIGHT = 130;
   const EXPANDED_Y = 0; // No margin at the top
   const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
 
