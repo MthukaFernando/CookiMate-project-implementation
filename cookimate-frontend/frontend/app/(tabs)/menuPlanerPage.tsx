@@ -24,7 +24,6 @@ import { Ionicons } from "@expo/vector-icons";
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
 
-//The meal category card content
 const mealCategories = [
   { label: "Breakfast     🍳🥞", color: "#ceb604" },
   { label: "Lunch     🥗🌮", color: "#ceb604" },
@@ -35,7 +34,6 @@ const mealCategories = [
   { label: "Snack     🍿🥨", color: "#ceb604" },
 ];
 
-//Default images for when it is not a festival season
 const defaultImages = [
   require("../../assets/images/planner_img1.png"),
   require("../../assets/images/planner_img2.png"),
@@ -102,14 +100,14 @@ const Page = () => {
       try {
         const debuggerHost = Constants.expoConfig?.hostUri;
         const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-        const baseUrl = `http://${address}:5000/api`; //Dynamic IP
+        const baseUrl = `http://${address}:5000/api`;
         const response = await fetch(`${baseUrl}/recipes/seasonal`);
         const data = await response.json();
         if (data && data.length > 0) {
           setIsSeasonal(true);
           const remoteImages = data.map((recipe: any) => ({
-            uri: recipe.image, //Gets the images of the seasonal recipe
-            id: recipe.id, //Used to get the other content of the seasonal recipes
+            uri: recipe.image,
+            id: recipe.id,
           }));
           setCarouselImages([...remoteImages, remoteImages[0]]);
         } else {
@@ -188,7 +186,7 @@ const Page = () => {
   );
 
   return (
-    <SafeAreaView style={[globalStyle.container, { flex: 1, paddingTop: 20 }]}>
+    <SafeAreaView style={[globalStyle.container, { flex: 1 }]}>
        <ScrollView 
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -273,6 +271,7 @@ const Page = () => {
           )}
         </View>
       </View>
+      </ScrollView>
 
       <Modal
         animationType="slide"
@@ -402,7 +401,6 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -422,20 +420,20 @@ export const calendarStyles: any = {
 export const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 80, // High padding to ensure View Recipe btn clears nav bar
   },
   mainContent: {
-    flex: 1,
+    // flex: 1 removed to allow content to expand naturally
     justifyContent: "space-between",
-    paddingBottom: 40,
   },
   calendarContainer: { 
-    marginTop: Platform.OS === 'ios' ? 50 : 10,
+    marginTop: Platform.OS === 'ios' ? 50 : 20,
     backgroundColor: "#1A1A1A", 
     borderRadius: 25,
     overflow: "hidden",
     paddingVertical: 5,
-    width: CAROUSEL_WIDTH, // Match carousel width
-    alignSelf: "center",   // Center on screen
+    width: CAROUSEL_WIDTH,
+    alignSelf: "center",
   },
   dayComponent: {
     alignItems: "center",
@@ -480,6 +478,7 @@ export const styles = StyleSheet.create({
     shadowRadius: 15,
     elevation: 12,
     marginTop: 20,
+    marginBottom: 20, // Bottom margin to separate from end of view
   },
   carouselWrapper: {
     flex: 1,
