@@ -99,7 +99,7 @@ const Page = () => {
     const fetchSeasonalContent = async () => {
       try {
         
-        const baseUrl = `https://cookimate-project-implementation.onrender.com`;
+        const baseUrl = `https://cookimate-project-implementation-m4on.onrender.com`;
         const response = await fetch(`${baseUrl}/api/recipes/seasonal`);
         const data = await response.json();
         if (data && data.length > 0) {

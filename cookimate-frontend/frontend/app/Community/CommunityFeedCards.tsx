@@ -14,7 +14,7 @@ import { globalStyle } from '../globalStyleSheet.style';
 
 const { width } = Dimensions.get('window');
 
-const BASE_URL = `https://cookimate-project-implementation.onrender.com`;
+const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 // Theme matching your home page palette
 const theme = {

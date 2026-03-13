@@ -30,7 +30,7 @@ const GAP = 5;
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
 
-const BASE_URL = `https://cookimate-project-implementation.onrender.com`;
+const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const COLORS = {
   background: "#050505",
