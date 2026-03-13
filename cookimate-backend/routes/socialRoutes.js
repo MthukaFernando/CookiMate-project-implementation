@@ -6,22 +6,18 @@ import {
   addComment,
   deletePost,
 } from "../controllers/socialController.js";
+import { upload } from "../config/cloudinary.js"; // 1. Import the upload engine
 
 const router = express.Router();
 
-// Create a post with image upload
-router.post("/", createPost);
+// 2. Add 'upload.single("image")' here
+// This looks for a field named "image" in the incoming request
+router.post("/", upload.single("image"), createPost);
 
-// Get the community feed
+// ... (rest of your routes stay the same)
 router.get("/feed", getFeed);
-
-// Like/unlike a post
 router.put("/:id/like", likePost);
-
-// Add a comment to a post
 router.post("/:postId/comment", addComment);
-
-// Delete a post
 router.delete("/:postId", deletePost);
 
 export default router;
