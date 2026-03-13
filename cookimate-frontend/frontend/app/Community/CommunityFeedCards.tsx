@@ -13,9 +13,8 @@ import { auth } from "../../config/firebase";
 import { globalStyle } from '../globalStyleSheet.style';
 
 const { width } = Dimensions.get('window');
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const BASE_URL = `http://${address}:5000/api`;
+
+const BASE_URL = `https://cookimate-project-implementation.onrender.com`;
 
 // Theme matching your home page palette
 const theme = {
@@ -47,7 +46,7 @@ export default function CommunityFeed() {
 
   const fetchFeed = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/social/feed`);
+      const response = await axios.get(`${BASE_URL}/api/social/feed`);
       setPosts(response.data);
     } catch (error) { 
       console.error(error); 
@@ -64,7 +63,7 @@ export default function CommunityFeed() {
     if (text.length > 1) {
       setIsSearching(true);
       try {
-        const res = await axios.get(`${BASE_URL}/users/search`, { params: { username: text } });
+        const res = await axios.get(`${BASE_URL}/api/users/search`, { params: { username: text } });
         setSearchResults(res.data);
       } catch (err) { console.log(err); }
     } else {
@@ -86,7 +85,7 @@ export default function CommunityFeed() {
       return p;
     }));
     try {
-      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid });
+      await axios.put(`${BASE_URL}/api/social/${postId}/like`, { userId: currentUser.uid });
     } catch (err) { 
       console.error("Like failed", err);
       fetchFeed(); 
@@ -97,7 +96,7 @@ export default function CommunityFeed() {
     if (!commentText.trim() || !currentUser) return;
     setIsSubmitting(true);
     try {
-      const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
+      const res = await axios.post(`${BASE_URL}/api/social/${postId}/comment`, {
         userId: currentUser.uid,
         text: commentText
       });

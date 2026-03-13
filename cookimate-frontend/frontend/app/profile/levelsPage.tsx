@@ -18,9 +18,7 @@ import Constants from "expo-constants";
 
 const { width } = Dimensions.get("window");
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation.onrender.com`;
 
 const LevelsPage = () => {
   const router = useRouter();

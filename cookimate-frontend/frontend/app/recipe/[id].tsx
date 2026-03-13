@@ -24,9 +24,7 @@ import { auth } from "../../config/firebase";
 // Adjusted import to your provided path
 import Timer from "../details/timerPage";
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation.onrender.com`;
 
 /**
  * Robust helper to extract all time durations from a string.

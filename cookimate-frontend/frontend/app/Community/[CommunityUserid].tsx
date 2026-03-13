@@ -29,9 +29,8 @@ const COLUMN_COUNT = 3;
 const GAP = 5;
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const BASE_URL = `http://${address}:5000/api`;
+
+const BASE_URL = `https://cookimate-project-implementation.onrender.com`;
 
 const COLORS = {
   background: "#050505",
@@ -96,7 +95,7 @@ export default function CommunityUserProfile() {
       if (!CommunityUserid) return;
       setLoading(true);
       const response = await axios.get(
-        `${BASE_URL}/users/community/${CommunityUserid}`,
+        `${BASE_URL}/api/users/community/${CommunityUserid}`,
         { params: { viewerId: currentUser?.uid } },
       );
       setProfile(response.data);
@@ -115,7 +114,7 @@ export default function CommunityUserProfile() {
   const handleFollowToggle = async () => {
     if (!currentUser || !profile) return;
     try {
-      const res = await axios.put(`${BASE_URL}/users/follow`, {
+      const res = await axios.put(`${BASE_URL}/api/users/follow`, {
         targetUserId: CommunityUserid,
         currentUserId: currentUser.uid,
       });
@@ -142,7 +141,7 @@ export default function CommunityUserProfile() {
     setIsSubmitting(true);
     try {
       const res = await axios.post(
-        `${BASE_URL}/social/${selectedPost.id}/comment`,
+        `${BASE_URL}/api/social/${selectedPost.id}/comment`,
         {
           userId: currentUser.uid,
           text: commentText,
@@ -178,7 +177,7 @@ export default function CommunityUserProfile() {
           style: "destructive",
           onPress: async () => {
             try {
-              await axios.delete(`${BASE_URL}/social/${postId}`, {
+              await axios.delete(`${BASE_URL}/api/social/${postId}`, {
                 data: { userId: currentUser?.uid }
               });
               setProfile((prev) =>

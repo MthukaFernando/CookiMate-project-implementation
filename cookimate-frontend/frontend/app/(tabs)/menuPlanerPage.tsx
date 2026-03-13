@@ -98,10 +98,9 @@ const Page = () => {
   useEffect(() => {
     const fetchSeasonalContent = async () => {
       try {
-        const debuggerHost = Constants.expoConfig?.hostUri;
-        const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-        const baseUrl = `http://${address}:5000/api`;
-        const response = await fetch(`${baseUrl}/recipes/seasonal`);
+        
+        const baseUrl = `https://cookimate-project-implementation.onrender.com`;
+        const response = await fetch(`${baseUrl}/api/recipes/seasonal`);
         const data = await response.json();
         if (data && data.length > 0) {
           setIsSeasonal(true);

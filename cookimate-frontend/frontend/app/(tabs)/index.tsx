@@ -26,10 +26,7 @@ const VIDEO_SIZE = SCREEN_WIDTH * 0.45;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
-
+const API_URL = `https://cookimate-project-implementation.onrender.com`;
 const theme = {
   headerBg: "#130B00",
   mainBg: "#0A0A0A",
