@@ -10,20 +10,18 @@ import {
   View,
   ImageSourcePropType,
   Dimensions,
-  SafeAreaView,
   StatusBar,
   Animated,
   FlatList,
   ActivityIndicator,
 } from "react-native";
-import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context"; // Required for cross-platform safe areas
 import { Video, ResizeMode } from "expo-av";
 import axios from "axios";
 import Constants from "expo-constants";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-// Video dimensions set to 50% of width
 const VIDEO_SIZE = SCREEN_WIDTH * 0.45;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
@@ -94,9 +92,8 @@ const NavCard = ({
 };
 
 function HomePage() {
-  const [message, setMessage] = useState(
-    "What would you like to cook?",
-  );
+  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const [message, setMessage] = useState("What would you like to cook?");
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const videoRef = useRef(null);
@@ -150,7 +147,7 @@ function HomePage() {
     return (
       <Pressable
         style={styles.randomCard}
-        onPress={() => router.push(`/recipe/${item.id}`)}
+        onPress={() => router.push(`/recipe/${item.id}` as any)}
       >
         <Image source={{ uri: item.image }} style={styles.randomImage} />
         <View style={styles.randomInfo}>
@@ -169,13 +166,15 @@ function HomePage() {
   };
 
   return (
-    <View style={styles.container}>
+    // Applied dynamic padding to the top based on device inset
+    <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
 
       <ScrollView showsVerticalScrollIndicator={false} bounces={false}>
-        <SafeAreaView>
+        <View style={styles.welcomeWrapper}>
           <Text style={styles.welcome}>Welcome Back</Text>
-        </SafeAreaView>
+        </View>
+
         <View style={styles.heroContainer}>
           <View style={styles.videoSection}>
             <Video
@@ -250,23 +249,27 @@ function HomePage() {
           )}
         </View>
 
-        <View style={{ height: 120 }} />
+        {/* Dynamic bottom spacing to avoid home indicator overlap */}
+        <View style={{ height: 120 + insets.bottom }} />
       </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.mainBg },
-
+  container: { 
+    flex: 1, 
+    backgroundColor: theme.mainBg 
+  },
+  welcomeWrapper: {
+    paddingHorizontal: 25,
+    paddingTop: 10,
+  },
   welcome: {
     fontSize: 28,
     fontWeight: "900",
     color: "#ffe100",
-    paddingHorizontal: 25,
-    paddingTop: 20,
   },
-
   heroContainer: {
     width: SCREEN_WIDTH,
     alignItems: "center",
@@ -288,19 +291,18 @@ const styles = StyleSheet.create({
     width: "100%",
     height: "100%",
   },
-
   bubbleWrapper: {
-    marginTop: -10, // Moves it partially over the bottom of the video for that overlay look
+    marginTop: -10,
     zIndex: 10,
     alignItems: "center",
   },
   bubbleBody: {
-    backgroundColor: "rgb(39, 39, 39)", // Dark pill background
+    backgroundColor: "rgb(39, 39, 39)",
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 22,
     paddingVertical: 14,
-    borderRadius: 100, // Full pill shape
+    borderRadius: 100,
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
     shadowColor: "#000",
@@ -313,7 +315,7 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: "#4CAF50", // Green status dot
+    backgroundColor: "#4CAF50",
     marginRight: 12,
   },
   bubbleText: {
@@ -322,7 +324,6 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     textAlign: "center",
   },
-
   contentBody: {
     backgroundColor: theme.mainBg,
   },
@@ -342,7 +343,6 @@ const styles = StyleSheet.create({
     marginTop: 25,
     marginBottom: 15,
   },
-
   navCard: {
     width: CARD_WIDTH,
     height: 320,
@@ -372,7 +372,6 @@ const styles = StyleSheet.create({
   titleRow: { flexDirection: "row", alignItems: "center" },
   navTitle: { fontSize: 19, fontWeight: "800", color: "#fff", marginLeft: 8 },
   subtitle: { marginTop: 6, color: "#aaa", fontSize: 12 },
-
   randomCard: {
     width: 260,
     backgroundColor: theme.card,

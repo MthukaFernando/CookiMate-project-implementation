@@ -188,28 +188,34 @@ const Page = () => {
       <ScrollView 
         style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.mainContent}>
-          <View style={styles.calendarContainer}>
-            <Calendar
-              theme={calendarStyles}
-              markedDates={markedDates}
-              onDayPress={(day) => {
-                setSelectedDate(day.dateString);
-                setIsAddingMeal(false);
-                setIsModalVisible(true);
-              }}
-              dayComponent={({ date, state, marking }: any) => {
-                const isToday = state === "today";
-                return (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setSelectedDate(date.dateString);
-                      setIsAddingMeal(false);
-                      setIsModalVisible(true);
-                    }}
-                    style={styles.dayComponent}
+        bounces={false}
+       >
+      <View style={styles.mainContent}>
+        <View style={styles.calendarContainer}>
+          <Calendar
+            theme={calendarStyles}
+            markedDates={markedDates}
+            onDayPress={(day) => {
+              setSelectedDate(day.dateString);
+              setIsAddingMeal(false);
+              setIsModalVisible(true);
+            }}
+            dayComponent={({ date, state, marking }: any) => {
+              const isToday = state === "today";
+              return (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSelectedDate(date.dateString);
+                    setIsAddingMeal(false);
+                    setIsModalVisible(true);
+                  }}
+                  style={styles.dayComponent}
+                >
+                  <View
+                    style={[
+                      styles.dayTextContainer,
+                      isToday && styles.todayCircle,
+                    ]}
                   >
                     <View style={[styles.dayTextContainer, isToday && styles.todayCircle]}>
                       <Text style={[styles.dayText, state === "disabled" ? { color: "#4d4d4d" } : { color: isToday ? "white" : "#cecece" }]}>
@@ -360,25 +366,28 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: 150,
+    minHeight: height, // Ensures the scrollview takes full screen height
   },
   mainContent: {
     flex: 1,
-    alignItems: 'center',
+    justifyContent: "space-between", // Pushes calendar up and carousel down
+    paddingBottom: height * 0.11, // Dynamic bottom padding
   },
   calendarContainer: { 
-    marginTop: Platform.OS === 'ios' ? 20 : 10,
+    marginTop: Platform.OS === 'ios' ? height * 0.04 : height * 0.04, // Dynamic top margin
     backgroundColor: "#1A1A1A", 
     borderRadius: 25,
     overflow: "hidden",
-    paddingVertical: 20,
+    paddingVertical: height * 0.015,
     width: CAROUSEL_WIDTH,
+    alignSelf: "center",
+    minHeight: height * 0.45, // Calendar scales to take ~45% of screen height
   },
   dayComponent: {
     alignItems: "center",
     justifyContent: "center",
-    width: 45,
-    height: 60,
+    width: width * 0.12,
+    height: height * 0.06, // Day cells scale vertically
   },
   dayTextContainer: {
     width: 32,
@@ -396,7 +405,7 @@ const styles = StyleSheet.create({
   },
   plannedIndicator: {
     position: "absolute", 
-    bottom: 0,
+    bottom: 4,
     backgroundColor: "#FF4D4D",
     borderRadius: 4,
     paddingHorizontal: 4,
@@ -409,13 +418,13 @@ const styles = StyleSheet.create({
   },
   carouselShadowContainer: {
     width: CAROUSEL_WIDTH,
-    height: 260,
+    height: height * 0.3, // Carousel takes ~30% of screen height
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
     shadowRadius: 15,
     elevation: 12,
-    marginTop: 20,
+   
   },
   carouselWrapper: {
     flex: 1,
