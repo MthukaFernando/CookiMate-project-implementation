@@ -12,15 +12,14 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
-  Platform
+  Platform,
+  StatusBar
 } from "react-native";
 import React, { useState, useRef, useEffect, useMemo } from "react";
 import { Calendar } from "react-native-calendars";
 import Constants from "expo-constants";
-import { globalStyle } from "../globalStyleSheet.style";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // Recommended for notch handling
 
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
@@ -42,7 +41,6 @@ const defaultImages = [
 ];
 
 const Page = () => {
-  const insets = useSafeAreaInsets();
   const [isSeasonal, setIsSeasonal] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
@@ -52,7 +50,6 @@ const Page = () => {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
-  
   const {
     openModalWithDate,
     newRecipeId,
@@ -159,7 +156,7 @@ const Page = () => {
   const handleDeleteRecipe = (uniqueId: string) => {
     Alert.alert(
       "Remove Recipe",
-      "Are you sure you want to delete this recipe from your planner?",
+      "Are you sure you want to delete this recipe from your planner :3?",
       [
         { text: "Cancel", style: "cancel" },
         {
@@ -187,83 +184,82 @@ const Page = () => {
   );
 
   return (
-    <View style={[globalStyle.container, { flex: 1, backgroundColor: '#000', paddingTop: insets.top }]}>
-       <ScrollView 
-        showsVerticalScrollIndicator={false}
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView 
+        style={{ flex: 1 }}
         contentContainerStyle={styles.scrollContent}
-        bounces={false}
-       >
-      <View style={styles.mainContent}>
-        <View style={styles.calendarContainer}>
-          <Calendar
-            theme={calendarStyles}
-            markedDates={markedDates}
-            onDayPress={(day) => {
-              setSelectedDate(day.dateString);
-              setIsAddingMeal(false);
-              setIsModalVisible(true);
-            }}
-            dayComponent={({ date, state, marking }: any) => {
-              const isToday = state === "today";
-              return (
-                <TouchableOpacity
-                  onPress={() => {
-                    setSelectedDate(date.dateString);
-                    setIsAddingMeal(false);
-                    setIsModalVisible(true);
-                  }}
-                  style={styles.dayComponent}
-                >
-                  <View style={[styles.dayTextContainer, isToday && styles.todayCircle]}>
-                    <Text style={[styles.dayText, state === "disabled" ? { color: "#4d4d4d" } : { color: isToday ? "white" : "#cecece" }]}>
-                      {date.day}
-                    </Text>
-                  </View>
-                  {marking?.marked && (
-                    <View style={styles.plannedIndicator}>
-                      <Text style={styles.plannedIndicatorText}>PLANNED</Text>
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.mainContent}>
+          <View style={styles.calendarContainer}>
+            <Calendar
+              theme={calendarStyles}
+              markedDates={markedDates}
+              onDayPress={(day) => {
+                setSelectedDate(day.dateString);
+                setIsAddingMeal(false);
+                setIsModalVisible(true);
+              }}
+              dayComponent={({ date, state, marking }: any) => {
+                const isToday = state === "today";
+                return (
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSelectedDate(date.dateString);
+                      setIsAddingMeal(false);
+                      setIsModalVisible(true);
+                    }}
+                    style={styles.dayComponent}
+                  >
+                    <View style={[styles.dayTextContainer, isToday && styles.todayCircle]}>
+                      <Text style={[styles.dayText, state === "disabled" ? { color: "#4d4d4d" } : { color: isToday ? "white" : "#cecece" }]}>
+                        {date.day}
+                      </Text>
                     </View>
-                  )}
-                </TouchableOpacity>
-              );
-            }}
-          />
-        </View>
-
-        <View style={styles.carouselShadowContainer}>
-          <View style={styles.carouselWrapper}>
-            <FlatList
-              ref={flatListRef}
-              data={carouselImages}
-              horizontal
-              pagingEnabled
-              snapToInterval={CAROUSEL_WIDTH}
-              decelerationRate="fast"
-              showsHorizontalScrollIndicator={false}
-              keyExtractor={(_, index) => index.toString()}
-              onScroll={handleScroll}
-              scrollEventThrottle={16}
-              renderItem={renderItem}
+                    {marking?.marked && (
+                      <View style={styles.plannedIndicator}>
+                        <Text style={styles.plannedIndicatorText}>PLANNED</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              }}
             />
           </View>
-          {isSeasonal && (
-            <TouchableOpacity
-              style={styles.seasonalButton}
-              onPress={() => {
-                const currentRecipe = carouselImages[currentIndex];
-                if (currentRecipe && currentRecipe.id) {
-                  router.push(`/recipe/${currentRecipe.id}` as any);
-                }
-              }}
-            >
-              <Text style={styles.seasonalButtonText}>View Recipe</Text>
-            </TouchableOpacity>
-          )}
+
+          <View style={styles.carouselShadowContainer}>
+            <View style={styles.carouselWrapper}>
+              <FlatList
+                ref={flatListRef}
+                data={carouselImages}
+                horizontal
+                pagingEnabled
+                snapToInterval={CAROUSEL_WIDTH}
+                decelerationRate="fast"
+                showsHorizontalScrollIndicator={false}
+                keyExtractor={(_, index) => index.toString()}
+                onScroll={handleScroll}
+                scrollEventThrottle={16}
+                renderItem={renderItem}
+              />
+            </View>
+            {isSeasonal && (
+              <TouchableOpacity
+                style={styles.seasonalButton}
+                onPress={() => {
+                  const currentRecipe = carouselImages[currentIndex];
+                  if (currentRecipe && currentRecipe.id) {
+                    router.push(`/recipe/${currentRecipe.id}` as any);
+                  }
+                }}
+              >
+                <Text style={styles.seasonalButtonText}>View Recipe</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
       </ScrollView>
 
-      {/* Modal logic remains unchanged for brevity */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -340,7 +336,7 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -356,29 +352,33 @@ export const calendarStyles: any = {
   arrowColor: "#ffcc00",
 };
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#0A0A0A", 
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
+  },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Platform.OS === 'ios' ? 100 : 80, // Dynamic padding to clear nav bar
+    paddingBottom: 150,
   },
   mainContent: {
     flex: 1,
-    paddingHorizontal: 15,
+    alignItems: 'center',
   },
   calendarContainer: { 
-    marginTop: 10,
+    marginTop: Platform.OS === 'ios' ? 20 : 10,
     backgroundColor: "#1A1A1A", 
     borderRadius: 25,
     overflow: "hidden",
-    paddingVertical: 5,
+    paddingVertical: 20,
     width: CAROUSEL_WIDTH,
-    alignSelf: "center",
   },
   dayComponent: {
     alignItems: "center",
     justifyContent: "center",
     width: 45,
-    height: 42,
+    height: 60,
   },
   dayTextContainer: {
     width: 32,
@@ -408,9 +408,8 @@ export const styles = StyleSheet.create({
     fontWeight: "900",
   },
   carouselShadowContainer: {
-    alignSelf: "center",
     width: CAROUSEL_WIDTH,
-    aspectRatio: 1.4, // Responsive aspect ratio instead of fixed height
+    height: 260,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.3,
@@ -442,9 +441,6 @@ export const styles = StyleSheet.create({
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     borderTopWidth: 1.5,
-    borderLeftWidth: 1.5,
-    borderRightWidth: 1.5,
-    borderBottomWidth: 0,
     borderColor: "#ffb0053c",
     elevation: 20,
   },
@@ -468,7 +464,7 @@ export const styles = StyleSheet.create({
     fontWeight: "bold",
     lineHeight: 28,
   },
-  popupBoxDate: { fontSize: 22, fontWeight: "bold", color: "#000000" },
+  popupBoxDate: { fontSize: 22, fontWeight: "bold", color: "#ffffff" },
   addMealContainer: { flex: 1, width: "100%", marginTop: 5 },
   addMealHeader: {
     fontSize: 18,
@@ -530,7 +526,7 @@ export const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    color: "#ffff",
+    color: "#ffffff",
     textAlign: "center",
     marginTop: 10,
     opacity: 0.6,
