@@ -24,7 +24,7 @@ import { auth } from "../../config/firebase";
 // Adjusted import to your provided path
 import Timer from "../details/timerPage";
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 /**
  * Robust helper to extract all time durations from a string.

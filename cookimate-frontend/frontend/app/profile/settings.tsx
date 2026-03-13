@@ -19,7 +19,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 // Predefined dietary preferences options - ALL WITH SAME ICON - UPDATED TO GOLD
 const DIETARY_OPTIONS = [

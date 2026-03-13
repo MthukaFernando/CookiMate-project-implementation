@@ -16,7 +16,7 @@ import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 const DEFAULT_AVATAR = "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
 
 const ProfilePage = () => {

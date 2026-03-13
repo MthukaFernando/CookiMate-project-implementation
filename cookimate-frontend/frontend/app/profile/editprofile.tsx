@@ -21,7 +21,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 
-        const API_URL = `https://cookimate-project-implementation.onrender.com`;
+        const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const AVATAR_OPTIONS = [
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png",

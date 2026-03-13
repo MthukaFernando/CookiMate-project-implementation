@@ -18,7 +18,7 @@ import Constants from "expo-constants";
 
 const { width } = Dimensions.get("window");
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const LevelsPage = () => {
   const router = useRouter();

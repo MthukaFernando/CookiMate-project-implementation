@@ -25,7 +25,7 @@ import { auth } from "../../config/firebase";
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const cuisineOptions = [
   { label: "All Cuisines", value: "All" },

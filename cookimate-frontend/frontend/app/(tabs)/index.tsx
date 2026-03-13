@@ -26,7 +26,7 @@ const VIDEO_SIZE = SCREEN_WIDTH * 0.45;
 const CARD_WIDTH = SCREEN_WIDTH * 0.72;
 const SPACING = 12;
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 const theme = {
   headerBg: "#130B00",
   mainBg: "#0A0A0A",

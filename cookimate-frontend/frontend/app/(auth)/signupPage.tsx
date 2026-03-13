@@ -24,7 +24,7 @@ import {
   signOut,
 } from "firebase/auth";
 
-const API_URL = `https://cookimate-project-implementation.onrender.com`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 export default function SignupPage() {
   const router = useRouter();
 
