@@ -128,7 +128,7 @@ const ProfilePage = () => {
             <StatItem 
               icon="users" 
               label="Fans" 
-              value={user?.followers || 0} 
+              value={user?.followers.length || 0} 
               onPress={() => console.log("Route to Followers")}
             />
           </View>
