@@ -356,7 +356,11 @@ const MyRecipesPage = () => {
             value={meal}
             disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
-            containerStyle={{ backgroundColor: "#000000" }}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2, 
+              borderColor: "#D4AF37",
+            }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
           />
@@ -370,7 +374,11 @@ const MyRecipesPage = () => {
             valueField="value"
             value={cuisine}
             onChange={(item) => setCuisine(item.value)}
-            containerStyle={{ backgroundColor: "#000000" }}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2, 
+              borderColor: "#D4AF37",
+            }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
           />
@@ -384,7 +392,11 @@ const MyRecipesPage = () => {
             valueField="value"
             value={time}
             onChange={(item) => setTime(item.value)}
-            containerStyle={{ backgroundColor: "#000000" }}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2, 
+              borderColor: "#D4AF37",
+            }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
           />
@@ -398,7 +410,11 @@ const MyRecipesPage = () => {
             valueField="value"
             value={diet}
             onChange={(item) => setDiet(item.value)}
-            containerStyle={{ backgroundColor: "#000000" }}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2, 
+              borderColor: "#D4AF37",
+            }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
           />
