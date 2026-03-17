@@ -101,10 +101,10 @@ This project was developed as a year-long Software Development Group Project (SD
 This project was developed collaboratively by a student team.  
 - [Methuka Fernando](https://github.com/MthukaFernando)
 - [Chalini Kaushalya](https://github.com/ChaliniKK)
-- [Anchor Text](URL)
-- [Anchor Text](URL)
-- [Anchor Text](URL)
-- [Anchor Text](URL)
+- [Vishmi Himasha](https://github.com/Vishmeii444)
+- [Wenuka Kithnula](https://github.com/WenukaKithnula)
+- [Shashini Ranasinghe](https://github.com/shashini13)
+- [Ashani Hansika](https://github.com/AshaniHansika)
 
 
 ---
