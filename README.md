@@ -69,5 +69,49 @@ The system is designed for scalability and maintainability.
 
 ---
 
+## 👥 Team & Collaboration
+
+This project was developed as a year-long Software Development Group Project (SDGP), following industry-standard SDLC practices.
+
+- Collaborative development using GitHub
+- Task distribution and feature ownership
+- Documentation and iterative development
+- Continuous integration through version control
+
+---
+
+## 🎯 Target Users
+
+- University and dorm students  
+- Beginners in cooking  
+- Anyone looking to reduce food waste and cook smarter
+
+---
+
+## 🚀 Future Improvements
+
+- Advanced AI personalization
+- Grocery list auto-generation
+- Nutrition tracking integration
+
+---
+
+## 🤝 Contributions
+
+This project was developed collaboratively by a student team.  
+
+---
+
+## 🎥 Demo
+
+📽 Demo Video: [https://drive.google.com/file/d/13GSr7hKTBE4E6k8p4Wtv6deOlLoe2Jxa/view?usp=sharing]
+
+---
+
+## 📄 License
+
+This project is developed for academic purposes.
+
+
 
 
