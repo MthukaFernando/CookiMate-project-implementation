@@ -362,6 +362,9 @@ const MyRecipesPage = () => {
             value={meal}
             disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
+            containerStyle={{ backgroundColor: "#000000" }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -373,6 +376,9 @@ const MyRecipesPage = () => {
             valueField="value"
             value={cuisine}
             onChange={(item) => setCuisine(item.value)}
+            containerStyle={{ backgroundColor: "#000000" }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -384,6 +390,9 @@ const MyRecipesPage = () => {
             valueField="value"
             value={time}
             onChange={(item) => setTime(item.value)}
+            containerStyle={{ backgroundColor: "#000000" }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -395,6 +404,9 @@ const MyRecipesPage = () => {
             valueField="value"
             value={diet}
             onChange={(item) => setDiet(item.value)}
+            containerStyle={{ backgroundColor: "#000000" }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
         </ScrollView>
       </View>
