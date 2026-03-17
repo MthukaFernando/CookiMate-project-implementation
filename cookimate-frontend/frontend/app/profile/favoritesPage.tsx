@@ -256,6 +256,10 @@ const FavoritesPage = () => {
             }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -272,6 +276,10 @@ const FavoritesPage = () => {
             }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -288,6 +296,10 @@ const FavoritesPage = () => {
             }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -304,6 +316,10 @@ const FavoritesPage = () => {
             }}
             itemTextStyle={{ color: "#FFFFFF" }}
             activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
         </ScrollView>
       </View>
