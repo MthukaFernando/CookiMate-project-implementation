@@ -16,4 +16,36 @@ Reduce food waste • Simplify cooking • Build confidence in the kitchen
 
 ---
 
+## ✨ Features
+
+### 🥕 AI Recipe Generation
+- Generate recipes using leftover ingredients
+- Smart suggestions based on available items
+
+### 🧂 Cooking Error Recovery
+- AI-powered tips to fix common mistakes
+  - Too much salt
+  - Overcooked dishes
+  - Texture or seasoning issues
+
+### 👩‍🍳 Interactive Cooking Guide
+- Animated mascot for step-by-step guidance
+- Beginner-friendly cooking experience
+
+### ⏱ Utilities
+- Built-in cooking timers
+- Unit and measurement converters
+
+### 📅 Meal Planner
+- Calendar-based meal planning
+- Helps organize meals for busy schedules
+
+### 📸 Social Recipe Sharing
+- Share cooked recipes with images
+- Post tips and personal variations
+- Follow other users and explore new ideas
+
+---
+
+
 
