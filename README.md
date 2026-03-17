@@ -99,6 +99,13 @@ This project was developed as a year-long Software Development Group Project (SD
 ## 🤝 Contributions
 
 This project was developed collaboratively by a student team.  
+[Methuka Fernando](https://github.com/MthukaFernando)
+[Chalini Kaushalya](https://github.com/ChaliniKK)
+[Anchor Text](URL)
+[Anchor Text](URL)
+[Anchor Text](URL)
+[Anchor Text](URL)
+
 
 ---
 
