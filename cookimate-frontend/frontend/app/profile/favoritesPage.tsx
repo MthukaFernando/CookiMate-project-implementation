@@ -214,7 +214,7 @@ const FavoritesPage = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
+          <Ionicons name="arrow-back" size={24} color="#D4AF37" />
         </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
@@ -250,6 +250,12 @@ const FavoritesPage = () => {
             valueField="value"
             value={meal}
             onChange={(item) => setMeal(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -260,6 +266,12 @@ const FavoritesPage = () => {
             valueField="value"
             value={cuisine}
             onChange={(item) => setCuisine(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -270,6 +282,12 @@ const FavoritesPage = () => {
             valueField="value"
             value={time}
             onChange={(item) => setTime(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
           <Dropdown
             style={styles.dropdown}
@@ -280,6 +298,12 @@ const FavoritesPage = () => {
             valueField="value"
             value={diet}
             onChange={(item) => setDiet(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
           />
         </ScrollView>
       </View>
@@ -354,8 +378,8 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: '#1b1b1b',
-    borderColor: '#1A1A1A',
+    backgroundColor: "#1b1b1b",
+    borderColor: "#1A1A1A",
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,
@@ -389,7 +413,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   viewButton: {
-     backgroundColor: "#D4AF37",
+    backgroundColor: "#D4AF37",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,
