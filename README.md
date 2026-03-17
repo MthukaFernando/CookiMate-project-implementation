@@ -47,5 +47,27 @@ Reduce food waste • Simplify cooking • Build confidence in the kitchen
 
 ---
 
+## 🛠 Tech Stack
+
+- **Frontend:** TypeScript, JavaScript  
+- **Backend & Services:** Firebase, MongoDB  
+- **Cloud Platform:** Google Cloud Console  
+- **Version Control:** GitHub (team-based workflow with commits)
+
+---
+
+## 🏗 Architecture
+
+The application follows a modular full-stack architecture:
+
+- Frontend communicates with backend services via REST APIs
+- Firebase handles authentication and real-time features
+- MongoDB manages structured recipe and user data
+- Google Cloud supports deployment and cloud services
+
+The system is designed for scalability and maintainability.
+
+---
+
 
 
