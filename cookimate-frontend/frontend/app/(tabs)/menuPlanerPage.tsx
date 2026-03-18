@@ -24,6 +24,9 @@ import { Ionicons } from "@expo/vector-icons";
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
 
+
+let globalPlannedRecipes: any[] = [];
+
 const mealCategories = [
   { label: "Breakfast     🍳🥞", color: "#ceb604" },
   { label: "Lunch     🥗🌮", color: "#ceb604" },
@@ -45,11 +48,15 @@ const Page = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [isAddingMeal, setIsAddingMeal] = useState(false);
-  const [plannedRecipes, setPlannedRecipes] = useState<any[]>([]);
+  
+  // Initialize from global memory instead of an empty array
+  const [plannedRecipes, setPlannedRecipes] = useState<any[]>(globalPlannedRecipes);
+  
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const router = useRouter();
+  
   const {
     openModalWithDate,
     newRecipeId,
@@ -57,6 +64,11 @@ const Page = () => {
     newRecipeImage,
     newRecipeCategory,
   } = useLocalSearchParams();
+
+  // Keep global memory in sync whenever the local state changes
+  useEffect(() => {
+    globalPlannedRecipes = plannedRecipes;
+  }, [plannedRecipes]);
 
   const markedDates = useMemo(() => {
     const marks: any = {};
@@ -69,17 +81,20 @@ const Page = () => {
   useEffect(() => {
     if (newRecipeId) {
       const recipeToAdd = {
-        uniqueId: Date.now().toString(),
+        uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
         id: newRecipeId,
         name: newRecipeName,
         image: newRecipeImage,
         category: newRecipeCategory,
         date: openModalWithDate,
       };
+      
       setPlannedRecipes((prev) => [...prev, recipeToAdd]);
       setSelectedDate(openModalWithDate as string);
       setIsAddingMeal(false);
       setIsModalVisible(true);
+
+      // Clear params to prevent double-adding on refresh
       router.setParams({
         newRecipeId: undefined,
         newRecipeName: undefined,
@@ -173,7 +188,7 @@ const Page = () => {
 
   const getCategoryColor = (catName: string) => {
     const found = mealCategories.find((c) => c.label.includes(catName));
-    return found ? found.color : "#fff";
+    return found ? found.color : "#ceb604";
   };
 
   const renderItem = ({ item }: { item: any }) => (
