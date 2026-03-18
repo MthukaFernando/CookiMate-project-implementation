@@ -3,7 +3,7 @@ import SeasonalRecipe from "../models/SeasonalRecipe.js";
 
 export const getAllRecipes = async (req, res) => {
   try {
-    const { searchQuery, cuisine, meal, diet } = req.query;
+    const { searchQuery, cuisine, meal, diet, time } = req.query;
     let query = {};
 
     // Search by name
@@ -24,6 +24,22 @@ export const getAllRecipes = async (req, res) => {
     // Filter by Diet
     if (diet && diet !== 'All') {
       query.search_terms = diet.toLowerCase();
+    }
+
+    //Filter by Time
+    if (time && time !== 'All') {
+      const timeLimit = parseInt(time);
+      
+      if (timeLimit === 15) {
+        // Under 15 min
+        query.totalTime = { $lte: 15 };
+      } else if (timeLimit === 30) {
+        // 15-30 min
+        query.totalTime = { $gt: 15, $lte: 30 };
+      } else if (timeLimit === 60) {
+        // 30-60 min
+        query.totalTime = { $gt: 30, $lte: 60 };
+      }
     }
 
     //Returns all recipes
