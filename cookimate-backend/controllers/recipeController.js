@@ -29,17 +29,35 @@ export const getAllRecipes = async (req, res) => {
     //Filter by Time
     if (time && time !== 'All') {
       const timeLimit = parseInt(time);
-      
-      if (timeLimit === 15) {
-        // Under 15 min
-        query.totalTime = { $lte: 15 };
-      } else if (timeLimit === 30) {
-        // 15-30 min
-        query.totalTime = { $gt: 15, $lte: 30 };
-      } else if (timeLimit === 60) {
-        // 30-60 min
-        query.totalTime = { $gt: 30, $lte: 60 };
-      }
+
+      recipes = recipes.filter((recipe) => {
+        if (!recipe.totalTime) return false;
+
+        const timeStr = recipe.totalTime.toLowerCase();
+        let totalMinutes = 0;
+
+        // Parse Hours
+        const hourMatch = timeStr.match(/(\d+)\s*h/);
+        if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60;
+
+        // Parse Minutes
+        const minMatch = timeStr.match(/(\d+)\s*m/);
+        if (minMatch) {
+          totalMinutes += parseInt(minMatch[1]);
+        } else if (!hourMatch) {
+          const firstNum = timeStr.match(/\d+/);
+          if (firstNum) totalMinutes = parseInt(firstNum[0]);
+        }
+
+        // Logical comparisons
+        let isMatch = false;
+        if (timeLimit === 15) isMatch = totalMinutes <= 15;
+        else if (timeLimit === 30) isMatch = totalMinutes > 15 && totalMinutes <= 30;
+        else if (timeLimit === 60) isMatch = totalMinutes > 30 && totalMinutes <= 60;
+        else isMatch = true;
+
+        return isMatch;
+      });
     }
 
     //Returns all recipes
