@@ -1,10 +1,21 @@
-import React, { useEffect, useRef } from 'react';
-import { Tabs } from 'expo-router';
-import { View, Text, TouchableOpacity, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import React, { useEffect, useRef } from "react";
+import { Tabs } from "expo-router";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  Platform,
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import {
+  SafeAreaProvider,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const TAB_BAR_WIDTH = width * 0.9;
 const TAB_WIDTH = TAB_BAR_WIDTH / 4;
 
@@ -28,11 +39,8 @@ function MyTabBar({ state, descriptors, navigation }: any) {
     <View style={[styles.container, { bottom: 2 }]}>
       <View style={styles.pill}>
         {/* The Sliding Purple Circle */}
-        <Animated.View 
-          style={[
-            styles.activeIndicator, 
-            { transform: [{ translateX }] }
-          ]} 
+        <Animated.View
+          style={[styles.activeIndicator, { transform: [{ translateX }] }]}
         />
 
         {state.routes.map((route: any, index: number) => {
@@ -44,28 +52,31 @@ function MyTabBar({ state, descriptors, navigation }: any) {
 
           const onPress = () => {
             const event = navigation.emit({
-              type: 'tabPress',
+              type: "tabPress",
               target: route.key,
               canPreventDefault: true,
             });
 
             if (!isFocused && !event.defaultPrevented) {
-              navigation.navigate(route.name);
+              navigation.dispatch({
+                ...navigation.navigate(route.name),
+                target: state.key,
+              });
             }
           };
 
           const icons: any = {
-            index: isFocused ? 'home' : 'home-outline',
-            menuPlanerPage: isFocused ? 'restaurant' : 'restaurant-outline',
-            tools: isFocused ? 'construct' : 'construct-outline',
-            profilePage: isFocused ? 'person' : 'person-outline',
+            index: isFocused ? "home" : "home-outline",
+            menuPlanerPage: isFocused ? "restaurant" : "restaurant-outline",
+            tools: isFocused ? "construct" : "construct-outline",
+            profilePage: isFocused ? "person" : "person-outline",
           };
 
           const labels: any = {
-            index: 'Home',
-            menuPlanerPage: 'Planner',
-            tools: 'Tools',
-            profilePage: 'Profile',
+            index: "Home",
+            menuPlanerPage: "Planner",
+            tools: "Tools",
+            profilePage: "Profile",
           };
 
           return (
@@ -75,13 +86,15 @@ function MyTabBar({ state, descriptors, navigation }: any) {
               style={styles.tabItem}
               activeOpacity={0.7}
             >
-              <Ionicons 
-                name={icons[route.name]} 
-                size={24} 
-                color={isFocused ? '#FFFFFF' : '#8E8E93'} 
+              <Ionicons
+                name={icons[route.name]}
+                size={24}
+                color={isFocused ? "#FFFFFF" : "#8E8E93"}
               />
               {/* Labels appear only when NOT focused to keep it clean like your image */}
-              {!isFocused && <Text style={styles.label}>{labels[route.name]}</Text>}
+              {!isFocused && (
+                <Text style={styles.label}>{labels[route.name]}</Text>
+              )}
             </TouchableOpacity>
           );
         })}
@@ -101,7 +114,7 @@ export default function TabLayout() {
         <Tabs.Screen name="menuPlanerPage" />
         <Tabs.Screen name="tools" />
         <Tabs.Screen name="profilePage" />
-        
+
         {/* Hiding extras from the logic */}
         <Tabs.Screen name="myRecipes" options={{ href: null }} />
         <Tabs.Screen name="generateRecipes" options={{ href: null }} />
@@ -117,20 +130,20 @@ export default function TabLayout() {
 
 const styles = StyleSheet.create({
   container: {
-    position: 'absolute',
-    alignSelf: 'center',
+    position: "absolute",
+    alignSelf: "center",
     width: TAB_BAR_WIDTH,
   },
   pill: {
-    flexDirection: 'row',
+    flexDirection: "row",
     height: 70,
-    backgroundColor: '#373636',
+    backgroundColor: "#373636",
     borderRadius: 35,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: "#000",
         shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.15,
         shadowRadius: 10,
@@ -141,22 +154,22 @@ const styles = StyleSheet.create({
     }),
   },
   activeIndicator: {
-    position: 'absolute',
+    position: "absolute",
     width: 50,
     height: 50,
-    backgroundColor: '#fbab32ea', // Purple
+    backgroundColor: "#fbab32ea", // Purple
     borderRadius: 25,
-    left: (TAB_WIDTH - 50) / 2, 
+    left: (TAB_WIDTH - 50) / 2,
   },
   tabItem: {
     width: TAB_WIDTH,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   label: {
     fontSize: 10,
     marginTop: 2,
-    color: '#8E8E93',
-    fontWeight: '500'
+    color: "#8E8E93",
+    fontWeight: "500",
   },
 });
