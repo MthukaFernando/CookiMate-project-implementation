@@ -118,11 +118,23 @@ const FavoritesPage = () => {
 
         let matchesTime = true;
         if (time !== "All" && item.totalTime) {
-          const cookTime = parseInt(item.totalTime);
-          if (time === "15") matchesTime = cookTime < 15;
-          else if (time === "30")
-            matchesTime = cookTime >= 15 && cookTime <= 30;
-          else if (time === "60") matchesTime = cookTime > 30 && cookTime <= 60;
+          const timeStr = item.totalTime.toLowerCase();
+          let totalMinutes = 0;
+
+          const hourMatch = timeStr.match(/(\d+)\s*h/);
+          if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60;
+
+          const minMatch = timeStr.match(/(\d+)\s*m/);
+          if (minMatch) {
+            totalMinutes += parseInt(minMatch[1]);
+          } else if (!hourMatch) {
+            const fallbackMatch = timeStr.match(/\d+/);
+            if (fallbackMatch) totalMinutes = parseInt(fallbackMatch[0]);
+          }
+
+          if (time === "15") matchesTime = totalMinutes <= 15;
+          else if (time === "30") matchesTime = totalMinutes > 15 && totalMinutes <= 30;
+          else if (time === "60") matchesTime = totalMinutes > 30 && totalMinutes <= 60;
         }
 
         return (
@@ -258,7 +270,7 @@ const FavoritesPage = () => {
             activeColor="#333333"
             itemContainerStyle={{
               borderBottomWidth: 0.2,
-              borderBottomColor: "#D4AF37", 
+              borderBottomColor: "#D4AF37",
             }}
           />
           <Dropdown
@@ -280,7 +292,7 @@ const FavoritesPage = () => {
             activeColor="#333333"
             itemContainerStyle={{
               borderBottomWidth: 0.2,
-              borderBottomColor: "#D4AF37", 
+              borderBottomColor: "#D4AF37",
             }}
           />
           <Dropdown
@@ -302,7 +314,31 @@ const FavoritesPage = () => {
             activeColor="#333333"
             itemContainerStyle={{
               borderBottomWidth: 0.2,
-              borderBottomColor: "#D4AF37", 
+              borderBottomColor: "#D4AF37",
+            }}
+          />
+
+          <Dropdown
+            style={styles.dropdown}
+            placeholderStyle={styles.dropText}
+            selectedTextStyle={styles.dropText}
+            iconColor="white"
+            data={dietOptions}
+            labelField="label"
+            valueField="value"
+            value={diet}
+            onChange={(item) => setDiet(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37",
             }}
           />
           
