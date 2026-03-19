@@ -1,5 +1,5 @@
 import Groq from "groq-sdk";
-import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js"; 
+import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
 
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
@@ -48,9 +48,9 @@ async function generateRecipeImage(recipeTitle) {
 // The "Culinary Firewall" function
 function sanitizePrompt(userPrompt) {
   if (!userPrompt) return "";
-  
+
   const lowerPrompt = userPrompt.toLowerCase();
-  if (FORBIDDEN_WORDS.some(word => lowerPrompt.includes(word))) {
+  if (FORBIDDEN_WORDS.some((word) => lowerPrompt.includes(word))) {
     return "INVALID_PROMPT";
   }
 
@@ -62,23 +62,23 @@ function sanitizePrompt(userPrompt) {
     /system.*prompt/i,
     /new.*role/i,
     /bypass/i,
-    /forget.*previous/i
+    /forget.*previous/i,
   ];
-  
-  if (jailbreakPatterns.some(pattern => pattern.test(lowerPrompt))) {
+
+  if (jailbreakPatterns.some((pattern) => pattern.test(lowerPrompt))) {
     return "INVALID_PROMPT";
   }
 
-   // Strict Word Filtering
+  // Strict Word Filtering
   const words = lowerPrompt.replace(/[^a-z\s]/g, "").split(/\s+/);
-  const filteredWords = words.filter(word => ALLOWLIST.has(word));
+  const filteredWords = words.filter((word) => ALLOWLIST.has(word));
 
   //Check if prompt was completely sanitized away
   if (userPrompt && filteredWords.length === 0) {
     return "INVALID_PROMPT"; // Treat as suspicious
   }
 
-    return filteredWords.join(" ");
+  return filteredWords.join(" ");
 }
 
 // Main Controller Route
@@ -87,10 +87,16 @@ export const generateRecipeText = async (req, res) => {
 
   // Run the prompt through the firewall
   const cleanPrompt = sanitizePrompt(prompt);
-if (cleanPrompt === "INVALID_PROMPT") {
-    return res.status(400).json({ 
-      error: "Please keep your request strictly related to cooking. No off-topic language allowed." 
+  if (cleanPrompt === "INVALID_PROMPT") {
+    return res.status(400).json({
+      error:
+        "Please keep your request strictly related to cooking. No off-topic language allowed.",
     });
+  }
+
+  // Log sanitization for debugging
+  if (prompt && cleanPrompt !== prompt) {
+    console.log(`🔒 Prompt sanitized: "${prompt}" -> "${cleanPrompt}"`);
   }
 
   try {
@@ -109,12 +115,12 @@ if (cleanPrompt === "INVALID_PROMPT") {
           content:
             "You are a Master Chef. Provide a recipe. The first line MUST be just the recipe title without any symbols.",
         },
-                {
+        {
           role: "user",
           content: `Cuisine: ${cuisine || "Any"}
           Meal Type: ${mealType || "Dish"}
           Ingredients: ${ingredients?.join(", ") || "Any"}
-          Note: ${cleanPrompt || "surprise me with a delicious recipe"}`
+          Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
         },
       ],
       model: "llama-3.3-70b-versatile",
