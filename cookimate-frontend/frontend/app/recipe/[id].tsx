@@ -110,6 +110,32 @@ export default function RecipeDetails() {
   ]);
   const [userQuestion, setUserQuestion] = useState("");
   const [isChefThinking, setIsChefThinking] = useState(false);
+
+  //AI Chat Send Logic
+  const handleSendMessage = async () => {
+    if (!userQuestion.trim()) return;
+
+    const newMessages = [...chatMessages, { role: "user", content: userQuestion }];
+    setChatMessages(newMessages);
+    const currentInput = userQuestion;
+    setUserQuestion("");
+    setIsChefThinking(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/api/ai/chat`, {
+        recipeId: id, 
+        userQuestion: currentInput,
+        chatHistory: chatMessages.slice(-4), 
+      });
+
+      setChatMessages([...newMessages, { role: "assistant", content: response.data.reply }]);
+    } catch (err) {
+      console.error("Chat Error:", err);
+      Alert.alert("Chef's Busy", "I couldn't get an answer. Try again in a moment!");
+    } finally {
+      setIsChefThinking(false);
+    }
+  };
   
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
