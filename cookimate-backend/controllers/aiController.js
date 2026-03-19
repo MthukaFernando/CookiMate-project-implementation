@@ -68,6 +68,11 @@ function sanitizePrompt(userPrompt) {
   if (jailbreakPatterns.some(pattern => pattern.test(lowerPrompt))) {
     return "INVALID_PROMPT";
   }
+
+   // Strict Word Filtering
+  const words = lowerPrompt.replace(/[^a-z\s]/g, "").split(/\s+/);
+  const filteredWords = words.filter(word => ALLOWLIST.has(word));
+  
     return filteredWords.join(" ");
 }
 
