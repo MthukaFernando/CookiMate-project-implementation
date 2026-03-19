@@ -103,6 +103,14 @@ export default function RecipeDetails() {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(0);
 
+  //AI Chat State
+  const [isChatModalVisible, setIsChatModalVisible] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { role: "assistant", content: "👨‍🍳 Hi! I'm your CookiMate AI Chef. Ask me anything about this recipe!" }
+  ]);
+  const [userQuestion, setUserQuestion] = useState("");
+  const [isChefThinking, setIsChefThinking] = useState(false);
+  
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
     setCookingMode(true);
