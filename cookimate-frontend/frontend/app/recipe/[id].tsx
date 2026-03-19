@@ -136,7 +136,7 @@ export default function RecipeDetails() {
       setIsChefThinking(false);
     }
   };
-  
+
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
     setCookingMode(true);
@@ -399,6 +399,14 @@ export default function RecipeDetails() {
           )}
         </View>
       </ScrollView>
+
+      {/*Floating chat FAB*/}
+      <TouchableOpacity 
+        style={styles.chatFAB} 
+        onPress={() => setIsChatModalVisible(true)}
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#000" />
+      </TouchableOpacity>
 
       {/* Cooking Mode Modal */}
       <Modal
