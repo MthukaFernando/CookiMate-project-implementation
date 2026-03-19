@@ -93,3 +93,4 @@ export const generateRecipeText = async (req, res) => {
       .json({ error: "The Chef is currently offline. Please try again." });
   }
 };
+export const chatWithRecipe = async (req, res) => {}
