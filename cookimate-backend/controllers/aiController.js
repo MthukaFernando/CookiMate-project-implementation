@@ -45,6 +45,17 @@ async function generateRecipeImage(recipeTitle) {
   }
 }
 
+// The "Culinary Firewall" function
+function sanitizePrompt(userPrompt) {
+  if (!userPrompt) return "";
+  
+  const lowerPrompt = userPrompt.toLowerCase();
+  if (FORBIDDEN_WORDS.some(word => lowerPrompt.includes(word))) {
+    return "INVALID_PROMPT";
+  }
+    return filteredWords.join(" ");
+}
+
 // Main Controller Route
 export const generateRecipeText = async (req, res) => {
   const { ingredients, cuisine, mealType, prompt } = req.body;
