@@ -291,3 +291,54 @@ export const getCommunityProfile = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Save the meals the user has planner
+export const addToMealPlan = async (req, res) => {
+  try {
+    const { uid } = req.params; // Firebase UID
+    const { uniqueId, id, name, image, category, date } = req.body;
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { 
+        $push: { 
+          mealPlan: { 
+            uniqueId, 
+            recipeId: id, 
+            name, 
+            image, 
+            category, 
+            date 
+          } 
+        } 
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json(updatedUser.mealPlan);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove a meal from the user's planner
+export const removeFromMealPlan = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { uniqueId } = req.body; 
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $pull: { mealPlan: { uniqueId: uniqueId } } },
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Meal removed from planner" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
