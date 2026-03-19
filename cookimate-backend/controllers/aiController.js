@@ -141,7 +141,11 @@ export const generateRecipeText = async (req, res) => {
     if (!responseData.title || !responseData.ingredients || !responseData.instructions) {
       throw new Error("Invalid recipe format received from AI");
     }
-    
+
+    // Format the text for frontend display
+    const recipeText = `${responseData.title}\n\nIngredients:\n${responseData.ingredients.join("\n")}\n\nInstructions:\n${responseData.instructions.join("\n")}\n\nChef's Note: ${responseData.chef_note || "Enjoy your meal!"}`;
+
+    const recipeTitle = responseData.title;
     console.log("🍴 Recipe Created:", recipeTitle);
 
     //Generate Image using the Title
