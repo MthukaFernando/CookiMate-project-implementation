@@ -155,6 +155,7 @@ export const generateRecipeText = async (req, res) => {
     res.status(200).json({
       recipe: recipeText,
       image: imageUri,
+      title: recipeTitle,
     });
   } catch (error) {
     console.error("Master Route Error:", error);
