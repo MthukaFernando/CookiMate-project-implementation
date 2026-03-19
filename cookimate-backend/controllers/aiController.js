@@ -52,15 +52,21 @@ async function generateRecipeImage(recipeTitle) {
   }
 }
 
-// The "Culinary Firewall" function
-function sanitizePrompt(userPrompt) {
-  if (!userPrompt) return "";
-
-  const lowerPrompt = userPrompt.toLowerCase();
-
+// Enhanced sanitization function that returns more detailed status
+function sanitizeIngredient(ingredient, index) {
+  if (!ingredient) return { valid: false, reason: "Empty ingredient" };
+  
+  const lowerIngredient = ingredient.toLowerCase();
+  
   // Check for forbidden words
-  if (FORBIDDEN_WORDS.some((word) => lowerPrompt.includes(word))) {
-    return "INVALID_PROMPT";
+  for (const word of FORBIDDEN_WORDS) {
+    if (lowerIngredient.includes(word)) {
+      return { 
+        valid: false, 
+        reason: `Ingredient "${ingredient}" contains forbidden word: "${word}"`,
+        ingredient 
+      };
+    }
   }
 
   // Check for jailbreak patterns
@@ -74,42 +80,76 @@ function sanitizePrompt(userPrompt) {
     /forget.*previous/i,
   ];
 
-  if (jailbreakPatterns.some((pattern) => pattern.test(lowerPrompt))) {
-    return "INVALID_PROMPT";
+  for (const pattern of jailbreakPatterns) {
+    if (pattern.test(lowerIngredient)) {
+      return { 
+        valid: false, 
+        reason: `Ingredient "${ingredient}" contains invalid pattern`,
+        ingredient 
+      };
+    }
   }
 
-  // Stem each word and check ratio against stemmed allowlist
-  const words = lowerPrompt
+  // Stem each word and check against stemmed allowlist
+  const words = lowerIngredient
     .replace(/[^a-z\s]/g, "")
     .split(/\s+/)
     .filter(Boolean);
-  if (words.length === 0) return "";
+  
+  if (words.length > 0) {
+    const culinaryCount = words.filter((w) =>
+      STEMMED_ALLOWLIST.has(PorterStemmer.stem(w)),
+    ).length;
 
-  const culinaryCount = words.filter((w) =>
-    STEMMED_ALLOWLIST.has(PorterStemmer.stem(w)),
-  ).length;
+    const ratio = culinaryCount / words.length;
 
-  const ratio = culinaryCount / words.length;
-
-  // Reject if less than 30% of words are culinary-related
-  if (ratio < 0.3) {
-    return "INVALID_PROMPT";
+    // Reject if less than 30% of words are culinary-related
+    if (ratio < 0.3) {
+      return { 
+        valid: false, 
+        reason: `Ingredient "${ingredient}" doesn't appear to be food-related`,
+        ingredient 
+      };
+    }
   }
 
-  return userPrompt.trim(); // Pass original (not stripped) prompt
+  return { valid: true, cleaned: ingredient.trim() };
+}
+
+// The "Culinary Firewall" function (kept for backward compatibility)
+function sanitizePrompt(userPrompt) {
+  if (!userPrompt) return "";
+  
+  const result = sanitizeIngredient(userPrompt, 0);
+  return result.valid ? result.cleaned : "INVALID_PROMPT";
 }
 
 // Main Controller Route
 export const generateRecipeText = async (req, res) => {
   const { ingredients, cuisine, mealType, prompt } = req.body;
 
-  // Run the prompt through the firewall
-  const cleanPrompt = sanitizePrompt(prompt);
+  // Sanitize each ingredient individually
+  let cleanIngredients = [];
+  if (ingredients && Array.isArray(ingredients)) {
+    for (let i = 0; i < ingredients.length; i++) {
+      const result = sanitizeIngredient(ingredients[i], i);
+      if (!result.valid) {
+        return res.status(400).json({
+          error: result.reason || "Invalid ingredient detected. Please check your ingredients and try again."
+        });
+      }
+      if (result.cleaned) {
+        cleanIngredients.push(result.cleaned);
+      }
+    }
+  }
+
+  // Sanitize the prompt
+  const cleanPrompt = sanitizePrompt(prompt || "");
 
   if (cleanPrompt === "INVALID_PROMPT") {
     return res.status(400).json({
-      error:
-        "Please keep your request strictly related to cooking. No off-topic language allowed.",
+      error: "Please keep your notes strictly related to cooking.",
     });
   }
 
@@ -149,7 +189,7 @@ CRITICAL RULES:
           role: "user",
           content: `Cuisine: ${cuisine || "Any"}
 Meal Type: ${mealType || "Dish"}
-Ingredients: ${ingredients?.join(", ") || "Any"}
+Ingredients: ${cleanIngredients.join(", ") || "Any"}
 Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
         },
       ],
