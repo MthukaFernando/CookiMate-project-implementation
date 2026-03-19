@@ -159,6 +159,14 @@ export const generateRecipeText = async (req, res) => {
     });
   } catch (error) {
     console.error("Master Route Error:", error);
+
+    // Handle JSON parse errors specifically
+    if (error instanceof SyntaxError) {
+      return res.status(500).json({ 
+        error: "The Chef returned an invalid response. Please try again." 
+      });
+    }
+    
     res
       .status(500)
       .json({ error: "The Chef is currently offline. Please try again." });
