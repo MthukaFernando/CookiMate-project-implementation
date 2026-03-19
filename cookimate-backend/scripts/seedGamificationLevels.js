@@ -15,9 +15,8 @@ const gamificationLevels = [
       cookRecipes: 1,
       saveFavorites: 3,
       useAIGenerator: 1,
-      shareRecipes: 2,
-      getLikes: 2,
-      streak: 3
+      sharePosts: 2,
+      getLikes: 2
     },
     badge: {
       imageUrl: "https://img.icons8.com/color/96/000000/chef-hat.png",
@@ -32,11 +31,9 @@ const gamificationLevels = [
     requirements: {
       cookRecipes: 5,
       saveFavorites: 5,
-      shareRecipes: 3,
+      sharePosts: 3,
       getLikes: 5,
       useAIGenerator: 3,
-      fixErrors: 1,
-      streak: 5
     },
     badge: {
       imageUrl: "https://img.icons8.com/color/96/000000/cooking-book.png",
@@ -51,13 +48,10 @@ const gamificationLevels = [
     requirements: {
       cookRecipes: 15,
       saveFavorites: 10,
-      shareRecipes: 5,
+      sharePosts: 5,
       getLikes: 10,
       useAIGenerator: 7,
-      fixErrors: 3,
-      weeklyMealPlans: 1,
-      streak: 7,
-      dailyChallenges: 3
+      planMeals: 1
     },
     badge: {
       imageUrl: "https://img.icons8.com/color/96/000000/kitchen.png",
@@ -72,14 +66,10 @@ const gamificationLevels = [
     requirements: {
       cookRecipes: 30,
       saveFavorites: 15,
-      shareRecipes: 8,
+      sharePosts: 8,
       getLikes: 20,
       useAIGenerator: 15,
-      fixErrors: 5,
-      weeklyMealPlans: 3,
-      followers: 5,
-      streak: 14,
-      dailyChallenges: 7
+      planMeals: 3
     },
     badge: {
       imageUrl: "https://img.icons8.com/color/96/000000/spoon-and-fork.png",
@@ -94,16 +84,10 @@ const gamificationLevels = [
     requirements: {
       cookRecipes: 50,
       saveFavorites: 25,
-      shareRecipes: 12,
+      sharePosts: 12,
       getLikes: 35,
       useAIGenerator: 25,
-      fixErrors: 8,
-      weeklyMealPlans: 6,
-      followers: 15,
-      streak: 30,
-      dailyChallenges: 15,
-      recipePhotos: 5,
-      helpUsers: 5
+      planMeals: 6
     },
     badge: {
       imageUrl: "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
