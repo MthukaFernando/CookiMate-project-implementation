@@ -176,13 +176,14 @@ export default function GenerateRecipesPage() {
     
     const data = await response.json();
     
-    if (!response.ok) {
-      throw new Error(data.message || `Error: ${response.status}`);
-    }
-    
-    if (data.error) {
-      throw new Error(data.error);
-    }
+if (!response.ok) {
+  // If the backend returns an error message, display it
+  if (data.error) {
+    throw new Error(data.error);
+  } else {
+    throw new Error(`Error: ${response.status}`);
+  }
+}
     
     setGeneratedRecipe(data.recipe);
     setRecipeImage(data.image);
