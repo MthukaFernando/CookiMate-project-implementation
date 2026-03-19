@@ -7,16 +7,11 @@ export const getPointsForAction = (action) => {
   const pointsMap = {
     'COOK_RECIPE': 10,
     'SAVE_FAVORITE': 5,
-    'SHARE_RECIPE': 15,
+    'SHARE_POST': 15,
     'RECEIVE_LIKE': 2,
     'USE_AI': 20,
-    'FIX_ERROR': 25,
-    'COMPLETE_MEAL_PLAN': 30,
-    'DAILY_LOGIN': 5,
-    'COMPLETE_CHALLENGE': 40,
-    'UPLOAD_PHOTO': 10,
-    'HELP_USER': 15,
-    'GAIN_FOLLOWER': 3
+    'PLAN_MEAL': 30,
+    'DAILY_LOGIN': 5
   };
   
   return pointsMap[action] || 0;
@@ -32,15 +27,10 @@ export const updateUserStats = async (userId, action, increment = 1) => {
     const statMap = {
       'COOK_RECIPE': 'recipesCooked',
       'SAVE_FAVORITE': 'favoritesSaved',
-      'SHARE_RECIPE': 'recipesShared',
+      'SHARE_POST': 'postsShared',
       'RECEIVE_LIKE': 'likesReceived',
       'USE_AI': 'aiGenerations',
-      'FIX_ERROR': 'errorsFixed',
-      'COMPLETE_MEAL_PLAN': 'weeklyPlansCompleted',
-      'GAIN_FOLLOWER': 'followersCount',
-      'COMPLETE_CHALLENGE': 'dailyChallengesDone',
-      'UPLOAD_PHOTO': 'photosUploaded',
-      'HELP_USER': 'usersHelped'
+      'PLAN_MEAL': 'mealsPlanned'
     };
 
     // Update the stat
@@ -135,17 +125,11 @@ const checkGamificationLevelUp = async (progress) => {
     const meetsRequirements = 
       stats.recipesCooked >= reqs.cookRecipes &&
       stats.favoritesSaved >= reqs.saveFavorites &&
-      stats.recipesShared >= reqs.shareRecipes &&
+      stats.postsShared >= reqs.sharePosts &&
       stats.likesReceived >= reqs.getLikes &&
       stats.aiGenerations >= reqs.useAIGenerator &&
-      stats.errorsFixed >= (reqs.fixErrors || 0) &&
-      stats.weeklyPlansCompleted >= (reqs.weeklyMealPlans || 0) &&
-      stats.followersCount >= (reqs.followers || 0) &&
-      stats.currentStreak >= (reqs.streak || 0) &&
-      stats.dailyChallengesDone >= (reqs.dailyChallenges || 0) &&
-      stats.photosUploaded >= (reqs.recipePhotos || 0) &&
-      stats.usersHelped >= (reqs.helpUsers || 0);
-
+      stats.mealsPlanned >= (reqs.planMeals || 0);
+      
     if (meetsRequirements) {
       progress.gamificationLevel = nextGamificationLevel.levelNumber;
       
