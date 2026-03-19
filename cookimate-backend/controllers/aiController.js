@@ -53,6 +53,21 @@ function sanitizePrompt(userPrompt) {
   if (FORBIDDEN_WORDS.some(word => lowerPrompt.includes(word))) {
     return "INVALID_PROMPT";
   }
+
+  // Check for jailbreak patterns
+  const jailbreakPatterns = [
+    /ignore.*instruction/i,
+    /act as/i,
+    /you are now/i,
+    /system.*prompt/i,
+    /new.*role/i,
+    /bypass/i,
+    /forget.*previous/i
+  ];
+  
+  if (jailbreakPatterns.some(pattern => pattern.test(lowerPrompt))) {
+    return "INVALID_PROMPT";
+  }
     return filteredWords.join(" ");
 }
 
