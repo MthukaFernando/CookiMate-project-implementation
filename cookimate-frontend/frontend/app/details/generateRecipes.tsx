@@ -135,7 +135,7 @@ export default function GenerateRecipesPage() {
     setCulinaryPrompt("");
     setGeneratedRecipe(null);
     setRecipeImage(null);
-    setError(null); 
+    setError(null);
   };
 
   const addIngredient = (name: string) => {
@@ -149,10 +149,18 @@ export default function GenerateRecipesPage() {
   };
 
   const handleGenerate = async () => {
-  setLoading(true);
-  setError(null); 
+    setError(null);
 
-  try {
+  if (selectedIngredients.length === 0 && !culinaryPrompt.trim()) {
+    setError("Please add some ingredients or describe what you'd like to cook");
+    return; 
+  }
+  
+  setLoading(true);
+  setGeneratedRecipe(null);
+  setRecipeImage(null);
+
+    try {
     const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,23 +168,27 @@ export default function GenerateRecipesPage() {
         ingredients: selectedIngredients,
         cuisine,
         mealType,
+        time: prepTime,
+        servings,
         prompt: culinaryPrompt,
       }),
     });
-
+    
     const data = await response.json();
-
+    
     if (!response.ok) {
-      // This catches the "Please keep your request strictly related to cooking" message
-      setError(data.error);
-      setLoading(false);
-      return;
+      throw new Error(data.message || `Error: ${response.status}`);
     }
-
+    
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    
     setGeneratedRecipe(data.recipe);
     setRecipeImage(data.image);
-  } catch (err) {
-    setError("The Chef is currently offline. Please try again.");
+  } catch (error: any) {
+    console.error("Fetch Error:", error.message);
+    setError(error.message || "Failed to generate recipe. Please try again.");
   } finally {
     setLoading(false);
   }
@@ -414,11 +426,11 @@ export default function GenerateRecipesPage() {
               </TouchableOpacity>
 
               {error && (
-  <View style={styles.errorBox}>
-    <Ionicons name="alert-circle" size={18} color="#FF5252" />
-    <Text style={styles.errorText}>{error}</Text>
-  </View>
-)}
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={18} color="#FF5252" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
 
               {(generatedRecipe || loading) && (
                 <View style={styles.resultContainer}>
@@ -692,21 +704,21 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   errorBox: {
-  backgroundColor: "rgba(255, 82, 82, 0.1)",
-  padding: 12,
-  borderRadius: 12,
-  flexDirection: 'row',
-  alignItems: 'center',
-  marginBottom: 20,
-  marginTop:20,
-  borderWidth: 1,
-  borderColor: "#FF5252",
-},
-errorText: {
-  color: "#FF5252",
-  fontSize: 14,
-  fontWeight: "600",
-  marginLeft: 10,
-  marginRight: 10,
-},
+    backgroundColor: "rgba(255, 82, 82, 0.1)",
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#FF5252",
+  },
+  errorText: {
+    color: "#FF5252",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 10,
+    marginRight: 10,
+  },
 });
