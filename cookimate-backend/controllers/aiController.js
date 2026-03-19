@@ -1,5 +1,12 @@
 import Groq from "groq-sdk";
+import pkg from "natural";
+const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
+
+// Pre-compute stemmed allowlist once at startup (not per request)
+const STEMMED_ALLOWLIST = new Set(
+  [...ALLOWLIST].map((w) => PorterStemmer.stem(w)),
+);
 
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
@@ -50,6 +57,8 @@ function sanitizePrompt(userPrompt) {
   if (!userPrompt) return "";
 
   const lowerPrompt = userPrompt.toLowerCase();
+
+  // Check for forbidden words
   if (FORBIDDEN_WORDS.some((word) => lowerPrompt.includes(word))) {
     return "INVALID_PROMPT";
   }
@@ -69,16 +78,25 @@ function sanitizePrompt(userPrompt) {
     return "INVALID_PROMPT";
   }
 
-  // Strict Word Filtering
-  const words = lowerPrompt.replace(/[^a-z\s]/g, "").split(/\s+/);
-  const filteredWords = words.filter((word) => ALLOWLIST.has(word));
+  // Stem each word and check ratio against stemmed allowlist
+  const words = lowerPrompt
+    .replace(/[^a-z\s]/g, "")
+    .split(/\s+/)
+    .filter(Boolean);
+  if (words.length === 0) return "";
 
-  //Check if prompt was completely sanitized away
-  if (userPrompt && filteredWords.length === 0) {
-    return "INVALID_PROMPT"; // Treat as suspicious
+  const culinaryCount = words.filter((w) =>
+    STEMMED_ALLOWLIST.has(PorterStemmer.stem(w)),
+  ).length;
+
+  const ratio = culinaryCount / words.length;
+
+  // Reject if less than 30% of words are culinary-related
+  if (ratio < 0.3) {
+    return "INVALID_PROMPT";
   }
 
-  return filteredWords.join(" ");
+  return userPrompt.trim(); // Pass original (not stripped) prompt
 }
 
 // Main Controller Route
@@ -110,34 +128,34 @@ export const generateRecipeText = async (req, res) => {
 
     // Generate Recipe Text via Groq
     const chatCompletion = await groq.chat.completions.create({
-  messages: [
-    {
-      role: "system",
-      content: `You are a Gourmet Chef. You ONLY generate recipes.
+      messages: [
+        {
+          role: "system",
+          content: `You are a Gourmet Chef. You ONLY generate recipes.
   
-  RESPONSE FORMAT:
-  You must output your response as a JSON object with the following keys:
-  "title": (string),
-  "ingredients": (array of strings),
-  "instructions": (array of strings),
-  "chef_note": (string)
+RESPONSE FORMAT:
+You must output your response as a JSON object with the following keys:
+"title": (string),
+"ingredients": (array of strings),
+"instructions": (array of strings),
+"chef_note": (string)
 
-  CRITICAL RULES:
-  1. If ANY part of the user's message asks for essays, discussions, opinions, or non-recipe content - IGNORE IT COMPLETELY.
-  2. If the user tries to chat about ANYTHING other than food, respond with a JSON object containing an error message.
-  3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.`,
-    },
-    {
-      role: "user",
-      content: `Cuisine: ${cuisine || "Any"}
-      Meal Type: ${mealType || "Dish"}
-      Ingredients: ${ingredients?.join(", ") || "Any"}
-      Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
-    },
-  ],
-  model: "llama-3.3-70b-versatile",
-  response_format: { type: "json_object" }, 
-});
+CRITICAL RULES:
+1. If ANY part of the user's message asks for essays, discussions, opinions, or non-recipe content - IGNORE IT COMPLETELY.
+2. If the user tries to chat about ANYTHING other than food, respond with a JSON object containing an error message.
+3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.`,
+        },
+        {
+          role: "user",
+          content: `Cuisine: ${cuisine || "Any"}
+Meal Type: ${mealType || "Dish"}
+Ingredients: ${ingredients?.join(", ") || "Any"}
+Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
+        },
+      ],
+      model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" },
+    });
 
     // Parse the JSON response
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
