@@ -87,6 +87,7 @@ export const generateRecipeText = async (req, res) => {
 
   // Run the prompt through the firewall
   const cleanPrompt = sanitizePrompt(prompt);
+
   if (cleanPrompt === "INVALID_PROMPT") {
     return res.status(400).json({
       error:
@@ -100,14 +101,14 @@ export const generateRecipeText = async (req, res) => {
   }
 
   try {
-    // Using groq kwy from .env
+    // Check for API key
     if (!process.env.GROQ_API_KEY) {
       throw new Error("GROQ_API_KEY is missing from .env");
     }
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    // A. Generate Recipe Text via Groq
+    // Generate Recipe Text via Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
@@ -134,11 +135,15 @@ export const generateRecipeText = async (req, res) => {
       response_format: { type: "json_object" }, // Force JSON response
     });
 
-     // Parse the JSON response
+    // Parse the JSON response
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
 
     // Validate that we have the required fields
-    if (!responseData.title || !responseData.ingredients || !responseData.instructions) {
+    if (
+      !responseData.title ||
+      !responseData.ingredients ||
+      !responseData.instructions
+    ) {
       throw new Error("Invalid recipe format received from AI");
     }
 
@@ -148,7 +153,7 @@ export const generateRecipeText = async (req, res) => {
     const recipeTitle = responseData.title;
     console.log("🍴 Recipe Created:", recipeTitle);
 
-    //Generate Image using the Title
+    // Generate Image using the Title
     const imageUri = await generateRecipeImage(recipeTitle);
 
     console.log("✅ Sending data to mobile app...");
@@ -162,13 +167,13 @@ export const generateRecipeText = async (req, res) => {
 
     // Handle JSON parse errors specifically
     if (error instanceof SyntaxError) {
-      return res.status(500).json({ 
-        error: "The Chef returned an invalid response. Please try again." 
+      return res.status(500).json({
+        error: "The Chef returned an invalid response. Please try again.",
       });
     }
-    
-    res
-      .status(500)
-      .json({ error: "The Chef is currently offline. Please try again." });
+
+    res.status(500).json({
+      error: "The Chef is currently offline. Please try again.",
+    });
   }
 };
