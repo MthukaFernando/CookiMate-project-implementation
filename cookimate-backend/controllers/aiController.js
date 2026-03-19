@@ -134,10 +134,9 @@ export const generateRecipeText = async (req, res) => {
       response_format: { type: "json_object" }, // Force JSON response
     });
 
-    const recipeText = chatCompletion.choices[0].message.content;
+     // Parse the JSON response
+    const responseData = JSON.parse(chatCompletion.choices[0].message.content);
 
-    //Extract the title of the generated recipe
-    const recipeTitle = recipeText.split("\n")[0].replace(/[#*]/g, "").trim();
     console.log("🍴 Recipe Created:", recipeTitle);
 
     //Generate Image using the Title
