@@ -1,4 +1,5 @@
 import Groq from "groq-sdk";
+import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js"; 
 
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
