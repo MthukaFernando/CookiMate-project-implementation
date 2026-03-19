@@ -339,7 +339,9 @@ export default function GenerateRecipesPage() {
                 ))}
               </ScrollView>
 
-              <Text style={styles.label}>Are you making something specific? (Optional)</Text>
+              <Text style={styles.label}>
+                Are you making something specific? (Optional)
+              </Text>
               <View style={styles.descriptionWrapper}>
                 <TextInput
                   style={styles.descriptionInput}
