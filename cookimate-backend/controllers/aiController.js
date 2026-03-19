@@ -77,13 +77,16 @@ function sanitizePrompt(userPrompt) {
   if (userPrompt && filteredWords.length === 0) {
     return "INVALID_PROMPT"; // Treat as suspicious
   }
-  
+
     return filteredWords.join(" ");
 }
 
 // Main Controller Route
 export const generateRecipeText = async (req, res) => {
   const { ingredients, cuisine, mealType, prompt } = req.body;
+
+  // Run the prompt through the firewall
+  const cleanPrompt = sanitizePrompt(prompt);
 
   try {
     // Using groq kwy from .env
@@ -101,9 +104,12 @@ export const generateRecipeText = async (req, res) => {
           content:
             "You are a Master Chef. Provide a recipe. The first line MUST be just the recipe title without any symbols.",
         },
-        {
+                {
           role: "user",
-          content: `Create a ${cuisine || ""} ${mealType || "dish"} using: ${ingredients?.join(", ")}. ${prompt || ""}`,
+          content: `Cuisine: ${cuisine || "Any"}
+          Meal Type: ${mealType || "Dish"}
+          Ingredients: ${ingredients?.join(", ") || "Any"}
+          Note: ${cleanPrompt || "surprise me with a delicious recipe"}`
         },
       ],
       model: "llama-3.3-70b-versatile",
