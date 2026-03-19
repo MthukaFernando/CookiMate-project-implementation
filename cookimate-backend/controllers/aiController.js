@@ -72,6 +72,11 @@ function sanitizePrompt(userPrompt) {
    // Strict Word Filtering
   const words = lowerPrompt.replace(/[^a-z\s]/g, "").split(/\s+/);
   const filteredWords = words.filter(word => ALLOWLIST.has(word));
+
+  //Check if prompt was completely sanitized away
+  if (userPrompt && filteredWords.length === 0) {
+    return "INVALID_PROMPT"; // Treat as suspicious
+  }
   
     return filteredWords.join(" ");
 }
