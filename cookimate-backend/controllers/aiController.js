@@ -131,6 +131,7 @@ export const generateRecipeText = async (req, res) => {
         },
       ],
       model: "llama-3.3-70b-versatile",
+      response_format: { type: "json_object" }, // Force JSON response
     });
 
     const recipeText = chatCompletion.choices[0].message.content;
