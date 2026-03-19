@@ -87,6 +87,11 @@ export const generateRecipeText = async (req, res) => {
 
   // Run the prompt through the firewall
   const cleanPrompt = sanitizePrompt(prompt);
+if (cleanPrompt === "INVALID_PROMPT") {
+    return res.status(400).json({ 
+      error: "Please keep your request strictly related to cooking. No off-topic language allowed." 
+    });
+  }
 
   try {
     // Using groq kwy from .env
