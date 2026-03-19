@@ -135,9 +135,11 @@ export default function RecipeDetails() {
         chatHistory: chatMessages.slice(-4),
       });
 
+      const data = response.data as any;
+
       setChatMessages([
         ...newMessages,
-        { role: "assistant", content: response.data.reply },
+        { role: "assistant", content: data.reply },
       ]);
     } catch (err) {
       console.error("Chat Error:", err);
@@ -197,7 +199,8 @@ export default function RecipeDetails() {
       try {
         if (!uid || !id) return;
         const response = await axios.get(`${API_URL}/api/users/${uid}`);
-        const favorites = response.data.favorites || [];
+        const data = response.data as any;
+        const favorites = data.favorites || [];
         const isFav = favorites.some((fav: any) => fav.id === id);
         setIsFavorite(isFav);
       } catch (error) {
@@ -205,7 +208,7 @@ export default function RecipeDetails() {
       }
     };
     if (id) checkFavorite(id as string);
-  }, [id]);
+  }, [id, uid]);
 
   const handleRemoveFavorite = async () => {
     try {
