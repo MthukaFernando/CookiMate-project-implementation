@@ -137,6 +137,11 @@ export const generateRecipeText = async (req, res) => {
      // Parse the JSON response
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
 
+    // Validate that we have the required fields
+    if (!responseData.title || !responseData.ingredients || !responseData.instructions) {
+      throw new Error("Invalid recipe format received from AI");
+    }
+    
     console.log("🍴 Recipe Created:", recipeTitle);
 
     //Generate Image using the Title
