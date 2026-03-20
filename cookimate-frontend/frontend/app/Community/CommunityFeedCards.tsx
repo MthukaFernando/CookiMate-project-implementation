@@ -77,9 +77,12 @@ export default function CommunityFeed() {
   // Key scoped per user so reports don't bleed across accounts
   const REPORTED_POSTS_KEY = `reported_posts_${currentUser?.uid ?? "guest"}`;
 
+  // pass uid so the backend can filter out blocked users' posts
   const fetchFeed = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/social/feed`);
+      const response = await axios.get(`${BASE_URL}/social/feed`, {
+        params: { uid: currentUser?.uid },
+      });
       setPosts(response.data);
     } catch (error) {
       console.error(error);

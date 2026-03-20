@@ -69,8 +69,7 @@ const userSchema = new mongoose.Schema(
     },
     blockedUsers: [
       {
-        type: String, // store firebaseUid
-        default: [],
+        type: String,
       },
     ],
     mealPlan: [

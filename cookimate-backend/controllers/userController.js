@@ -263,23 +263,17 @@ export const getCommunityProfile = async (req, res) => {
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    let isFollowing = false;
+    let viewer = null;
+    let blockedByCurrentUser = false;
     if (viewerId) {
-      const viewer = await User.findOne({ firebaseUid: viewerId });
-      if (viewer) {
-        isFollowing = (user.followers || []).some(fId => fId.equals(viewer._id));
-      }
+      viewer = await User.findOne({ firebaseUid: viewerId });
+      blockedByCurrentUser = viewer?.blockedUsers?.includes(uid) || false;
     }
 
-    // Fetch from Post model and populate comment authors
-    const userPosts = await Post.find({ user: uid }) 
+    // User posts
+    const userPosts = await Post.find({ user: uid })
       .sort({ createdAt: -1 })
-      .populate({
-        path: "comments.user",
-        model: "User",
-        foreignField: "firebaseUid",
-        select: "username profilePic"
-      });
+      .populate({ path: "comments.user", model: "User", foreignField: "firebaseUid", select: "username profilePic" });
 
     res.status(200).json({
       _id: user._id,
@@ -287,7 +281,8 @@ export const getCommunityProfile = async (req, res) => {
       username: user.username,
       profilePic: user.profilePic,
       bio: user.bio,
-      isFollowing,
+      isFollowing: viewer?.following?.includes(user._id) || false,
+      blockedByCurrentUser,
       stats: {
         recipes: user.recipesCookedCount || 0,
         followers: user.followers?.length || 0,
@@ -297,8 +292,8 @@ export const getCommunityProfile = async (req, res) => {
         id: p._id.toString(),
         uri: p.imageUrl,
         caption: p.caption,
-        likes: p.likes || [], 
-        comments: p.comments || [], 
+        likes: p.likes || [],
+        comments: p.comments || [],
       })),
     });
   } catch (error) {
@@ -352,6 +347,41 @@ export const removeFromMealPlan = async (req, res) => {
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ message: "Meal removed from planner" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const toggleBlockUser = async (req, res) => {
+  try {
+    const { currentUserUid, targetUserUid } = req.body;
+
+    if (currentUserUid === targetUserUid) {
+      return res.status(400).json({ message: "Cannot block yourself" });
+    }
+
+    const currentUser = await User.findOne({ firebaseUid: currentUserUid });
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isBlocked = currentUser.blockedUsers.includes(targetUserUid);
+
+    if (!isBlocked) {
+      // BLOCK (one-way only)
+      await currentUser.updateOne({
+        $addToSet: { blockedUsers: targetUserUid }
+      });
+
+      return res.status(200).json({ blocked: true });
+    } else {
+      // UNBLOCK
+      await currentUser.updateOne({
+        $pull: { blockedUsers: targetUserUid }
+      });
+
+      return res.status(200).json({ blocked: false });
+    }
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

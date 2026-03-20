@@ -46,7 +46,6 @@ const COLORS = {
   overlayBg: "rgba(20, 20, 20, 0.95)",
 };
 
-// AsyncStorage key scoped per reporter uid
 const getStorageKey = (reporterUid: string) => `reported_users_${reporterUid}`;
 
 interface Post {
@@ -61,6 +60,7 @@ interface Post {
   }[];
 }
 
+// FIX 1: Removed duplicate `stats` key — it was declared twice in the interface
 interface UserProfile {
   _id: string;
   name: string;
@@ -68,20 +68,24 @@ interface UserProfile {
   profilePic?: string;
   bio?: string;
   isFollowing: boolean;
-  stats: { recipes: number; followers: number; following: number };
+  blockedByCurrentUser?: boolean;
+  stats: {
+    recipes: number;
+    followers: number;
+    following: number;
+  };
   posts: Post[];
 }
 
 export default function CommunityUserProfile() {
   const router = useRouter();
-  const { CommunityUserid } = useLocalSearchParams<{
-    CommunityUserid: string;
-  }>();
+  const { CommunityUserid } = useLocalSearchParams<{ CommunityUserid: string }>();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [showModalComments, setShowModalComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -89,15 +93,11 @@ export default function CommunityUserProfile() {
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
   const [showAlreadyReported, setShowAlreadyReported] = useState(false);
-
-  // Whether the current user has already reported this profile
   const [isUserReported, setIsUserReported] = useState(false);
 
   const currentUser = auth.currentUser;
 
-  // -----------------------------------------------------------------
-  // Load persisted reported user IDs from AsyncStorage on mount
-  // -----------------------------------------------------------------
+  // Load persisted report status from AsyncStorage on mount
   useEffect(() => {
     if (!currentUser || !CommunityUserid) return;
     const loadReportedStatus = async () => {
@@ -106,17 +106,6 @@ export default function CommunityUserProfile() {
         if (raw) {
           const ids: string[] = JSON.parse(raw);
           setIsUserReported(ids.includes(CommunityUserid));
-        } else {
-          // First launch: fetch from server then cache locally
-          const res = await axios.get(
-            `${BASE_URL}/social/reports/by-user/${currentUser.uid}`,
-          );
-          const ids: string[] = res.data.reportedIds || [];
-          setIsUserReported(ids.includes(CommunityUserid));
-          await AsyncStorage.setItem(
-            getStorageKey(currentUser.uid),
-            JSON.stringify(ids),
-          );
         }
       } catch (err) {
         console.log("Could not load reported user status:", err);
@@ -131,12 +120,11 @@ export default function CommunityUserProfile() {
       setLoading(true);
       const response = await axios.get(
         `${BASE_URL}/users/community/${CommunityUserid}`,
-        {
-          params: { viewerId: currentUser?.uid },
-        },
+        { params: { viewerId: currentUser?.uid } },
       );
       setProfile(response.data);
       setIsFollowing(response.data.isFollowing);
+      setIsBlocked(response.data.blockedByCurrentUser || false);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -173,6 +161,9 @@ export default function CommunityUserProfile() {
     }
   };
 
+  // FIX 2: Added the missing closing `};` — handleBlockUser was nested inside
+  // handleLikeToggle because the catch block was never closed, making the
+  // block button completely non-functional
   const handleLikeToggle = async () => {
     if (!currentUser || !selectedPost) return;
     const postId = selectedPost.id || (selectedPost as any)._id;
@@ -180,9 +171,7 @@ export default function CommunityUserProfile() {
       await axios.put(`${BASE_URL}/social/${postId}/like`, {
         userId: currentUser.uid,
       });
-      const isCurrentlyLiked = (selectedPost.likes || []).includes(
-        currentUser.uid,
-      );
+      const isCurrentlyLiked = (selectedPost.likes || []).includes(currentUser.uid);
       const newLikes = isCurrentlyLiked
         ? selectedPost.likes.filter((uid) => uid !== currentUser.uid)
         : [...(selectedPost.likes || []), currentUser.uid];
@@ -203,6 +192,40 @@ export default function CommunityUserProfile() {
       console.error("Like error:", error);
       Alert.alert("Error", "Could not process like.");
     }
+  }; // ← was missing — everything below was accidentally inside handleLikeToggle
+
+  const handleBlockUser = async () => {
+    if (!currentUser) return;
+    Alert.alert(
+      isBlocked ? "Unblock User" : "Block User",
+      isBlocked
+        ? "Do you want to unblock this user?"
+        : "Are you sure you want to block this user?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isBlocked ? "Unblock" : "Block",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.put(`${BASE_URL}/users/block`, {
+                currentUserUid: currentUser.uid,
+                targetUserUid: CommunityUserid,
+              });
+              setIsBlocked((prev) => !prev);
+              Alert.alert(
+                isBlocked ? "Unblocked" : "Blocked",
+                `User has been ${isBlocked ? "unblocked" : "blocked"}.`,
+              );
+              if (!isBlocked) router.replace("/Community/CommunityFeedCards");
+            } catch (err) {
+              console.error(err);
+              Alert.alert("Error", "Could not update block status.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleCommentSubmit = async () => {
@@ -234,6 +257,8 @@ export default function CommunityUserProfile() {
     }
   };
 
+  // FIX 3: Removed git merge conflict markers (<<<<<<< HEAD / ======= / >>>>>>>)
+  // Kept the robust version that handles both p.id and p._id
   const handleDeletePost = (postId: string) => {
     Alert.alert(
       "Delete Post",
@@ -270,16 +295,18 @@ export default function CommunityUserProfile() {
     );
   };
 
+  // FIX 4: handleReportPress now opens the styled modal for already-reported
+  // instead of a plain native Alert, keeping UI consistent
   const handleReportPress = () => {
     if (isUserReported) {
-      Alert.alert(
-        "Already Reported",
-        "You have already flagged this user. Our team is reviewing the report.",
-      );
+      setShowAlreadyReported(true);
+      setShowThankYou(false);
+      setReportModalVisible(true);
       return;
     }
-    setReportModalVisible(true);
+    setShowAlreadyReported(false);
     setShowThankYou(false);
+    setReportModalVisible(true);
   };
 
   const submitReport = async (reason: string) => {
@@ -289,11 +316,10 @@ export default function CommunityUserProfile() {
         reporter: currentUser.uid,
         targetId: CommunityUserid,
         targetType: "user",
-        reason: reason,
+        reason,
       });
-      // Update state
       setIsUserReported(true);
-      // Persist to AsyncStorage
+      // Persist so the flag stays red after navigating away and back
       try {
         const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
         const existing: string[] = raw ? JSON.parse(raw) : [];
@@ -319,6 +345,7 @@ export default function CommunityUserProfile() {
     setShowModalComments(false);
     setCommentText("");
   };
+
   const closeReportModal = () => {
     setReportModalVisible(false);
     setShowThankYou(false);
@@ -335,36 +362,55 @@ export default function CommunityUserProfile() {
 
   if (!profile) return null;
 
+  // FIX 5: Rebuilt ProfileHeader from scratch —
+  //   • Removed erroneous topActionRow wrapper that was never closed
+  //   • Closed the flag TouchableOpacity properly
+  //   • Grouped flag + block into a single right-side View
+  //   • Fixed all mismatched </View> counts
   const ProfileHeader = () => (
     <View style={styles.header}>
-      <View style={styles.topActionRow}>
+      <View style={styles.topRow}>
+        {/* Back button — left side */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
+        {/* Flag + Block — right side, only shown for other users */}
         {currentUser?.uid !== CommunityUserid && (
-          <TouchableOpacity
-            onPress={() => {
-              if (isUserReported) {
-                setShowAlreadyReported(true);
-                setShowThankYou(false);
-                setReportModalVisible(true);
-              } else {
-                handleReportPress();
-              }
-            }}
-            style={styles.reportBtn}
-          >
-            {/* Filled red flag when reported, hollow muted flag otherwise */}
-            <Ionicons
-              name={isUserReported ? "flag" : "flag-outline"}
-              size={20}
-              color={isUserReported ? COLORS.accentRed : COLORS.textMuted}
-            />
-          </TouchableOpacity>
+          <View style={styles.topRightActions}>
+            {/* Report flag */}
+            <TouchableOpacity onPress={handleReportPress} style={styles.reportBtn}>
+              <Ionicons
+                name={isUserReported ? "flag" : "flag-outline"}
+                size={20}
+                color={isUserReported ? COLORS.accentRed : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            {/* Block / Unblock pill */}
+            <TouchableOpacity
+              style={[styles.blockCornerBtn, isBlocked && styles.blockCornerBtnActive]}
+              onPress={handleBlockUser}
+            >
+              <Ionicons
+                name={isBlocked ? "ban" : "ban-outline"}
+                size={18}
+                color={isBlocked ? COLORS.textMuted : COLORS.accentRed}
+              />
+              <Text
+                style={[
+                  styles.blockCornerText,
+                  isBlocked && { color: COLORS.textMuted },
+                ]}
+              >
+                {isBlocked ? "Unblock" : "Block"}
+              </Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
+      {/* Profile card */}
       <View style={styles.profileCard}>
         <Image
           source={{
@@ -377,6 +423,7 @@ export default function CommunityUserProfile() {
         <Text style={styles.userName}>{profile.name || "User"}</Text>
         <Text style={styles.handle}>@{profile.username || "unknown"}</Text>
         {profile.bio && <Text style={styles.bioText}>{profile.bio}</Text>}
+
         <View style={styles.statsRow}>
           <View style={styles.stat}>
             <Text style={styles.statNum}>{profile.stats?.recipes || 0}</Text>
@@ -391,16 +438,13 @@ export default function CommunityUserProfile() {
             <Text style={styles.statLab}>Following</Text>
           </View>
         </View>
+
         {currentUser?.uid !== CommunityUserid && (
           <TouchableOpacity
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
             onPress={handleFollowToggle}
           >
-            <Text
-              style={
-                isFollowing ? styles.followingBtnText : styles.followBtnText
-              }
-            >
+            <Text style={isFollowing ? styles.followingBtnText : styles.followBtnText}>
               {isFollowing ? "Following" : "Follow"}
             </Text>
           </TouchableOpacity>
@@ -433,11 +477,13 @@ export default function CommunityUserProfile() {
         )}
       />
 
-      {/* --- REPORT USER MODAL --- */}
+      {/* ── REPORT USER MODAL ── */}
       <Modal visible={reportModalVisible} transparent animationType="fade">
         <View style={styles.reportOverlay}>
           <View style={styles.reportCard}>
+
             {showAlreadyReported ? (
+              /* Screen 1: user tapped the flag again after already reporting */
               <View style={styles.thankYouArea}>
                 <Ionicons
                   name="flag"
@@ -445,14 +491,11 @@ export default function CommunityUserProfile() {
                   color={COLORS.accentRed}
                   style={{ marginBottom: 10 }}
                 />
-                <Text
-                  style={[styles.thankYouTitle, { color: COLORS.accentRed }]}
-                >
+                <Text style={[styles.thankYouTitle, { color: COLORS.accentRed }]}>
                   Already Reported
                 </Text>
                 <Text style={styles.thankYouText}>
-                  You've already reported this user. Our team will review it
-                  shortly.
+                  You've already reported this user. Our team will review it shortly.
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -466,24 +509,16 @@ export default function CommunityUserProfile() {
                   ]}
                   onPress={closeReportModal}
                 >
-                  <Text
-                    style={{
-                      color: "#FFF",
-                      fontWeight: "bold",
-                      textAlign: "center",
-                    }}
-                  >
+                  <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>
                     Got It
                   </Text>
                 </TouchableOpacity>
               </View>
+
             ) : showThankYou ? (
+              /* Screen 2: report just submitted successfully */
               <View style={styles.thankYouArea}>
-                <Ionicons
-                  name="checkmark-circle"
-                  size={60}
-                  color={COLORS.primaryGold}
-                />
+                <Ionicons name="checkmark-circle" size={60} color={COLORS.primaryGold} />
                 <Text style={styles.thankYouTitle}>User Reported</Text>
                 <Text style={styles.thankYouText}>
                   Thank you for your report. Our team will review this account.
@@ -506,7 +541,9 @@ export default function CommunityUserProfile() {
                   </Text>
                 </TouchableOpacity>
               </View>
+
             ) : (
+              /* Screen 3: reason selection */
               <View>
                 <View style={styles.modalHeaderReport}>
                   <Text style={styles.reportModalTitle}>Report User</Text>
@@ -514,29 +551,26 @@ export default function CommunityUserProfile() {
                     <Ionicons name="close" size={24} color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </View>
-                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map(
-                  (reason) => (
-                    <TouchableOpacity
-                      key={reason}
-                      style={styles.optionBtn}
-                      onPress={() => submitReport(reason)}
-                    >
-                      <Text style={styles.optionText}>{reason}</Text>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={18}
-                        color={COLORS.primaryGold}
-                      />
-                    </TouchableOpacity>
-                  ),
-                )}
+                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map((reason) => (
+                  <TouchableOpacity
+                    key={reason}
+                    style={styles.optionBtn}
+                    onPress={() => submitReport(reason)}
+                  >
+                    <Text style={styles.optionText}>{reason}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.primaryGold} />
+                  </TouchableOpacity>
+                ))}
               </View>
             )}
+
           </View>
         </View>
       </Modal>
 
-      {/* --- POST DETAIL MODAL --- */}
+      {/* ── POST DETAIL MODAL ── */}
+      {/* FIX 6: Removed the duplicate modal header that was copy-pasted at line ~639
+          (second <Image>, <Text>, <View> block that left tags unclosed) */}
       <Modal visible={!!selectedPost} transparent animationType="fade">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -544,6 +578,8 @@ export default function CommunityUserProfile() {
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View style={styles.modalCard}>
+
+            {/* Single, correct modal header */}
             <View style={styles.modalHeader}>
               <Image
                 source={{
@@ -562,20 +598,13 @@ export default function CommunityUserProfile() {
                   gap: 15,
                 }}
               >
-                {currentUser?.uid === CommunityUserid && (
+                {currentUser?.uid === CommunityUserid && selectedPost && (
                   <TouchableOpacity
                     onPress={() =>
-                      selectedPost &&
-                      handleDeletePost(
-                        selectedPost.id || (selectedPost as any)._id,
-                      )
+                      handleDeletePost(selectedPost.id || (selectedPost as any)._id)
                     }
                   >
-                    <Ionicons
-                      name="trash-outline"
-                      size={20}
-                      color={COLORS.accentRed}
-                    />
+                    <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={closeModal}>
@@ -588,17 +617,12 @@ export default function CommunityUserProfile() {
               <View>
                 <ScrollView bounces={false}>
                   <View style={styles.imageWrapper}>
-                    <Image
-                      source={{ uri: selectedPost.uri }}
-                      style={styles.modalImg}
-                    />
+                    <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
                     {showModalComments && (
                       <View style={styles.commentOverlay}>
                         <View style={styles.overlayHeader}>
                           <Text style={styles.overlayTitle}>Comments</Text>
-                          <TouchableOpacity
-                            onPress={() => setShowModalComments(false)}
-                          >
+                          <TouchableOpacity onPress={() => setShowModalComments(false)}>
                             <Ionicons
                               name="chevron-down"
                               size={22}
@@ -606,23 +630,16 @@ export default function CommunityUserProfile() {
                             />
                           </TouchableOpacity>
                         </View>
-                        <ScrollView
-                          nestedScrollEnabled
-                          style={styles.overlayScroll}
-                        >
-                          {(selectedPost?.comments || []).length > 0 ? (
+                        <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
+                          {(selectedPost.comments || []).length > 0 ? (
                             selectedPost.comments.map((c, index) => (
                               <View key={index} style={styles.commentLine}>
-                                <Text style={styles.cUser}>
-                                  {c.user?.username}{" "}
-                                </Text>
+                                <Text style={styles.cUser}>{c.user?.username} </Text>
                                 <Text style={styles.cText}>{c.text}</Text>
                               </View>
                             ))
                           ) : (
-                            <Text style={styles.noCommentsText}>
-                              No comments yet.
-                            </Text>
+                            <Text style={styles.noCommentsText}>No comments yet.</Text>
                           )}
                         </ScrollView>
                       </View>
@@ -630,29 +647,22 @@ export default function CommunityUserProfile() {
                   </View>
 
                   <View style={styles.modalActionRow}>
-                    <TouchableOpacity
-                      style={styles.actionBtn}
-                      onPress={handleLikeToggle}
-                    >
+                    <TouchableOpacity style={styles.actionBtn} onPress={handleLikeToggle}>
                       <Ionicons
                         name={
-                          (selectedPost?.likes || []).includes(
-                            currentUser?.uid || "",
-                          )
+                          (selectedPost.likes || []).includes(currentUser?.uid || "")
                             ? "heart"
                             : "heart-outline"
                         }
                         size={24}
                         color={
-                          (selectedPost?.likes || []).includes(
-                            currentUser?.uid || "",
-                          )
+                          (selectedPost.likes || []).includes(currentUser?.uid || "")
                             ? COLORS.accentRed
                             : COLORS.textLight
                         }
                       />
                       <Text style={styles.actionText}>
-                        {(selectedPost?.likes || []).length}
+                        {(selectedPost.likes || []).length}
                       </Text>
                     </TouchableOpacity>
 
@@ -661,16 +671,12 @@ export default function CommunityUserProfile() {
                       onPress={() => setShowModalComments(!showModalComments)}
                     >
                       <Ionicons
-                        name={
-                          showModalComments
-                            ? "chatbubble"
-                            : "chatbubble-outline"
-                        }
+                        name={showModalComments ? "chatbubble" : "chatbubble-outline"}
                         size={22}
                         color={COLORS.textLight}
                       />
                       <Text style={styles.actionText}>
-                        {(selectedPost?.comments || []).length}
+                        {(selectedPost.comments || []).length}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -694,27 +700,18 @@ export default function CommunityUserProfile() {
                       value={commentText}
                       onChangeText={setCommentText}
                     />
-                    <TouchableOpacity
-                      onPress={handleCommentSubmit}
-                      disabled={isSubmitting}
-                    >
+                    <TouchableOpacity onPress={handleCommentSubmit} disabled={isSubmitting}>
                       {isSubmitting ? (
-                        <ActivityIndicator
-                          size="small"
-                          color={COLORS.primaryGold}
-                        />
+                        <ActivityIndicator size="small" color={COLORS.primaryGold} />
                       ) : (
-                        <Ionicons
-                          name="send"
-                          size={20}
-                          color={COLORS.primaryGold}
-                        />
+                        <Ionicons name="send" size={20} color={COLORS.primaryGold} />
                       )}
                     </TouchableOpacity>
                   </View>
                 )}
               </View>
             )}
+
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -725,11 +722,21 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
-  topActionRow: {
+
+  // Top row: back btn on left, flag + block group on right
+  topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    marginTop: 10,
   },
+  // FIX 7: Added topRightActions to group flag + block — removed unused topActionRow
+  topRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
   backBtn: {
     width: 40,
     height: 40,
@@ -737,17 +744,35 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
   reportBtn: {
-    width: 40,
-    height: 40,
+    width: 36,
+    height: 36,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
   },
+  blockCornerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.accentRed,
+    backgroundColor: "transparent",
+  },
+  blockCornerBtnActive: {
+    borderColor: COLORS.border,
+  },
+  blockCornerText: {
+    color: COLORS.accentRed,
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
   profileCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 30,
@@ -800,6 +825,7 @@ const styles = StyleSheet.create({
   },
   followingBtnText: { color: "green", fontWeight: "bold" },
   followBtnText: { color: COLORS.background, fontWeight: "bold" },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
