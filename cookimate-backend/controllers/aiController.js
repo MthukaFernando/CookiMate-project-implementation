@@ -1,4 +1,5 @@
 import Groq from "groq-sdk";
+import Recipe from "../models/Recipe.js";
 
 
 // Helper function to generate the image
