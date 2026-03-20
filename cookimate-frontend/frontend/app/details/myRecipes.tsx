@@ -188,6 +188,52 @@ const MyRecipesPage = () => {
     }
   };
 
+  const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
+    Alert.alert(
+      "Delete Recipe",
+      `Are you sure you want to delete "${recipeName}"? This action cannot be undone.`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const uid = auth.currentUser?.uid;
+              if (!uid) {
+                Alert.alert("Error", "You must be logged in to delete recipes");
+                return;
+              }
+
+              const response = await axios.delete(
+                `${API_URL}/api/recipes/generated/${recipeId}`,
+                {
+                  data: { userId: uid } // Send userId in the request body
+                }
+              );
+
+              if (response.data.success) {
+                Alert.alert("Success", "Recipe deleted successfully");
+                // Refresh the recipes list
+                fetchRecipes();
+                // Also refresh favorites if needed
+                if (favorites.includes(recipeId)) {
+                  setFavorites(favorites.filter(id => id !== recipeId));
+                }
+              }
+            } catch (error: any) {
+              console.error("Error deleting recipe:", error);
+              Alert.alert(
+                "Error", 
+                error.response?.data?.message || "Failed to delete recipe"
+              );
+            }
+          }
+        }
+      ]
+    );
+  };
+
   const fetchRecipes = async () => {
     setLoading(true);
     try {
@@ -257,6 +303,8 @@ const MyRecipesPage = () => {
 
   const renderRecipeItem = ({ item }: { item: any }) => {
     const isSelected = selectedRecipeId === item.id;
+    // Check if this is a generated recipe (you'll need to add isGenerated to your recipe objects)
+    const isGenerated = item.isGenerated === true;
 
     return (
       <TouchableOpacity
@@ -275,13 +323,25 @@ const MyRecipesPage = () => {
             <Text style={styles.recipeTitle} numberOfLines={2}>
               {item.name}
             </Text>
-            <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
-              <Ionicons
-                name={favorites.includes(item.id) ? "heart" : "heart-outline"}
-                size={24}
-                color={favorites.includes(item.id) ? "#D4AF37" : "#FFFFFF"}
-              />
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity onPress={() => toggleFavorite(item.id)}>
+                <Ionicons
+                  name={favorites.includes(item.id) ? "heart" : "heart-outline"}
+                  size={24}
+                  color={favorites.includes(item.id) ? "#D4AF37" : "#FFFFFF"}
+                />
+              </TouchableOpacity>
+              
+              {/* Show delete button only for generated recipes */}
+              {isGenerated && (
+                <TouchableOpacity 
+                  onPress={() => handleDeleteGeneratedRecipe(item.id, item.name)}
+                  style={styles.deleteButton}
+                >
+                  <Ionicons name="trash-outline" size={22} color="#FF5252" />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
           <Text style={styles.recipeDescription} numberOfLines={2}>
             {item.description}
@@ -574,6 +634,14 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 4,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  deleteButton: {
+    padding: 4,
   },
   recipeTitle: {
     fontSize: 17,

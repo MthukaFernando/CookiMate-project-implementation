@@ -246,8 +246,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
 
 // Save Generated Recipe
 export const saveGeneratedRecipe = async (req, res) => {
-  const { recipe, image, title, userId, cuisine, mealType, servings } =
-    req.body;
+  const { recipe, image, title, userId, cuisine, mealType, servings } = req.body;
 
   try {
     // Validate required fields
@@ -324,6 +323,8 @@ export const saveGeneratedRecipe = async (req, res) => {
       servings: servings ? parseInt(servings) : 4,
       serving_size: "serving",
       search_terms: searchTerms,
+      isGenerated: true, // NEW: Mark as generated
+      generatedBy: userId, // NEW: Track which user generated it
     };
 
     // Check if recipe with same name already exists

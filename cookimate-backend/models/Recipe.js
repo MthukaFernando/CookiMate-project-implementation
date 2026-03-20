@@ -12,7 +12,9 @@ const RecipeSchema = new mongoose.Schema({
   meal_type: [String],
   steps: [String],
   search_terms: [String],
-  image: String
+  image: String,
+  isGenerated: {type: Boolean, default: false}, 
+  generatedBy: {type: String, ref: "User"}
 }, {collection: 'recipes'});
 
 // Check if model exists before creating
