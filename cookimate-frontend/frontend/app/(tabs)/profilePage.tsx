@@ -8,13 +8,13 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView, // Added for better device compatibility
+  SafeAreaView,
+  Modal, // Added Modal
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
-import Constants from "expo-constants";
 
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 const DEFAULT_AVATAR = "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
@@ -23,6 +23,7 @@ const ProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false); // Added Modal State
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid; 
 
@@ -55,7 +56,7 @@ const ProfilePage = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
         style={globalStyle.container} 
-        contentContainerStyle={styles.scrollContent} // Applied centering here
+        contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
       
@@ -83,7 +84,7 @@ const ProfilePage = () => {
                 <TouchableOpacity 
                   style={styles.settingsBtn}
                   activeOpacity={0.7}
-                  onPress={() => router.push("/profile/settings")}
+                  onPress={() => setIsModalVisible(true)} // Intercepted Settings
                 >
                   <Feather name="settings" size={18} color="#000000" />
                 </TouchableOpacity>
@@ -111,7 +112,7 @@ const ProfilePage = () => {
               icon="coffee" 
               label="Cooked" 
               value={user?.recipesCookedCount || 0} 
-              onPress={() => console.log("Route to Cooked List")}
+              onPress={() => setIsModalVisible(true)} // Intercepted Cooked
             />
             <StatItem 
               icon="heart" 
@@ -129,7 +130,7 @@ const ProfilePage = () => {
               icon="users" 
               label="Fans" 
               value={user?.followers.length || 0} 
-              onPress={() => console.log("Route to Followers")}
+              onPress={() => setIsModalVisible(true)} // Intercepted Fans
             />
           </View>
         </View>
@@ -150,11 +151,35 @@ const ProfilePage = () => {
         </View>
         
       </ScrollView>
+
+      {/* --- COMING SOON MODAL --- */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <MaterialCommunityIcons name="chef-hat" size={60} color="#D4AF37" />
+            <Text style={styles.modalTitle}>Coming Soon</Text>
+            <Text style={styles.modalSubtitle}>
+              Our chefs are still prepping this feature. It'll be served hot very soon!
+            </Text>
+            <TouchableOpacity
+              style={styles.modalCloseButton}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-/* --- SUB-COMPONENTS REMAINED UNCHANGED --- */
+/* --- SUB-COMPONENTS --- */
 const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity 
     activeOpacity={0.7}
@@ -205,19 +230,17 @@ const styles = StyleSheet.create({
     flexGrow: 1,           
     justifyContent: "center", 
     paddingHorizontal: 25, 
-    paddingTop: 5,       // Small fixed buffer for the top
-    paddingBottom: 60,    // Extra space at bottom to balance the visual center
+    paddingTop: 5,       
+    paddingBottom: 60,    
     backgroundColor: "#0A0A0A"
   },
   
-  // Top Profile Card
   topSubContainer: {
     backgroundColor: '#000000',
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
     borderColor: '#ffffff',
-    // Removed marginTop: 20 so it centers properly
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -299,7 +322,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  // Level Bar
   levelContainer: { 
     marginTop: 20 
   },
@@ -329,7 +351,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D4AF37' 
   },
 
-  // Bottom Cards
   bottomSubContainer: {
     backgroundColor: '#1A1A1A',
     borderRadius: 25,
@@ -395,7 +416,6 @@ const styles = StyleSheet.create({
     color: '#A6A6A6' 
   },
 
-  // Achievements
   badgeScroll: { 
     gap: 15, 
     paddingRight: 10 
@@ -430,6 +450,49 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
     color: '#FFFFFF',
     textAlign: 'center' 
+  },
+
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 30,
+    padding: 30,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+    elevation: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#D4AF37",
+    marginTop: 15,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#aaa",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  modalCloseButton: {
+    backgroundColor: "#D4AF37",
+    paddingVertical: 12,
+    paddingHorizontal: 35,
+    borderRadius: 15,
+  },
+  modalCloseButtonText: {
+    color: "#000",
+    fontWeight: "800",
+    fontSize: 16,
   },
 });
 
