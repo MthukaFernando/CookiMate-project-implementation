@@ -42,32 +42,31 @@ const CookedHistoryPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchCookedHistory = async () => {
-    setLoading(true);
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
+  setLoading(true);
+  try {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
 
-      const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
+    const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
 
-      if (response.data && response.data.cookedHistory) {
-        const history = response.data.cookedHistory
-          .filter((item: any) => item.recipeId) // Ensure recipeId exists
-          .map((item: any) => ({
-            ...item.recipeId, // Spreads name, image, etc.
-            dateCooked: item.dateCooked,
-            mongoId: item.recipeId._id,
-          }));
-        setRecipes(history);
-      } else {
-        setRecipes([]);
-      }
-    } catch (error) {
-      console.error("Error fetching cooked history:", error);
-      setRecipes([]);
-    } finally {
-      setLoading(false);
+    if (response.data && response.data.cookedHistory) {
+      const history = response.data.cookedHistory
+        .filter((item: any) => item.recipeId) 
+        .map((item: any) => ({
+          // FLAG: Map the long MongoDB _id to 'id'
+          id: item.recipeId?._id || item.recipeId, 
+          name: item.recipeId?.name || "Unknown Recipe",
+          image: item.recipeId?.image,
+          dateCooked: item.dateCooked,
+        }));
+      setRecipes(history);
     }
-  };
+  } catch (error) {
+    console.error("Error:", error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useFocusEffect(
     useCallback(() => {
@@ -76,26 +75,31 @@ const CookedHistoryPage = () => {
   );
 
   const renderRecipeItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => router.push(`/recipe/${item.id}` as any)}
-      style={styles.card}
-    >
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-      <View style={styles.cardContent}>
-        <Text style={styles.recipeTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <Text style={styles.cookedDate}>
-          Cooked on {new Date(item.dateCooked).toLocaleDateString()}
-        </Text>
-        <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View Again</Text>
-          <Ionicons name="chevron-forward" size={14} color="black" />
-        </View>
+  <TouchableOpacity
+    activeOpacity={0.9}
+    // FLAG: Use /recipe/${item.id}. 
+    // This assumes your file is at frontend/app/recipe/[id].tsx
+    onPress={() => router.push(`/recipe/${item.id}` as any)} 
+    style={styles.card}
+  >
+    <Image 
+      source={{ uri: item.image }} 
+      style={styles.cardImage} 
+    />
+    <View style={styles.cardContent}>
+      <Text style={styles.recipeTitle} numberOfLines={1}>
+        {item.name}
+      </Text>
+      <Text style={styles.cookedDate}>
+        Cooked on {new Date(item.dateCooked).toLocaleDateString()}
+      </Text>
+      <View style={styles.viewButton}>
+        <Text style={styles.viewButtonText}>View Again</Text>
+        <Ionicons name="chevron-forward" size={14} color="black" />
       </View>
-    </TouchableOpacity>
-  );
+    </View>
+  </TouchableOpacity>
+);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>

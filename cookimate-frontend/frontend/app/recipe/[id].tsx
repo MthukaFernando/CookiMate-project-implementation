@@ -122,11 +122,14 @@ export default function RecipeDetails() {
       const auth = getAuth();
       const currentUserUid = auth.currentUser?.uid;
 
-      if (currentUserUid) {
+      if (currentUserUid && recipe?._id) {
         await axios.put(
           `${API_URL}/api/users/complete-recipe/${currentUserUid}`,
+          { recipeId: recipe._id } // Sending the MongoDB ID in the body
         );
         console.log("Recipe completed! Cook count incremented.");
+      } else {
+        console.error("Missing UID or Recipe ID");
       }
 
       setCookingMode(false);

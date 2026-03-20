@@ -239,12 +239,7 @@ export const searchUsers = async (req, res) => {
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params; // Using firebaseUid for consistency
-    const { recipeId } = req.body; //extract recipeId from the request body
-
-    // Basic validation to prevent the 500 error if the frontend forgets the ID
-    if (!recipeId) {
-      return res.status(400).json({ message: "recipeId is required" });
-    }
+    const { recipeId } = req.body; //_id
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
@@ -261,11 +256,10 @@ export const incrementCookCount = async (req, res) => {
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
     // Filter out any nulls in case a recipe was deleted from the DB
-    const cleanHistory = updatedUser.cookedHistory.filter(item => item.recipeId !== null);
+    const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: cleanHistory });
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
   } catch (error) {
-    console.error("Backend Error in incrementCookCount:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
