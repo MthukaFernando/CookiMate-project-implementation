@@ -2,6 +2,13 @@ import Groq from "groq-sdk";
 import pkg from "natural";
 const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
+import dotenv from "dotenv";
+
+// Load environment variables
+dotenv.config();
+
+// Initialize Groq ONCE at the top level so all functions can use it
+const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // Pre-compute stemmed allowlist once at startup (not per request)
 const STEMMED_ALLOWLIST = new Set(
@@ -146,7 +153,6 @@ export const generateRecipeText = async (req, res) => {
 
   // Sanitize the prompt
   const cleanPrompt = sanitizePrompt(prompt || "");
-
   if (cleanPrompt === "INVALID_PROMPT") {
     return res.status(400).json({
       error: "Please keep your notes strictly related to cooking.",
@@ -159,20 +165,12 @@ export const generateRecipeText = async (req, res) => {
   }
 
   try {
-    // Check for API key
-    if (!process.env.GROQ_API_KEY) {
-      throw new Error("GROQ_API_KEY is missing from .env");
-    }
-
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
-    // Generate Recipe Text via Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
           content: `You are a Gourmet Chef. You ONLY generate recipes.
-  
+          
 RESPONSE FORMAT:
 You must output your response as a JSON object with the following keys:
 "title": (string),
@@ -199,7 +197,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
 
     // Parse the JSON response
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
-
+    
     // Validate that we have the required fields
     if (
       !responseData.title ||
@@ -217,7 +215,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
 
     // Generate Image using the Title
     const imageUri = await generateRecipeImage(recipeTitle);
-
+ 
     console.log("✅ Sending data to mobile app...");
     res.status(200).json({
       recipe: recipeText,
@@ -226,7 +224,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
     });
   } catch (error) {
     console.error("Master Route Error:", error);
-
+    
     // Handle JSON parse errors specifically
     if (error instanceof SyntaxError) {
       return res.status(500).json({
@@ -239,20 +237,16 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
     });
   }
 };
+
 export const chatWithRecipe = async (req, res) => {
   const { recipeId, message } = req.body;
 
   try {
     // 1. Fetch the specific recipe from MongoDB
     const recipe = await Recipe.findOne({ id: recipeId });
-
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
-
-    // 2. Initialize Groq
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-
     // 3. Create the Context-Aware System Prompt
     // We "feed" the AI the recipe details so it knows what it's talking about.
     const systemPrompt = `
@@ -284,54 +278,44 @@ export const chatWithRecipe = async (req, res) => {
     res.status(200).json({
       reply: chatCompletion.choices[0].message.content,
     });
-
   } catch (error) {
     console.error("Chat Error:", error);
     res.status(500).json({ error: "Chatbot is having trouble connecting." });
   }
-}
+};
 
-// Chatbot integration
+// Global Chatbot integration
 export const handleGlobalChat = async (req, res) => {
   try {
-    const { messages } = req.body; // Array of {role: "user", content: "..."}
-
+    const { messages } = req.body;
     if (!messages || messages.length === 0) {
       return res.status(400).json({ error: "No messages provided" });
     }
 
-    // 1. Get the latest message
     const latestMessage = messages[messages.length - 1].content.toLowerCase();
-    
-    // 2. Validate it's cooking related using your existing dictionary logic
-    const words = latestMessage.split(/\s+/);
+    const words = latestMessage.replace(/[^a-z\s]/g, "").split(/\s+/);
     const isCookingRelated = words.some((word) => 
       STEMMED_ALLOWLIST.has(PorterStemmer.stem(word))
     );
 
-    // If the user asks something totally random (e.g., "who is the president")
     if (!isCookingRelated) {
       return res.status(200).json({
         reply: "I'm sorry, I'm only trained to help with cooking and recipes! Is there a dish you'd like to talk about?"
       });
     }
 
-    // 3. Call Groq for a conversational response (No JSON mode)
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          content: "You are the CookiMate assistant. You are a professional chef. Only discuss cooking, ingredients, nutrition, and kitchen advice. Keep answers helpful and short. If the user asks for a recipe, give them a brief overview of how to make it."
+          content: "You are the CookiMate assistant, a professional chef. Only discuss cooking, ingredients, nutrition, and kitchen advice."
         },
         ...messages
       ],
       model: "llama-3.3-70b-versatile",
     });
 
-    res.status(200).json({
-      reply: chatCompletion.choices[0].message.content,
-    });
-
+    res.status(200).json({ reply: chatCompletion.choices[0].message.content });
   } catch (error) {
     console.error("Global Chat Error:", error);
     res.status(500).json({ error: "The AI chef is currently unavailable." });
