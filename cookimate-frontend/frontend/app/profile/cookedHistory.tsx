@@ -42,29 +42,32 @@ const CookedHistoryPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchCookedHistory = async () => {
-  setLoading(true);
-  try {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
 
-    const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
-    
-    if (response.data && response.data.cookedHistory) {
-      const history = response.data.cookedHistory.map((item: any) => ({
-        ...item.recipeId,
-        dateCooked: item.dateCooked,
-      }));
-      setRecipes(history);
-    } else {
+      const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
+
+      if (response.data && response.data.cookedHistory) {
+        const history = response.data.cookedHistory
+          .filter((item: any) => item.recipeId) // Ensure recipeId exists
+          .map((item: any) => ({
+            ...item.recipeId, // Spreads name, image, etc.
+            dateCooked: item.dateCooked,
+            mongoId: item.recipeId._id,
+          }));
+        setRecipes(history);
+      } else {
+        setRecipes([]);
+      }
+    } catch (error) {
+      console.error("Error fetching cooked history:", error);
       setRecipes([]);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching cooked history:", error);
-    setRecipes([]);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   useFocusEffect(
     useCallback(() => {
