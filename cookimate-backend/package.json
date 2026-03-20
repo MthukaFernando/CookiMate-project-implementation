@@ -24,7 +24,6 @@
     "react-native-confetti-cannon": "^1.5.2"
   },
   "devDependencies": {
-    "combined-stream": "^1.0.8",
     "nodemon": "^3.1.11"
   }
 }
