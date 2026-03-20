@@ -73,9 +73,9 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ username: 'text' });
+userSchema.index({ followers: 1 });
+userSchema.index({ following: 1 });
 
-userSchema.index({ followers: 1 }); // fast connection lookups
-userSchema.index({ following: 1 }); // fast connection lookups
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-const User = mongoose.model("User", userSchema);
 export default User;
