@@ -3,6 +3,7 @@ import { getAllRecipes, getRecipeById, getSeasonalRecipes } from '../controllers
 import { getRandomRecipes } from "../controllers/recipeController.js";
 import { generateRecipeText } from '../controllers/aiController.js';
 import { saveGeneratedRecipe } from '../controllers/aiController.js';
+import { deleteGeneratedRecipe } from '../controllers/recipeController.js';
 
 const router = express.Router();
 //To get recomandded recips in the home page
@@ -20,5 +21,7 @@ router.get('/:id', getRecipeById);
 router.post('/generate-text', generateRecipeText);
 
 router.post('/save-generated', saveGeneratedRecipe);
+
+router.delete('/generated/:id', deleteGeneratedRecipe);
 
 export default router;

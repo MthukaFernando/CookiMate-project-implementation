@@ -1,5 +1,6 @@
 import Recipe from "../models/Recipe.js";
 import SeasonalRecipe from "../models/SeasonalRecipe.js";
+import User from "../models/user.js"; // Add this import
 
 export const getAllRecipes = async (req, res) => {
   try {
@@ -113,5 +114,63 @@ export const getRandomRecipes = async (req, res) => {
     res.json(recipes);
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteGeneratedRecipe = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { userId } = req.body; // Firebase UID of the user making the request
+
+    if (!userId) {
+      return res.status(400).json({ 
+        message: "User ID is required" 
+      });
+    }
+
+    // Find the recipe using the custom 'id' field (not MongoDB _id)
+    const recipe = await Recipe.findOne({ id: id });
+    
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
+    // Check if it's a generated recipe
+    if (!recipe.isGenerated) {
+      return res.status(403).json({ 
+        message: "Only generated recipes can be deleted" 
+      });
+    }
+
+    // Check if the user is the one who generated this recipe
+    if (recipe.generatedBy !== userId) {
+      return res.status(403).json({ 
+        message: "You can only delete recipes you generated" 
+      });
+    }
+
+    // Find the user by their Firebase UID
+    const user = await User.findOne({ firebaseUid: userId });
+    
+    if (user) {
+      // Remove the recipe from user's favorites using the custom 'id' field
+      // Assuming favorites array contains objects with an 'id' property
+      user.favorites = user.favorites.filter(fav => fav.id !== id);
+      await user.save();
+    }
+
+    // Delete the recipe using the custom 'id' field
+    await Recipe.deleteOne({ id: id });
+
+    res.status(200).json({ 
+      success: true, 
+      message: "Recipe deleted successfully" 
+    });
+  } catch (error) {
+    console.error("Delete Recipe Error:", error);
+    res.status(500).json({ 
+      message: error.message,
+      success: false 
+    });
   }
 };

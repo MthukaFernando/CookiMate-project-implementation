@@ -161,19 +161,67 @@ const FavoritesPage = () => {
     }, [searchQuery, meal, diet, cuisine, time]),
   );
 
-  const confirmRemove = (recipeId: string) => {
+  const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
     Alert.alert(
-      "Remove Favorite",
-      "Are you sure you want to remove this recipe from favorites?",
+      "Delete Recipe",
+      `Are you sure you want to delete "${recipeName}"? This will remove it from your favorites and permanently delete it.`,
       [
         { text: "Cancel", style: "cancel" },
         {
-          text: "Remove",
+          text: "Delete",
           style: "destructive",
-          onPress: () => handleRemove(recipeId),
-        },
-      ],
+          onPress: async () => {
+            try {
+              const uid = auth.currentUser?.uid;
+              if (!uid) {
+                Alert.alert("Error", "You must be logged in to delete recipes");
+                return;
+              }
+
+              const response = await axios.delete(
+                `${API_URL}/api/recipes/generated/${recipeId}`,
+                {
+                  data: { userId: uid }
+                }
+              );
+
+              if (response.data.success) {
+                Alert.alert("Success", "Recipe deleted successfully");
+                // Refresh the favorites list
+                fetchFavorites();
+              }
+            } catch (error: any) {
+              console.error("Error deleting recipe:", error);
+              Alert.alert(
+                "Error", 
+                error.response?.data?.message || "Failed to delete recipe"
+              );
+            }
+          }
+        }
+      ]
     );
+  };
+
+  const confirmRemove = (recipeId: string, isGenerated: boolean = false, recipeName: string = "") => {
+    if (isGenerated) {
+      // For generated recipes, use the delete function that permanently deletes
+      handleDeleteGeneratedRecipe(recipeId, recipeName);
+    } else {
+      // For regular recipes, just remove from favorites
+      Alert.alert(
+        "Remove Favorite",
+        "Are you sure you want to remove this recipe from favorites?",
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: () => handleRemove(recipeId),
+          },
+        ],
+      );
+    }
   };
 
   const handleRemove = async (recipeId: string) => {
@@ -196,6 +244,8 @@ const FavoritesPage = () => {
   };
 
   const renderRecipeItem = ({ item }: { item: any }) => {
+    const isGenerated = item.isGenerated === true;
+    
     return (
       <View style={styles.card}>
         <Image source={{ uri: item.image }} style={styles.cardImage} />
@@ -204,9 +254,13 @@ const FavoritesPage = () => {
             <Text style={styles.recipeTitle} numberOfLines={2}>
               {item.name}
             </Text>
-            <TouchableOpacity onPress={() => confirmRemove(item.id)}>
-              <Feather name="trash-2" size={20} color="#aa1e0f" />
-            </TouchableOpacity>
+            <View style={styles.actionButtons}>
+              <TouchableOpacity 
+                onPress={() => confirmRemove(item.id, isGenerated, item.name)}
+              >
+                <Feather name="trash-2" size={20} color="#aa1e0f" />
+              </TouchableOpacity>
+            </View>
           </View>
           <Text style={styles.recipeDescription} numberOfLines={2}>
             {item.description}
@@ -437,6 +491,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     marginBottom: 4,
+  },
+  actionButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   recipeTitle: {
     fontSize: 18,
