@@ -60,5 +60,25 @@ const CookedHistoryPage = () => {
     }, []),
   );
 
-  
+  const renderRecipeItem = ({ item }: { item: any }) => (
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => router.push(`/recipe/${item.id}` as any)}
+      style={styles.card}
+    >
+      <Image source={{ uri: item.image }} style={styles.cardImage} />
+      <View style={styles.cardContent}>
+        <Text style={styles.recipeTitle} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <Text style={styles.cookedDate}>
+          Cooked on {new Date(item.dateCooked).toLocaleDateString()}
+        </Text>
+        <View style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>View Again</Text>
+          <Ionicons name="chevron-forward" size={14} color="black" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 };
