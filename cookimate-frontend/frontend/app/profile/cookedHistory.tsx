@@ -24,3 +24,9 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
+const CookedHistoryPage = () => {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const [recipes, setRecipes] = useState([]);
+  const [loading, setLoading] = useState(true);
+}
