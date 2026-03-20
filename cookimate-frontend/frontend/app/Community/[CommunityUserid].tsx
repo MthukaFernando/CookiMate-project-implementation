@@ -46,7 +46,7 @@ const COLORS = {
 };
 
 interface Post {
-  id: string;
+  id: string; // Ensure this matches what your backend returns (might need to be _id)
   uri: string;
   caption?: string;
   likes: string[];
@@ -89,7 +89,6 @@ export default function CommunityUserProfile() {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // --- REPORT STATES ---
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
 
@@ -131,7 +130,7 @@ export default function CommunityUserProfile() {
               ...prev,
               stats: {
                 ...prev.stats,
-                followers: prev.stats.followers + (newStatus ? 1 : -1),
+                followers: (prev.stats.followers || 0) + (newStatus ? 1 : -1),
               },
             }
           : prev,
@@ -141,26 +140,72 @@ export default function CommunityUserProfile() {
     }
   };
 
+  // --- FIXED FRONTEND LIKE LOGIC ---
+  const handleLikeToggle = async () => {
+    if (!currentUser || !selectedPost) return;
+
+    // Use current ID logic - checking if the ID exists (fallback to _id if backend uses that)
+    const postId = selectedPost.id || (selectedPost as any)._id;
+
+    try {
+      // 1. Send the request
+      await axios.put(`${BASE_URL}/social/${postId}/like`, {
+        userId: currentUser.uid,
+      });
+
+      // 2. Since your backend returns "Post liked!" (a string),
+      // we must update the local state manually.
+      const isCurrentlyLiked = (selectedPost.likes || []).includes(
+        currentUser.uid,
+      );
+
+      const newLikes = isCurrentlyLiked
+        ? selectedPost.likes.filter((uid) => uid !== currentUser.uid)
+        : [...(selectedPost.likes || []), currentUser.uid];
+
+      const updatedPost = { ...selectedPost, likes: newLikes };
+
+      // 3. Update the modal view
+      setSelectedPost(updatedPost);
+
+      // 4. Update the profile list view
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              posts: (prev.posts || []).map((p) => {
+                const pId = p.id || (p as any)._id;
+                return pId === postId ? updatedPost : p;
+              }),
+            }
+          : prev,
+      );
+    } catch (error) {
+      console.error("Like error:", error);
+      Alert.alert("Error", "Could not process like.");
+    }
+  };
+
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || !currentUser || !selectedPost) return;
+    const postId = selectedPost.id || (selectedPost as any)._id;
     setIsSubmitting(true);
     try {
-      const res = await axios.post(
-        `${BASE_URL}/social/${selectedPost.id}/comment`,
-        {
-          userId: currentUser.uid,
-          text: commentText,
-        },
-      );
+      const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
+        userId: currentUser.uid,
+        text: commentText,
+      });
+      // Comments endpoint returns the object, so we can use res.data directly
       setSelectedPost(res.data);
       setCommentText("");
       setProfile((prev) =>
         prev
           ? {
               ...prev,
-              posts: prev.posts.map((p) =>
-                p.id === selectedPost.id ? res.data : p,
-              ),
+              posts: (prev.posts || []).map((p) => {
+                const pId = p.id || (p as any)._id;
+                return pId === postId ? res.data : p;
+              }),
             }
           : prev,
       );
@@ -183,10 +228,18 @@ export default function CommunityUserProfile() {
           onPress: async () => {
             try {
               await axios.delete(`${BASE_URL}/social/${postId}`, {
-                data: { userId: currentUser?.uid }
+                data: { userId: currentUser?.uid },
               });
               setProfile((prev) =>
-                prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) } : prev
+                prev
+                  ? {
+                      ...prev,
+                      posts: (prev.posts || []).filter((p) => {
+                        const pId = p.id || (p as any)._id;
+                        return pId !== postId;
+                      }),
+                    }
+                  : prev,
               );
               closeModal();
             } catch (error) {
@@ -195,11 +248,10 @@ export default function CommunityUserProfile() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
-  // --- REPORT LOGIC ---
   const handleReportPress = () => {
     setReportModalVisible(true);
     setShowThankYou(false);
@@ -208,12 +260,11 @@ export default function CommunityUserProfile() {
   const submitReport = async (reason: string) => {
     if (!currentUser || !CommunityUserid) return;
     try {
-      // Logic for user reporting targets the specific user ID
       await axios.post(`${BASE_URL}/social/report`, {
         reporter: currentUser.uid,
         targetId: CommunityUserid,
-        targetType: 'user',
-        reason: reason
+        targetType: "user",
+        reason: reason,
       });
       setShowThankYou(true);
     } catch (err) {
@@ -250,9 +301,11 @@ export default function CommunityUserProfile() {
           <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
-        {/* Flag icon added for reporting functionality */}
         {currentUser?.uid !== CommunityUserid && (
-          <TouchableOpacity onPress={handleReportPress} style={styles.reportBtn}>
+          <TouchableOpacity
+            onPress={handleReportPress}
+            style={styles.reportBtn}
+          >
             <Ionicons name="flag-outline" size={20} color={COLORS.textMuted} />
           </TouchableOpacity>
         )}
@@ -261,24 +314,26 @@ export default function CommunityUserProfile() {
       <View style={styles.profileCard}>
         <Image
           source={{
-            uri: profile.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+            uri:
+              profile.profilePic ||
+              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
           }}
           style={styles.avatar}
         />
-        <Text style={styles.userName}>{profile.name}</Text>
-        <Text style={styles.handle}>@{profile.username}</Text>
+        <Text style={styles.userName}>{profile.name || "User"}</Text>
+        <Text style={styles.handle}>@{profile.username || "unknown"}</Text>
         {profile.bio && <Text style={styles.bioText}>{profile.bio}</Text>}
         <View style={styles.statsRow}>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.recipes}</Text>
+            <Text style={styles.statNum}>{profile.stats?.recipes || 0}</Text>
             <Text style={styles.statLab}>Recipes</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.followers}</Text>
+            <Text style={styles.statNum}>{profile.stats?.followers || 0}</Text>
             <Text style={styles.statLab}>Followers</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.following}</Text>
+            <Text style={styles.statNum}>{profile.stats?.following || 0}</Text>
             <Text style={styles.statLab}>Following</Text>
           </View>
         </View>
@@ -287,7 +342,11 @@ export default function CommunityUserProfile() {
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
             onPress={handleFollowToggle}
           >
-            <Text style={isFollowing ? styles.followingBtnText : styles.followBtnText}>
+            <Text
+              style={
+                isFollowing ? styles.followingBtnText : styles.followBtnText
+              }
+            >
               {isFollowing ? "Following" : "Follow"}
             </Text>
           </TouchableOpacity>
@@ -299,8 +358,8 @@ export default function CommunityUserProfile() {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={profile.posts}
-        keyExtractor={(item) => item.id}
+        data={profile.posts || []}
+        keyExtractor={(item) => item.id || (item as any)._id}
         numColumns={COLUMN_COUNT}
         ListHeaderComponent={ProfileHeader}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
@@ -309,31 +368,47 @@ export default function CommunityUserProfile() {
           <TouchableOpacity onPress={() => setSelectedPost(item)}>
             <Image
               source={{ uri: item.uri }}
-              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, backgroundColor: COLORS.surface }}
+              style={{
+                width: IMAGE_SIZE,
+                height: IMAGE_SIZE,
+                borderRadius: 8,
+                backgroundColor: COLORS.surface,
+              }}
             />
           </TouchableOpacity>
         )}
       />
 
-      {/* --- REPORT MODAL --- */}
-      <Modal 
-        visible={reportModalVisible} 
-        transparent 
-        animationType="fade"
-        onRequestClose={closeReportModal}
-      >
+      <Modal visible={reportModalVisible} transparent animationType="fade">
         <View style={styles.reportOverlay}>
           <View style={styles.reportCard}>
             {showThankYou ? (
               <View style={styles.thankYouArea}>
-                <Ionicons name="checkmark-circle" size={60} color={COLORS.primaryGold} />
+                <Ionicons
+                  name="checkmark-circle"
+                  size={60}
+                  color={COLORS.primaryGold}
+                />
                 <Text style={styles.thankYouTitle}>User Reported</Text>
-                <Text style={styles.thankYouText}>Thank you for your report. We will review this profile to ensure it meets our community guidelines.</Text>
-                <TouchableOpacity 
-                  style={[styles.modalBtnAction, { backgroundColor: COLORS.primaryGold, width: '100%' }]} 
+                <Text style={styles.thankYouText}>
+                  Thank you for your report.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtnAction,
+                    { backgroundColor: COLORS.primaryGold, width: "100%" },
+                  ]}
                   onPress={closeReportModal}
                 >
-                  <Text style={{ color: COLORS.background, fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+                  <Text
+                    style={{
+                      color: COLORS.background,
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                  >
+                    Close
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -344,19 +419,22 @@ export default function CommunityUserProfile() {
                     <Ionicons name="close" size={24} color={COLORS.textMuted} />
                   </TouchableOpacity>
                 </View>
-
-                <Text style={styles.reportSubTitle}>Why are you reporting this user?</Text>
-                
-                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map((reason) => (
-                  <TouchableOpacity 
-                    key={reason} 
-                    style={styles.optionBtn} 
-                    onPress={() => submitReport(reason)}
-                  >
-                    <Text style={styles.optionText}>{reason}</Text>
-                    <Ionicons name="chevron-forward" size={18} color={COLORS.primaryGold} />
-                  </TouchableOpacity>
-                ))}
+                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map(
+                  (reason) => (
+                    <TouchableOpacity
+                      key={reason}
+                      style={styles.optionBtn}
+                      onPress={() => submitReport(reason)}
+                    >
+                      <Text style={styles.optionText}>{reason}</Text>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={COLORS.primaryGold}
+                      />
+                    </TouchableOpacity>
+                  ),
+                )}
               </View>
             )}
           </View>
@@ -372,15 +450,36 @@ export default function CommunityUserProfile() {
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
               <Image
-                source={{ uri: profile.profilePic }}
+                source={{
+                  uri:
+                    profile.profilePic ||
+                    "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                }}
                 style={styles.modalAvatar}
               />
               <Text style={styles.modalUserTitle}>{profile.username}</Text>
-              
-              <View style={{ flexDirection: 'row', marginLeft: 'auto', alignItems: 'center', gap: 15 }}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginLeft: "auto",
+                  alignItems: "center",
+                  gap: 15,
+                }}
+              >
                 {currentUser?.uid === CommunityUserid && (
-                  <TouchableOpacity onPress={() => selectedPost && handleDeletePost(selectedPost.id)}>
-                    <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
+                  <TouchableOpacity
+                    onPress={() =>
+                      selectedPost &&
+                      handleDeletePost(
+                        selectedPost.id || (selectedPost as any)._id,
+                      )
+                    }
+                  >
+                    <Ionicons
+                      name="trash-outline"
+                      size={20}
+                      color={COLORS.accentRed}
+                    />
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity onPress={closeModal}>
@@ -391,28 +490,43 @@ export default function CommunityUserProfile() {
 
             {selectedPost && (
               <View>
-                <ScrollView bounces={false} >
+                <ScrollView bounces={false}>
                   <View style={styles.imageWrapper}>
-                    <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
-
+                    <Image
+                      source={{ uri: selectedPost.uri }}
+                      style={styles.modalImg}
+                    />
                     {showModalComments && (
                       <View style={styles.commentOverlay}>
                         <View style={styles.overlayHeader}>
-                          <Text style={styles.overlayTitle}>Recent Comments</Text>
-                          <TouchableOpacity onPress={() => setShowModalComments(false)}>
-                            <Ionicons name="chevron-down" size={22} color={COLORS.primaryGold} />
+                          <Text style={styles.overlayTitle}>Comments</Text>
+                          <TouchableOpacity
+                            onPress={() => setShowModalComments(false)}
+                          >
+                            <Ionicons
+                              name="chevron-down"
+                              size={22}
+                              color={COLORS.primaryGold}
+                            />
                           </TouchableOpacity>
                         </View>
-                        <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
-                          {selectedPost.comments.length > 0 ? (
+                        <ScrollView
+                          nestedScrollEnabled
+                          style={styles.overlayScroll}
+                        >
+                          {(selectedPost?.comments || []).length > 0 ? (
                             selectedPost.comments.map((c, index) => (
                               <View key={index} style={styles.commentLine}>
-                                <Text style={styles.cUser}>{c.user?.username} </Text>
+                                <Text style={styles.cUser}>
+                                  {c.user?.username}{" "}
+                                </Text>
                                 <Text style={styles.cText}>{c.text}</Text>
                               </View>
                             ))
                           ) : (
-                            <Text style={styles.noCommentsText}>No comments yet.</Text>
+                            <Text style={styles.noCommentsText}>
+                              No comments yet.
+                            </Text>
                           )}
                         </ScrollView>
                       </View>
@@ -420,13 +534,30 @@ export default function CommunityUserProfile() {
                   </View>
 
                   <View style={styles.modalActionRow}>
-                    <TouchableOpacity style={styles.actionBtn}>
+                    <TouchableOpacity
+                      style={styles.actionBtn}
+                      onPress={handleLikeToggle}
+                    >
                       <Ionicons
-                        name={selectedPost.likes.includes(currentUser?.uid || "") ? "heart" : "heart-outline"}
+                        name={
+                          (selectedPost?.likes || []).includes(
+                            currentUser?.uid || "",
+                          )
+                            ? "heart"
+                            : "heart-outline"
+                        }
                         size={24}
-                        color={selectedPost.likes.includes(currentUser?.uid || "") ? COLORS.accentRed : COLORS.textLight}
+                        color={
+                          (selectedPost?.likes || []).includes(
+                            currentUser?.uid || "",
+                          )
+                            ? COLORS.accentRed
+                            : COLORS.textLight
+                        }
                       />
-                      <Text style={styles.actionText}>{selectedPost.likes.length}</Text>
+                      <Text style={styles.actionText}>
+                        {(selectedPost?.likes || []).length}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -434,11 +565,17 @@ export default function CommunityUserProfile() {
                       onPress={() => setShowModalComments(!showModalComments)}
                     >
                       <Ionicons
-                        name={showModalComments ? "chatbubble" : "chatbubble-outline"}
+                        name={
+                          showModalComments
+                            ? "chatbubble"
+                            : "chatbubble-outline"
+                        }
                         size={22}
                         color={COLORS.textLight}
                       />
-                      <Text style={styles.actionText}>{selectedPost.comments.length}</Text>
+                      <Text style={styles.actionText}>
+                        {(selectedPost?.comments || []).length}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
@@ -461,11 +598,21 @@ export default function CommunityUserProfile() {
                       value={commentText}
                       onChangeText={setCommentText}
                     />
-                    <TouchableOpacity onPress={handleCommentSubmit} disabled={isSubmitting}>
+                    <TouchableOpacity
+                      onPress={handleCommentSubmit}
+                      disabled={isSubmitting}
+                    >
                       {isSubmitting ? (
-                        <ActivityIndicator size="small" color={COLORS.primaryGold} />
+                        <ActivityIndicator
+                          size="small"
+                          color={COLORS.primaryGold}
+                        />
                       ) : (
-                        <Ionicons name="send" size={20} color={COLORS.primaryGold} />
+                        <Ionicons
+                          name="send"
+                          size={20}
+                          color={COLORS.primaryGold}
+                        />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -482,10 +629,10 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
-  topActionRow: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center' 
+  topActionRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backBtn: {
     width: 40,
@@ -524,7 +671,12 @@ const styles = StyleSheet.create({
   },
   userName: { fontSize: 24, fontWeight: "800", color: COLORS.textLight },
   handle: { color: COLORS.primaryGold, fontWeight: "600" },
-  bioText: { textAlign: "center", marginTop: 8, color: COLORS.textMuted, paddingHorizontal: 20 },
+  bioText: {
+    textAlign: "center",
+    marginTop: 8,
+    color: COLORS.textMuted,
+    paddingHorizontal: 20,
+  },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -545,7 +697,11 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: "center",
   },
-  followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
+  followingBtn: {
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   followingBtnText: { color: "green", fontWeight: "bold" },
   followBtnText: { color: COLORS.background, fontWeight: "bold" },
   modalOverlay: {
@@ -562,16 +718,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  modalHeader: { 
-    flexDirection: "row", 
-    alignItems: "center", 
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border 
+    borderBottomColor: COLORS.border,
   },
-  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: COLORS.primaryGold },
+  modalAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGold,
+  },
   modalUserTitle: { color: COLORS.textLight, fontWeight: "bold" },
-  imageWrapper: { width: "100%", height: width * 0.9, position: "relative", backgroundColor: "#000" },
+  imageWrapper: {
+    width: "100%",
+    height: width * 0.9,
+    position: "relative",
+    backgroundColor: "#000",
+  },
   modalImg: { width: "100%", height: "100%" },
   commentOverlay: {
     position: "absolute",
@@ -593,7 +761,7 @@ const styles = StyleSheet.create({
   },
   overlayTitle: { color: COLORS.textLight, fontWeight: "bold", fontSize: 14 },
   overlayScroll: { flex: 1 },
-  commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: 'wrap' },
+  commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: "wrap" },
   cUser: { color: COLORS.primaryGold, fontWeight: "bold", fontSize: 13 },
   cText: { color: COLORS.textLight, fontSize: 14, lineHeight: 18 },
   noCommentsText: {
@@ -602,11 +770,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
   },
-  modalActionRow: {
-    flexDirection: "row",
-    padding: 15,
-    gap: 20,
-  },
+  modalActionRow: { flexDirection: "row", padding: 15, gap: 20 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
   actionText: { fontWeight: "700", color: COLORS.textLight },
   captionArea: { paddingHorizontal: 15, paddingBottom: 15 },
@@ -624,44 +788,55 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   bottomInput: { flex: 1, color: COLORS.textLight, fontSize: 14 },
-
-  // --- REPORT MODAL STYLES ---
-  reportOverlay: { 
-    flex: 1, 
-    backgroundColor: 'rgba(0,0,0,0.85)', 
-    justifyContent: 'center', 
-    alignItems: 'center' 
+  reportOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
   },
-  reportCard: { 
-    width: '88%', 
-    backgroundColor: COLORS.surface, 
-    borderRadius: 25, 
-    padding: 20, 
-    borderWidth: 1, 
-    borderColor: COLORS.border 
+  reportCard: {
+    width: "88%",
+    backgroundColor: COLORS.surface,
+    borderRadius: 25,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  modalHeaderReport: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center', 
-    marginBottom: 15 
+  modalHeaderReport: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
   },
-  reportModalTitle: { color: COLORS.primaryGold, fontSize: 18, fontWeight: 'bold' },
-  reportSubTitle: { color: COLORS.textLight, fontSize: 14, marginBottom: 15 },
-  optionBtn: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    backgroundColor: COLORS.surfaceLight, 
-    padding: 15, 
+  reportModalTitle: {
+    color: COLORS.primaryGold,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  optionBtn: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: COLORS.surfaceLight,
+    padding: 15,
     borderRadius: 12,
     marginBottom: 10,
-    borderWidth: 1, 
-    borderColor: COLORS.border
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  optionText: { color: COLORS.textLight, fontWeight: '600' },
-  thankYouArea: { alignItems: 'center', padding: 10 },
-  thankYouTitle: { color: COLORS.primaryGold, fontSize: 20, fontWeight: 'bold', marginVertical: 10 },
-  thankYouText: { color: COLORS.textMuted, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  optionText: { color: COLORS.textLight, fontWeight: "600" },
+  thankYouArea: { alignItems: "center", padding: 10 },
+  thankYouTitle: {
+    color: COLORS.primaryGold,
+    fontSize: 20,
+    fontWeight: "bold",
+    marginVertical: 10,
+  },
+  thankYouText: {
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
   modalBtnAction: { paddingVertical: 12, borderRadius: 10 },
 });
