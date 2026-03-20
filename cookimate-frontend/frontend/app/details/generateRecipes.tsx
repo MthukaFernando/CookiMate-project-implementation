@@ -94,6 +94,12 @@ export default function GenerateRecipesPage() {
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+    // Save recipe states
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [recipeTitle, setRecipeTitle] = useState<string | null>(null);
+
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
   // --- ANIMATIONS ---
@@ -199,6 +205,52 @@ export default function GenerateRecipesPage() {
     setError(error.message || "Failed to generate recipe. Please try again.");
   } finally {
     setLoading(false);
+  }
+};
+
+// Add save recipe function
+const handleSaveRecipe = async () => {
+  if (!generatedRecipe || !recipeTitle) {
+    setError("No recipe to save");
+    return;
+  }
+
+  if (!currentUserId) {
+    setError("Please log in to save recipes");
+    return;
+  }
+
+  setSaveLoading(true);
+  setSaveSuccess(false);
+  setError(null);
+
+  try {
+    const response = await fetch(`${API_URL}/api/recipes/save-generated`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipe: generatedRecipe,
+        image: recipeImage,
+        title: recipeTitle,
+        userId: currentUserId,
+        cuisine: cuisine,
+        mealType: mealType,
+        servings: servings,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Failed to save recipe");
+    }
+
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  } catch (error: any) {
+    setError(error.message || "Failed to save recipe");
+  } finally {
+    setSaveLoading(false);
   }
 };
 
