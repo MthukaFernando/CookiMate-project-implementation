@@ -239,17 +239,33 @@ export const searchUsers = async (req, res) => {
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params; // Using firebaseUid for consistency
+    const { recipeId } = req.body; //extract recipeId from the request body
+
+    // Basic validation to prevent the 500 error if the frontend forgets the ID
+    if (!recipeId) {
+      return res.status(400).json({ message: "recipeId is required" });
+    }
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
+        $push: {
+          cookedHistory: {
+            recipeId: recipeId,
+            dateCooked: new Date()
+          }
+        }}, 
       { new: true }
-    );
+    ).populate("cookedHistory.recipeId");
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount });
+    // Filter out any nulls in case a recipe was deleted from the DB
+    const cleanHistory = updatedUser.cookedHistory.filter(item => item.recipeId !== null);
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: cleanHistory });
   } catch (error) {
+    console.error("Backend Error in incrementCookCount:", error.message);
     res.status(500).json({ message: error.message });
   }
 };
