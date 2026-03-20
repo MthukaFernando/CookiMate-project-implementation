@@ -182,3 +182,4 @@ const styles = StyleSheet.create({
   exploreText: { fontWeight: "bold", color: "#000" }
 });
 
+export default CookedHistoryPage;
