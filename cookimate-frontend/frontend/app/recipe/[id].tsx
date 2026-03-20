@@ -84,6 +84,7 @@ const formatDisplayTime = (seconds: number): string => {
 export default function RecipeDetails() {
   const uid = auth.currentUser?.uid;
   const { id } = useLocalSearchParams();
+  console.log("Current Recipe ID from URL:", id);
   const router = useRouter();
 
   // Recipe Data & UI State
@@ -208,19 +209,28 @@ export default function RecipeDetails() {
   };
 
   useEffect(() => {
-    const fetchRecipeDetails = async (recipeId: string) => {
-      try {
-        const response = await axios.get(`${API_URL}/api/recipes/${recipeId}`);
+  const fetchRecipeDetails = async (recipeId: string) => {
+    try {
+      setLoading(true);
+      // Double check: Is your backend route /api/recipes/ or /api/recipe/?
+      const response = await axios.get(`${API_URL}/api/recipes/${recipeId}`);
+      
+      if (response.data) {
         setRecipe(response.data);
-      } catch (err) {
-        console.error("Error fetching details:", err);
-        setError("Failed to load recipe details.");
-      } finally {
-        setLoading(false);
+        setError(""); // Clear any previous errors
       }
-    };
-    if (id) fetchRecipeDetails(id as string);
-  }, [id]);
+    } catch (err: any) {
+      console.error("Axios Error Fetching Details:", err.response?.status, err.message);
+      setError("Failed to load recipe details. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (id) {
+    fetchRecipeDetails(id as string);
+  }
+}, [id]);
 
   if (loading) {
     return (
