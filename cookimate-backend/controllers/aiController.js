@@ -3,7 +3,7 @@ import pkg from "natural";
 const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
 import Recipe from "../models/Recipe.js"; // Add static import
-import User from "../models/User.js"; // Add static import
+import User from "../models/user.js"; // Add static import
 
 // Pre-compute stemmed allowlist once at startup (not per request)
 const STEMMED_ALLOWLIST = new Set(
@@ -338,12 +338,29 @@ export const saveGeneratedRecipe = async (req, res) => {
     // Save to database
     const savedRecipe = await Recipe.create(newRecipe);
 
-    // Add to user's favorites - Using the imported User model directly
+    // Find user by firebaseUid, then update favorites
     try {
-      await User.findByIdAndUpdate(userId, {
+      // Find the user document using firebaseUid
+      const user = await User.findOne({ firebaseUid: userId });
+
+      if (!user) {
+        console.log(`⚠️ User with firebaseUid ${userId} not found in database`);
+        // Recipe saved, but user not found - still return success
+        return res.status(201).json({
+          success: true,
+          message:
+            "Recipe saved, but could not add to favorites (user not found)",
+          recipe: savedRecipe,
+        });
+      }
+
+      // Now update the user's favorites using their MongoDB _id
+      await User.findByIdAndUpdate(user._id, {
         $addToSet: { favorites: savedRecipe._id },
       });
-      console.log(`✅ Recipe "${title}" saved to user ${userId}'s favorites`);
+      console.log(
+        `✅ Recipe "${title}" saved and added to user ${userId}'s favorites`,
+      );
     } catch (favError) {
       console.error("Could not add to favorites:", favError);
       // Recipe is saved, just not favorited - still return success
