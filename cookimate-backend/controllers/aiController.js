@@ -244,15 +244,27 @@ export const chatWithRecipe = async (req, res) => {
   const { recipeId, message } = req.body;
 
   try {
-    console.log("Incoming:", recipeId, message);
+    
 
-    // ✅ Use custom id field
+    
+    const latestMessage = message.toLowerCase();
+    const words = latestMessage.replace(/[^a-z\s]/g, "").split(/\s+/);
+    const isCookingRelated = words.some((word) =>
+      STEMMED_ALLOWLIST.has(PorterStemmer.stem(word))
+    );
+
+    if (!isCookingRelated) {
+      return res.status(200).json({
+        reply:
+          "I'm sorry, I can only answer questions about this recipe or cooking-related topics. Please ask about ingredients, steps, or preparation.",
+      });
+    }
+
+    // Fetch the recipe from DB
     const recipe = await Recipe.findOne({ id: recipeId });
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
-
-    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
     const systemPrompt = `
 You are a helpful kitchen assistant for the "Cookimate" app.
@@ -286,7 +298,6 @@ INSTRUCTIONS:
     res.status(500).json({ error: "Chatbot failed." });
   }
 };
-
 // Global Chatbot integration
 export const handleGlobalChat = async (req, res) => {
   try {
