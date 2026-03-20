@@ -259,24 +259,58 @@ export const saveGeneratedRecipe = async (req, res) => {
         .status(401)
         .json({ error: "You must be logged in to save recipes" });
     }
+    // Parse the recipe text to extract structured data
+    const lines = recipe.split("\n");
+    let ingredients = [];
+    let instructions = [];
+    let chefNote = "";
+    let currentSection = null;
 
-    // Create a unique ID for the generated recipe
-    const recipeId = `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    for (const line of lines) {
+      if (line.toLowerCase().includes("ingredients:")) {
+        currentSection = "ingredients";
+        continue;
+      } else if (line.toLowerCase().includes("instructions:")) {
+        currentSection = "instructions";
+        continue;
+      } else if (line.toLowerCase().includes("chef's note:")) {
+        currentSection = "note";
+        continue;
+      }
 
-    // Prepare recipe object
+      if (
+        currentSection === "ingredients" &&
+        line.trim() &&
+        !line.includes("Ingredients:")
+      ) {
+        ingredients.push(line.trim());
+      } else if (
+        currentSection === "instructions" &&
+        line.trim() &&
+        !line.includes("Instructions:")
+      ) {
+        instructions.push(line.trim());
+      } else if (currentSection === "note" && line.trim()) {
+        chefNote = line.trim();
+      }
+    }
+
+    // Prepare recipe object with parsed data
     const newRecipe = {
       id: recipeId,
       name: title,
-      description: `A delicious ${title} recipe created just for you!`,
-      image: image,
-      ingredients_raw_str: [],
-      steps: [],
+      description:
+        chefNote || `A delicious ${title} recipe created just for you!`,
+      image:
+        image && image !== "QUOTA_EXCEEDED" && image !== "ERROR" ? image : null,
+      ingredients_raw_str: ingredients,
+      steps: instructions,
       cuisine: cuisine ? [cuisine] : ["Various"],
       meal_type: mealType ? [mealType.toLowerCase()] : ["dish"],
       totalTime: "Varies",
       servings: servings ? parseInt(servings) : 4,
       serving_size: "serving",
-      search_terms: [title.toLowerCase()],
+      search_terms: searchTerms,
     };
 
     // Save to database
