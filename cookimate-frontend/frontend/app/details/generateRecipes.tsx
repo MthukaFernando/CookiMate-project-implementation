@@ -96,7 +96,7 @@ export default function GenerateRecipesPage() {
   const [recipeImage, setRecipeImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-    // Save recipe states
+  // Save recipe states
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -157,116 +157,115 @@ export default function GenerateRecipesPage() {
   };
 
   const handleGenerate = async () => {
-  setError(null);
+    setError(null);
 
-  if (selectedIngredients.length === 0 && !culinaryPrompt.trim()) {
-    setError("Please add some ingredients or describe what you'd like to cook");
-    return; 
-  }
-  
-  setLoading(true);
-  setGeneratedRecipe(null);
-  setRecipeImage(null);
+    if (selectedIngredients.length === 0 && !culinaryPrompt.trim()) {
+      setError(
+        "Please add some ingredients or describe what you'd like to cook",
+      );
+      return;
+    }
 
-  try {
-    const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ingredients: selectedIngredients,
-        cuisine,
-        mealType,
-        time: prepTime,
-        servings,
-        prompt: culinaryPrompt,
-      }),
-    });
-    
-    const data = await response.json();
-    
-    if (!response.ok) {
-      // If the backend returns an error message, display it without console error
-      if (data.error) {
-        setError(data.error);
-        setLoading(false);
-        return; // Just return without throwing
-      } else {
-        setError(`Error: ${response.status}`);
-        setLoading(false);
-        return;
+    setLoading(true);
+    setGeneratedRecipe(null);
+    setRecipeImage(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredients: selectedIngredients,
+          cuisine,
+          mealType,
+          time: prepTime,
+          servings,
+          prompt: culinaryPrompt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        // If the backend returns an error message, display it without console error
+        if (data.error) {
+          setError(data.error);
+          setLoading(false);
+          return; // Just return without throwing
+        } else {
+          setError(`Error: ${response.status}`);
+          setLoading(false);
+          return;
+        }
       }
+
+      setGeneratedRecipe(data.recipe);
+      setRecipeImage(data.image);
+
+      // Extract and store the recipe title
+      if (data.title) {
+        setRecipeTitle(data.title);
+      } else if (data.recipe) {
+        // Try to extract title from first line of recipe
+        const firstLine = data.recipe.split("\n")[0];
+        setRecipeTitle(firstLine.trim());
+      }
+    } catch (error: any) {
+      // Only log in development, but don't show console error to users
+      if (__DEV__) {
+        console.log("Error caught:", error.message); // Changed from console.error to console.log
+      }
+      setError(error.message || "Failed to generate recipe. Please try again.");
+    } finally {
+      setLoading(false);
     }
-    
-    setGeneratedRecipe(data.recipe);
-    setRecipeImage(data.image);
+  };
 
-    // Extract and store the recipe title
-if (data.title) {
-  setRecipeTitle(data.title);
-} else if (data.recipe) {
-  // Try to extract title from first line of recipe
-  const firstLine = data.recipe.split('\n')[0];
-  setRecipeTitle(firstLine.trim());
-}
-
-  } catch (error: any) {
-    // Only log in development, but don't show console error to users
-    if (__DEV__) {
-      console.log("Error caught:", error.message); // Changed from console.error to console.log
-    }
-    setError(error.message || "Failed to generate recipe. Please try again.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-
-
-// Add save recipe function
-const handleSaveRecipe = async () => {
-  if (!generatedRecipe || !recipeTitle) {
-    setError("No recipe to save");
-    return;
-  }
-
-  if (!currentUserId) {
-    setError("Please log in to save recipes");
-    return;
-  }
-
-  setSaveLoading(true);
-  setSaveSuccess(false);
-  setError(null);
-
-  try {
-    const response = await fetch(`${API_URL}/api/recipes/save-generated`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        recipe: generatedRecipe,
-        image: recipeImage,
-        title: recipeTitle,
-        userId: currentUserId,
-        cuisine: cuisine,
-        mealType: mealType,
-        servings: servings,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error || "Failed to save recipe");
+  // Add save recipe function
+  const handleSaveRecipe = async () => {
+    if (!generatedRecipe || !recipeTitle) {
+      setError("No recipe to save");
+      return;
     }
 
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
-  } catch (error: any) {
-    setError(error.message || "Failed to save recipe");
-  } finally {
-    setSaveLoading(false);
-  }
-};
+    if (!currentUserId) {
+      setError("Please log in to save recipes");
+      return;
+    }
+
+    setSaveLoading(true);
+    setSaveSuccess(false);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/recipes/save-generated`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipe: generatedRecipe,
+          image: recipeImage,
+          title: recipeTitle,
+          userId: currentUserId,
+          cuisine: cuisine,
+          mealType: mealType,
+          servings: servings,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save recipe");
+      }
+
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error: any) {
+      setError(error.message || "Failed to save recipe");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
 
   const panResponder = useRef(
     PanResponder.create({
@@ -506,6 +505,13 @@ const handleSaveRecipe = async () => {
                 </View>
               )}
 
+              {error && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={18} color="#FF5252" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
               {(generatedRecipe || loading) && (
                 <View style={styles.resultContainer}>
                   <Text style={styles.label}>Your Result</Text>
@@ -537,42 +543,54 @@ const handleSaveRecipe = async () => {
                     )}
                   </View>
                   {generatedRecipe && (
-  <View style={styles.recipeTextWrapper}>
-    <Text style={styles.recipeText}>{generatedRecipe}</Text>
-    
-    {/* Save Button */}
-    <TouchableOpacity
-      style={[
-        styles.saveButton, 
-        saveSuccess && styles.saveButtonSuccess,
-        !currentUserId && styles.saveButtonDisabled
-      ]}
-      onPress={handleSaveRecipe}
-      disabled={saveLoading || !currentUserId}
-    >
-      {saveLoading ? (
-        <ActivityIndicator color={BRAND.bg} size="small" />
-      ) : saveSuccess ? (
-        <>
-          <Ionicons name="checkmark-circle" size={20} color={BRAND.bg} />
-          <Text style={styles.saveButtonText}>Saved to My Recipes!</Text>
-        </>
-      ) : (
-        <>
-          <Ionicons name="bookmark" size={20} color={BRAND.bg} />
-          <Text style={styles.saveButtonText}>
-            {currentUserId ? "Save to My Recipes" : "Login to Save"}
-          </Text>
-        </>
-      )}
-    </TouchableOpacity>
-    {!currentUserId && (
-      <Text style={styles.loginPromptText}>
-        Please log in to save recipes to your collection
-      </Text>
-    )}
-  </View>
-)}
+                    <View style={styles.recipeTextWrapper}>
+                      <Text style={styles.recipeText}>{generatedRecipe}</Text>
+
+                      {/* Save Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.saveButton,
+                          saveSuccess && styles.saveButtonSuccess,
+                          !currentUserId && styles.saveButtonDisabled,
+                        ]}
+                        onPress={handleSaveRecipe}
+                        disabled={saveLoading || !currentUserId}
+                      >
+                        {saveLoading ? (
+                          <ActivityIndicator color={BRAND.bg} size="small" />
+                        ) : saveSuccess ? (
+                          <>
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={20}
+                              color={BRAND.bg}
+                            />
+                            <Text style={styles.saveButtonText}>
+                              Saved to My Recipes!
+                            </Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ionicons
+                              name="bookmark"
+                              size={20}
+                              color={BRAND.bg}
+                            />
+                            <Text style={styles.saveButtonText}>
+                              {currentUserId
+                                ? "Save to My Recipes"
+                                : "Login to Save"}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                      {!currentUserId && (
+                        <Text style={styles.loginPromptText}>
+                          Please log in to save recipes to your collection
+                        </Text>
+                      )}
+                    </View>
+                  )}
                 </View>
               )}
             </ScrollView>
