@@ -42,29 +42,29 @@ const CookedHistoryPage = () => {
   const [loading, setLoading] = useState(true);
 
   const fetchCookedHistory = async () => {
-    setLoading(true);
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) return;
-
-      // Define the expected response shape here
-      const response = await axios.get<{ cookedHistory: CookedItem[] }>(
-        `${API_URL}/api/users/${uid}`,
-      );
-
-      // Transform the nested data into a flat list
-      const history = response.data.cookedHistory.map((item) => ({
+  setLoading(true);
+  try {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+    
+    const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
+    
+    if (response.data && response.data.cookedHistory) {
+      const history = response.data.cookedHistory.map((item: any) => ({
         ...item.recipeId,
         dateCooked: item.dateCooked,
       }));
-
       setRecipes(history);
-    } catch (error) {
-      console.error("Error fetching cooked history:", error);
-    } finally {
-      setLoading(false);
+    } else {
+      setRecipes([]);
     }
-  };
+  } catch (error) {
+    console.error("Error fetching cooked history:", error);
+    setRecipes([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   useFocusEffect(
     useCallback(() => {
