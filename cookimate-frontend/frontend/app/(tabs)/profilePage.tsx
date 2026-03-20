@@ -113,7 +113,7 @@ const ProfilePage = () => {
               icon="coffee" 
               label="Cooked" 
               value={user?.recipesCookedCount || 0} 
-              onPress={() => console.log("Route to Cooked List")}
+              onPress={() => router.push("/profile/cookedHistory" as any)}
             />
             <StatItem 
               icon="heart" 
