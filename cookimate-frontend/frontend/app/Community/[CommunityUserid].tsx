@@ -88,6 +88,7 @@ export default function CommunityUserProfile() {
 
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [showAlreadyReported, setShowAlreadyReported] = useState(false);
 
   // Whether the current user has already reported this profile
   const [isUserReported, setIsUserReported] = useState(false);
@@ -321,6 +322,7 @@ export default function CommunityUserProfile() {
   const closeReportModal = () => {
     setReportModalVisible(false);
     setShowThankYou(false);
+    setShowAlreadyReported(false);
   };
 
   if (loading) {
@@ -342,14 +344,15 @@ export default function CommunityUserProfile() {
 
         {currentUser?.uid !== CommunityUserid && (
           <TouchableOpacity
-            onPress={() =>
-              isUserReported
-                ? Alert.alert(
-                    "Already Reported",
-                    "You've already reported this user. Our team will review it shortly.",
-                  )
-                : handleReportPress()
-            }
+            onPress={() => {
+              if (isUserReported) {
+                setShowAlreadyReported(true);
+                setShowThankYou(false);
+                setReportModalVisible(true);
+              } else {
+                handleReportPress();
+              }
+            }}
             style={styles.reportBtn}
           >
             {/* Filled red flag when reported, hollow muted flag otherwise */}
@@ -434,7 +437,47 @@ export default function CommunityUserProfile() {
       <Modal visible={reportModalVisible} transparent animationType="fade">
         <View style={styles.reportOverlay}>
           <View style={styles.reportCard}>
-            {showThankYou ? (
+            {showAlreadyReported ? (
+              <View style={styles.thankYouArea}>
+                <Ionicons
+                  name="flag"
+                  size={60}
+                  color={COLORS.accentRed}
+                  style={{ marginBottom: 10 }}
+                />
+                <Text
+                  style={[styles.thankYouTitle, { color: COLORS.accentRed }]}
+                >
+                  Already Reported
+                </Text>
+                <Text style={styles.thankYouText}>
+                  You've already reported this user. Our team will review it
+                  shortly.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtnAction,
+                    {
+                      backgroundColor: COLORS.accentRed,
+                      width: "100%",
+                      paddingVertical: 14,
+                      borderRadius: 12,
+                    },
+                  ]}
+                  onPress={closeReportModal}
+                >
+                  <Text
+                    style={{
+                      color: "#FFF",
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                  >
+                    Got It
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : showThankYou ? (
               <View style={styles.thankYouArea}>
                 <Ionicons
                   name="checkmark-circle"
