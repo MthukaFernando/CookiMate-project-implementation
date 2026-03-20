@@ -53,6 +53,20 @@ export const createUser = async (req, res) => {
   }
 };
 
+// Clear warning notification
+export const clearNotification = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $set: { lastMessage: "" } }
+    );
+    res.status(200).json({ message: "Notification cleared" });
+  } catch (err) {
+    res.status(500).json({ message: "Error clearing notification", error: err });
+  }
+};
+
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
@@ -287,6 +301,57 @@ export const getCommunityProfile = async (req, res) => {
         comments: p.comments || [], 
       })),
     });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Save the meals the user has planner
+export const addToMealPlan = async (req, res) => {
+  try {
+    const { uid } = req.params; // Firebase UID
+    const { uniqueId, id, name, image, category, date } = req.body;
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { 
+        $push: { 
+          mealPlan: { 
+            uniqueId, 
+            recipeId: id, 
+            name, 
+            image, 
+            category, 
+            date 
+          } 
+        } 
+      },
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json(updatedUser.mealPlan);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove a meal from the user's planner
+export const removeFromMealPlan = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    const { uniqueId } = req.body; 
+
+    const updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $pull: { mealPlan: { uniqueId: uniqueId } } },
+      { new: true }
+    );
+
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ message: "Meal removed from planner" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

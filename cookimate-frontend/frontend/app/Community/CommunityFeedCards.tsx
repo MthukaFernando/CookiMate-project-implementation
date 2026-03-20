@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { 
   View, Text, Image, FlatList, TouchableOpacity, StyleSheet, 
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
-  Platform, ActivityIndicator, StatusBar
+  Platform, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
 import { useRouter } from 'expo-router';
@@ -56,7 +56,29 @@ export default function CommunityFeed() {
     }
   };
 
-  useEffect(() => { fetchFeed(); }, []);
+  const checkUserNotification = async () => {
+    if (!currentUser) return;
+    try {
+      const res = await axios.get(`${BASE_URL}/users/${currentUser.uid}`);
+      if (res.data.lastMessage) {
+        Alert.alert(
+          "Post Removed",
+          res.data.lastMessage,
+          [{ 
+            text: "I Understand", 
+            onPress: async () => {
+              await axios.put(`${BASE_URL}/users/${currentUser.uid}/clear-notification`);
+            } 
+          }]
+        );
+      }
+    } catch (err) { console.log(err); }
+  };
+
+  useEffect(() => { 
+    fetchFeed(); 
+    checkUserNotification();
+  }, []);
 
   const handleSearch = async (text: string) => {
     setSearchQuery(text);

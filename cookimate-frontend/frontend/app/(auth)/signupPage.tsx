@@ -148,9 +148,8 @@ export default function SignupPage() {
         { cancelable: false },
       );
     } catch (error: any) {
-      setIsLoading(false);
-      console.error("Signup Error:", error.code || error.message);
-
+      setIsLoading(false); 
+      
       let errorMessage = "Something went wrong.";
       // Handle Firebase Errors
       if (error.code === "auth/email-already-in-use")

@@ -2,43 +2,73 @@ import Post from "../models/Post.js";
 import User from "../models/user.js";
 import { cloudinary } from "../config/cloudinary.js";
 import dotenv from "dotenv";
+import axios from "axios";
 
 dotenv.config();
 
 // 1. Create Post: Author gets 10 points
-// UPDATED: Now uses req.file.path (Multer) instead of Base64 strings
 export const createPost = async (req, res) => {
   try {
     const { user, caption } = req.body;
-
-    if (!req.file) {
-      return res.status(400).json({ message: "No image file provided" });
-    }
+    if (!req.file) return res.status(400).json({ message: "No image file provided" });
 
     const imageUrl = req.file.path;
 
-    // Save Post to MongoDB
+    // 1. Save the Post immediately as 'pending'
     const newPost = new Post({
-      user: user, // This is the Firebase UID string
+      user: user,
       caption: caption,
       imageUrl: imageUrl,
+      moderationStatus: "pending", 
     });
-
     const savedPost = await newPost.save();
 
-    // Reward the Author with 10 points
+    // Reward immediately
     await User.findOneAndUpdate(
       { firebaseUid: user },
-      { $inc: { points: 10 } },
+      { $inc: { points: 10 } }
     );
 
+    // Respond to the mobile app immediately so the user isn't stuck loading
     res.status(201).json(savedPost);
+
+    // 2. THE GHOST CHECK (Wait 8 seconds)
+    setTimeout(async () => {
+      try {
+        console.log(`🔍 Checking if image still exists: ${imageUrl}`);
+        
+        // We use axios.head to check if the URL is "Live" without downloading the whole image
+        await axios.head(imageUrl); 
+
+        // IF THE IMAGE EXISTS: Update status to approved and give points
+        console.log("✅ Image is safe. Rewarding user with 10 points.");
+        await Post.findByIdAndUpdate(savedPost._id, { moderationStatus: "approved" });
+
+      } catch (error) {
+        // IF THE IMAGE IS GONE (404/403): Cloudinary AI killed it.
+        console.log("❌ 404/403 Detected! Cloudinary removed the image. Deleting post from DB...");
+        
+        // This removes the post from your MongoDB entirely
+        await Post.findByIdAndDelete(savedPost._id);
+        
+        // Revoke points and set message
+        await User.findOneAndUpdate(
+          { firebaseUid: user },
+          { 
+            $inc: { points: -10 },
+            $set: { lastMessage: "Your post violated our safety policies and was removed. 10 points have been revoked." }
+          }
+        );
+      }
+    }, 8000); 
+
   } catch (err) {
     console.error("Upload Error:", err);
-    res.status(500).json({ message: "Upload failed", error: err.message });
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Upload failed", error: err.message });
+    }
   }
 };
-
 // 2. Get Feed: Populate user info correctly
 export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -46,7 +76,8 @@ export const getFeed = async (req, res) => {
   const skip = (page - 1) * limit;
 
   try {
-    const posts = await Post.find()
+    //added { moderationStatus: { $ne: "rejected" } } so it skips bad images!
+    const posts = await Post.find({ moderationStatus: { $ne: "rejected" } })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)

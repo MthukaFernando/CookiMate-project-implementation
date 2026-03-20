@@ -15,18 +15,21 @@ import {
   Platform,
   StatusBar
 } from "react-native";
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { Calendar } from "react-native-calendars";
 import Constants from "expo-constants";
-import { useRouter, useLocalSearchParams } from "expo-router";
+import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import axios from "axios";
+import { auth } from "../../config/firebase";
 
 const { width, height } = Dimensions.get("window");
 const SCREEN_HEIGHT = Dimensions.get("screen").height;
 const CAROUSEL_WIDTH = width * 0.9;
 
-
-let globalPlannedRecipes: any[] = [];
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
 
 const mealCategories = [
   { label: "Breakfast     🍳🥞", color: "#ceb604" },
@@ -50,8 +53,7 @@ const Page = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [isAddingMeal, setIsAddingMeal] = useState(false);
   
-  // Initialize from global memory instead of an empty array
-  const [plannedRecipes, setPlannedRecipes] = useState<any[]>(globalPlannedRecipes);
+  const [plannedRecipes, setPlannedRecipes] = useState<any[]>([]);
   
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
@@ -66,10 +68,31 @@ const Page = () => {
     newRecipeCategory,
   } = useLocalSearchParams();
 
-  // Keep global memory in sync whenever the local state changes
-  useEffect(() => {
-    globalPlannedRecipes = plannedRecipes;
-  }, [plannedRecipes]);
+  // Load the meal plan whenever the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      loadMealPlan();
+    }, [])
+  );
+
+  const loadMealPlan = async () => {
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      
+      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      if (response.data.mealPlan) {
+        // Map database recipeId to frontend id for consistency
+        const formattedPlan = response.data.mealPlan.map((m: any) => ({
+          ...m,
+          id: m.recipeId,
+        }));
+        setPlannedRecipes(formattedPlan);
+      }
+    } catch (error) {
+      console.error("Error loading meal plan from DB:", error);
+    }
+  };
 
   const markedDates = useMemo(() => {
     const marks: any = {};
@@ -79,36 +102,48 @@ const Page = () => {
     return marks;
   }, [plannedRecipes]);
 
+  // Handle adding a new recipe passed from MyRecipesPage
   useEffect(() => {
-    if (newRecipeId) {
-      const recipeToAdd = {
-        uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-        id: newRecipeId,
-        name: newRecipeName,
-        image: newRecipeImage,
-        category: newRecipeCategory,
-        date: openModalWithDate,
-      };
-      
-      setPlannedRecipes((prev) => [...prev, recipeToAdd]);
-      setSelectedDate(openModalWithDate as string);
-      setIsAddingMeal(false);
-      setIsModalVisible(true);
+    const saveNewRecipe = async () => {
+      const uid = auth.currentUser?.uid;
+      if (newRecipeId && uid) {
+        const recipeToAdd = {
+          uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          id: newRecipeId,
+          name: newRecipeName,
+          image: newRecipeImage,
+          category: newRecipeCategory,
+          date: openModalWithDate,
+        };
 
-      // Clear params to prevent double-adding on refresh
-      router.setParams({
-        newRecipeId: undefined,
-        newRecipeName: undefined,
-        newRecipeImage: undefined,
-        newRecipeCategory: undefined,
-        openModalWithDate: undefined,
-      });
-    } else if (openModalWithDate) {
-      setSelectedDate(openModalWithDate as string);
-      setIsAddingMeal(false);
-      setIsModalVisible(true);
-      router.setParams({ openModalWithDate: undefined });
-    }
+        try {
+          await axios.post(`${API_URL}/api/users/meal-plan/${uid}`, recipeToAdd);
+          setPlannedRecipes((prev) => [...prev, recipeToAdd]);
+          setSelectedDate(openModalWithDate as string);
+          setIsAddingMeal(false);
+          setIsModalVisible(true);
+
+          // Clear params
+          router.setParams({
+            newRecipeId: undefined,
+            newRecipeName: undefined,
+            newRecipeImage: undefined,
+            newRecipeCategory: undefined,
+            openModalWithDate: undefined,
+          });
+        } catch (error) {
+          console.error("Error saving meal:", error);
+          Alert.alert("Error", "Could not save to your planner.");
+        }
+      } else if (openModalWithDate) {
+        setSelectedDate(openModalWithDate as string);
+        setIsAddingMeal(false);
+        setIsModalVisible(true);
+        router.setParams({ openModalWithDate: undefined });
+      }
+    };
+
+    saveNewRecipe();
   }, [newRecipeId, openModalWithDate]);
 
   useEffect(() => {
@@ -169,6 +204,7 @@ const Page = () => {
   };
 
   const handleDeleteRecipe = (uniqueId: string) => {
+    const uid = auth.currentUser?.uid;
     Alert.alert(
       "Remove Recipe",
       "Are you sure you want to delete this recipe from your planner :3?",
@@ -177,10 +213,17 @@ const Page = () => {
         {
           text: "Remove",
           style: "destructive",
-          onPress: () =>
-            setPlannedRecipes((prev) =>
-              prev.filter((r) => r.uniqueId !== uniqueId),
-            ),
+          onPress: async () => {
+            try {
+              await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
+              setPlannedRecipes((prev) =>
+                prev.filter((r) => r.uniqueId !== uniqueId),
+              );
+            } catch (error) {
+              console.error("Error removing meal:", error);
+              Alert.alert("Error", "Could not remove from database.");
+            }
+          },
         },
       ],
     );
@@ -356,6 +399,7 @@ const Page = () => {
   );
 };
 
+// Styles remain the same
 export const calendarStyles: any = {
   calendarBackground: "#1A1A1A",
   dayTextColor: "white",

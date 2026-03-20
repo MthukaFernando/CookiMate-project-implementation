@@ -43,12 +43,10 @@ const userSchema = new mongoose.Schema(
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       default: [],
     },
-
     following: {
       type: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
       default: [],
     },
-
     unlockedAchievements: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -65,6 +63,20 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastMessage: {
+      type: String,
+      default: "",
+    },
+    mealPlan: [
+      {
+        uniqueId: { type: String, required: true }, 
+        recipeId: { type: String, required: true }, 
+        name: { type: String, required: true },
+        image: { type: String },
+        category: { type: String },
+        date: { type: String, required: true },
+      }
+    ],
   },
   {
     timestamps: true,
@@ -73,9 +85,8 @@ const userSchema = new mongoose.Schema(
 );
 
 userSchema.index({ username: 'text' });
-
-userSchema.index({ followers: 1 }); // fast connection lookups
-userSchema.index({ following: 1 }); // fast connection lookups
+userSchema.index({ followers: 1 });
+userSchema.index({ following: 1 });
 
 const User = mongoose.model("User", userSchema);
 export default User;
