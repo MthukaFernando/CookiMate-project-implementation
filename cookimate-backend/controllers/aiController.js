@@ -2,6 +2,8 @@ import Groq from "groq-sdk";
 import pkg from "natural";
 const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
+import Recipe from "../models/Recipe.js";  
+import User from "../models/User.js";
 
 // Pre-compute stemmed allowlist once at startup (not per request)
 const STEMMED_ALLOWLIST = new Set(
