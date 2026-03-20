@@ -195,7 +195,7 @@ const ingredients = {
     "paneer", "halloumi", "buttermilk", "condensed milk", "evaporated milk",
     "whipped cream", "clotted cream", "creme fraiche", "mascarpone",
     "skim milk", "whole milk", "half and half", "ice cream", "gelato",
-    "frozen yogurt", "kefir", "lassi", "ayran", "labneh"
+    "frozen yogurt", "kefir", "lassi", "ayran", "labneh", "eggs"
   ],
   
   pantry: [
