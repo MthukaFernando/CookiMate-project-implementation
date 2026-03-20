@@ -362,6 +362,18 @@ const MyRecipesPage = () => {
             value={meal}
             disable={!!selectedCategory}
             onChange={(item) => setMeal(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -373,6 +385,18 @@ const MyRecipesPage = () => {
             valueField="value"
             value={cuisine}
             onChange={(item) => setCuisine(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -384,6 +408,18 @@ const MyRecipesPage = () => {
             valueField="value"
             value={time}
             onChange={(item) => setTime(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -395,6 +431,18 @@ const MyRecipesPage = () => {
             valueField="value"
             value={diet}
             onChange={(item) => setDiet(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37", 
+            }}
           />
         </ScrollView>
       </View>

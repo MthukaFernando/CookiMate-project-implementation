@@ -120,11 +120,23 @@ const FavoritesPage = () => {
 
         let matchesTime = true;
         if (time !== "All" && item.totalTime) {
-          const cookTime = parseInt(item.totalTime);
-          if (time === "15") matchesTime = cookTime < 15;
-          else if (time === "30")
-            matchesTime = cookTime >= 15 && cookTime <= 30;
-          else if (time === "60") matchesTime = cookTime > 30 && cookTime <= 60;
+          const timeStr = item.totalTime.toLowerCase();
+          let totalMinutes = 0;
+
+          const hourMatch = timeStr.match(/(\d+)\s*h/);
+          if (hourMatch) totalMinutes += parseInt(hourMatch[1]) * 60;
+
+          const minMatch = timeStr.match(/(\d+)\s*m/);
+          if (minMatch) {
+            totalMinutes += parseInt(minMatch[1]);
+          } else if (!hourMatch) {
+            const fallbackMatch = timeStr.match(/\d+/);
+            if (fallbackMatch) totalMinutes = parseInt(fallbackMatch[0]);
+          }
+
+          if (time === "15") matchesTime = totalMinutes <= 15;
+          else if (time === "30") matchesTime = totalMinutes > 15 && totalMinutes <= 30;
+          else if (time === "60") matchesTime = totalMinutes > 30 && totalMinutes <= 60;
         }
 
         return (
@@ -214,7 +226,7 @@ const FavoritesPage = () => {
     <SafeAreaView style={styles.container}>
       <View style={styles.headerContainer}>
         <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color="#D4AF37"/>
+          <Ionicons name="arrow-back" size={24} color="#D4AF37" />
         </TouchableOpacity>
         <View style={styles.searchBar}>
           <TextInput
@@ -250,6 +262,18 @@ const FavoritesPage = () => {
             valueField="value"
             value={meal}
             onChange={(item) => setMeal(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37",
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -260,6 +284,18 @@ const FavoritesPage = () => {
             valueField="value"
             value={cuisine}
             onChange={(item) => setCuisine(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37",
+            }}
           />
           <Dropdown
             style={styles.dropdown}
@@ -270,17 +306,44 @@ const FavoritesPage = () => {
             valueField="value"
             value={time}
             onChange={(item) => setTime(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37",
+            }}
           />
+
           <Dropdown
             style={styles.dropdown}
             placeholderStyle={styles.dropText}
             selectedTextStyle={styles.dropText}
+            iconColor="white"
             data={dietOptions}
             labelField="label"
             valueField="value"
             value={diet}
             onChange={(item) => setDiet(item.value)}
+            containerStyle={{
+              backgroundColor: "#000000",
+              borderWidth: 0.2,
+              borderColor: "#D4AF37",
+              borderRadius: 2,
+            }}
+            itemTextStyle={{ color: "#FFFFFF" }}
+            activeColor="#333333"
+            itemContainerStyle={{
+              borderBottomWidth: 0.2,
+              borderBottomColor: "#D4AF37",
+            }}
           />
+          
         </ScrollView>
       </View>
       {loading ? (
@@ -354,8 +417,8 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingBottom: 40 },
   card: {
     flexDirection: "row",
-    backgroundColor: '#1b1b1b',
-    borderColor: '#1A1A1A',
+    backgroundColor: "#1b1b1b",
+    borderColor: "#1A1A1A",
     borderRadius: 20,
     marginBottom: 18,
     padding: 15,
@@ -389,7 +452,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   viewButton: {
-     backgroundColor: "#D4AF37",
+    backgroundColor: "#D4AF37",
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: 8,

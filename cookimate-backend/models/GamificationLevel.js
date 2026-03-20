@@ -22,16 +22,10 @@ const gamificationLevelSchema = new mongoose.Schema({
   requirements: {
     cookRecipes: { type: Number, default: 0 },
     saveFavorites: { type: Number, default: 0 },
-    shareRecipes: { type: Number, default: 0 },
+    sharePosts: { type: Number, default: 0 },
     getLikes: { type: Number, default: 0 },
     useAIGenerator: { type: Number, default: 0 },
-    fixErrors: { type: Number, default: 0 },
-    weeklyMealPlans: { type: Number, default: 0 },
-    followers: { type: Number, default: 0 },
-    streak: { type: Number, default: 0 },
-    dailyChallenges: { type: Number, default: 0 },
-    recipePhotos: { type: Number, default: 0 },
-    helpUsers: { type: Number, default: 0 }
+    planMeals: { type: Number, default: 0 },
   },
   badge: {
     imageUrl: { type: String, default: "" },

@@ -137,7 +137,6 @@ export default function SignupPage() {
 
     } catch (error: any) {
       setIsLoading(false); 
-      console.error("Signup Error:", error.code || error.message);
       
       let errorMessage = "Something went wrong.";
       // Handle Firebase Errors

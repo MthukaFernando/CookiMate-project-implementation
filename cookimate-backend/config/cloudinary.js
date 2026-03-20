@@ -13,12 +13,13 @@ cloudinary.config({
 });
 
 // 2. Setup the Storage Engine (The "Pipe")
+// 2. Setup the Storage Engine (The "Pipe")
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
   params: {
-    folder: "cookimate_posts", // Images will go in this folder
+    folder: "cookimate_posts", 
     allowed_formats: ["jpg", "png", "jpeg"],
-    // Optional: This optimizes the image on Cloudinary's side
+    moderation: "aws_rek", //Image filtering for safety
     transformation: [{ width: 1000, crop: "limit", quality: "auto" }],
   },
 });
