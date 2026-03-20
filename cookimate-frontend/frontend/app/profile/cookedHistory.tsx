@@ -25,6 +25,17 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
 
+// Interface to fix the "unknown" type error
+interface CookedItem {
+  dateCooked: string;
+  recipeId: {
+    id: string;
+    name: string;
+    image: string;
+    description?: string;
+  };
+}
+
 const CookedHistoryPage = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
