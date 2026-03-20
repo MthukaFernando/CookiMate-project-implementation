@@ -147,4 +147,21 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },listContent: { paddingHorizontal: 20, paddingTop: 10 },
+  card: {
+    flexDirection: "row",
+    backgroundColor: "#121212",
+    borderRadius: 20,
+    marginBottom: 15,
+    padding: 12,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#1A1A1A",
+  },
+  cardImage: {
+    width: IMAGE_SIZE,
+    height: IMAGE_SIZE,
+    borderRadius: 15,
+    marginRight: 15,
+  },
+  cardContent: { flex: 1, justifyContent: 'center' },
 })
