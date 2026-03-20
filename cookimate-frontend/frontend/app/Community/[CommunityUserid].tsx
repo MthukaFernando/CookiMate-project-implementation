@@ -23,6 +23,7 @@ import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
 import { auth } from "../../config/firebase";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 3;
@@ -91,8 +92,12 @@ export default function CommunityUserProfile() {
 
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
+  const [hasReportedUser, setHasReportedUser] = useState(false);
 
   const currentUser = auth.currentUser;
+
+  // Key scoped per viewer so reports don't bleed across accounts
+  const REPORTED_USERS_KEY = `reported_users_${currentUser?.uid ?? 'guest'}`;
 
   const fetchProfile = async () => {
     try {
@@ -113,7 +118,20 @@ export default function CommunityUserProfile() {
 
   useEffect(() => {
     fetchProfile();
+    loadReportedStatus();
   }, [CommunityUserid]);
+
+  const loadReportedStatus = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(REPORTED_USERS_KEY);
+      if (stored && CommunityUserid) {
+        const reportedIds: string[] = JSON.parse(stored);
+        setHasReportedUser(reportedIds.includes(CommunityUserid));
+      }
+    } catch (err) {
+      console.error('Failed to load reported users', err);
+    }
+  };
 
   const handleFollowToggle = async () => {
     if (!currentUser || !profile) return;
@@ -266,6 +284,15 @@ export default function CommunityUserProfile() {
         targetType: "user",
         reason: reason,
       });
+
+      // Persist the reported user ID so the flag stays colored after navigation
+      const stored = await AsyncStorage.getItem(REPORTED_USERS_KEY);
+      const reportedIds: string[] = stored ? JSON.parse(stored) : [];
+      if (!reportedIds.includes(CommunityUserid)) {
+        reportedIds.push(CommunityUserid);
+        await AsyncStorage.setItem(REPORTED_USERS_KEY, JSON.stringify(reportedIds));
+      }
+      setHasReportedUser(true);
       setShowThankYou(true);
     } catch (err) {
       console.error(err);
@@ -303,10 +330,14 @@ export default function CommunityUserProfile() {
 
         {currentUser?.uid !== CommunityUserid && (
           <TouchableOpacity
-            onPress={handleReportPress}
+            onPress={() => !hasReportedUser && handleReportPress()}
             style={styles.reportBtn}
           >
-            <Ionicons name="flag-outline" size={20} color={COLORS.textMuted} />
+            <Ionicons 
+              name={hasReportedUser ? "flag" : "flag-outline"} 
+              size={20} 
+              color={hasReportedUser ? COLORS.accentRed : COLORS.textMuted} 
+            />
           </TouchableOpacity>
         )}
       </View>
