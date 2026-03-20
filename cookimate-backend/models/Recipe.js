@@ -15,5 +15,7 @@ const RecipeSchema = new mongoose.Schema({
   image: String
 }, {collection: 'recipes'});
 
+// Check if model exists before creating
 const Recipe = mongoose.models.Recipe || mongoose.model("Recipe", RecipeSchema);
+
 export default Recipe;

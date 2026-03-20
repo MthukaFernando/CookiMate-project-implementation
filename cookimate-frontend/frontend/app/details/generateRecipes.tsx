@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -11,14 +11,22 @@ import {
   TouchableOpacity,
   ScrollView,
   PanResponder,
-  Pressable,
   StatusBar,
+  Image,
+  ActivityIndicator,
 } from "react-native";
 import { Video, ResizeMode } from "expo-av";
-import { Ionicons } from "@expo/vector-icons";
+import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import Constants from "expo-constants";
+import { getAuth } from "firebase/auth";
+import { auth } from "../../config/firebase";
 
-// --- DARK BRANDING COLORS ---
+// --- CONFIGURATION ---
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
+
 const BRAND = {
   bg: "#121212",
   surface: "#1E1E1E",
@@ -29,8 +37,18 @@ const BRAND = {
   border: "#333333",
 };
 
-// ... (Keep your DATA ARRAYS: QUICK_ADDS, CUISINES, etc. here) ...
-const QUICK_ADDS = ["Beef", "Pasta", "Onion", "Garlic", "Chicken", "Shrimp"];
+const QUICK_ADDS = [
+  "Beef",
+  "Pasta",
+  "Onion",
+  "Garlic",
+  "Chicken",
+  "Shrimp",
+  "Tomato",
+  "Cheese",
+  "Rice",
+  "Eggs",
+];
 const CUISINES = [
   "American",
   "Asian",
@@ -59,10 +77,9 @@ export default function GenerateRecipesPage() {
   const router = useRouter();
   const { height } = useWindowDimensions();
 
-  // --- ADJUSTED CONSTANTS FOR FULL SCREEN ---
   const TAB_BAR_HEIGHT = 65;
   const PEEK_HEIGHT = 130;
-  const EXPANDED_Y = 0; // No margin at the top
+  const EXPANDED_Y = 0;
   const COLLAPSED_Y = height - PEEK_HEIGHT - TAB_BAR_HEIGHT;
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -74,7 +91,38 @@ export default function GenerateRecipesPage() {
   const [prepTime, setPrepTime] = useState<string | null>(null);
   const [servings, setServings] = useState<string | null>(null);
 
+  const [loading, setLoading] = useState(false);
+  const [generatedRecipe, setGeneratedRecipe] = useState<string | null>(null);
+  const [recipeImage, setRecipeImage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Save recipe states
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [recipeTitle, setRecipeTitle] = useState<string | null>(null);
+
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
+
+  // Get current user on mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setCurrentUserId(user.uid);
+    }
+  }, []);
+
+  // Extract recipe title from generated recipe (first line or first few words)
+  useEffect(() => {
+    if (generatedRecipe) {
+      const lines = generatedRecipe.split("\n");
+      const firstLine = lines[0].trim();
+      // Use first line as title, or first 50 chars if line is too long
+      const title =
+        firstLine.length > 50 ? firstLine.substring(0, 47) + "..." : firstLine;
+      setRecipeTitle(title || "Untitled Recipe");
+    }
+  }, [generatedRecipe]);
 
   // --- ANIMATIONS ---
   const panelBgColor = slideAnim.interpolate({
@@ -85,7 +133,7 @@ export default function GenerateRecipesPage() {
 
   const borderRadiusAnim = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, EXPANDED_Y + 50],
-    outputRange: [0, 35], // Flatten corners when it hits the top
+    outputRange: [0, 35],
     extrapolate: "clamp",
   });
 
@@ -113,6 +161,10 @@ export default function GenerateRecipesPage() {
     setServings(null);
     setIngredientInput("");
     setCulinaryPrompt("");
+    setGeneratedRecipe(null);
+    setRecipeImage(null);
+    setError(null);
+    setSaveSuccess(false);
   };
 
   const addIngredient = (name: string) => {
@@ -123,6 +175,108 @@ export default function GenerateRecipesPage() {
       setSelectedIngredients([...selectedIngredients, formatted]);
     }
     setIngredientInput("");
+  };
+
+  const handleGenerate = async () => {
+    setError(null);
+
+    if (selectedIngredients.length === 0 && !culinaryPrompt.trim()) {
+      setError(
+        "Please add some ingredients or describe what you'd like to cook",
+      );
+      return;
+    }
+
+    setLoading(true);
+    setGeneratedRecipe(null);
+    setRecipeImage(null);
+    setSaveSuccess(false);
+
+    try {
+      const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ingredients: selectedIngredients,
+          cuisine,
+          mealType,
+          time: prepTime,
+          servings,
+          prompt: culinaryPrompt,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        if (data.error) {
+          setError(data.error);
+          setLoading(false);
+          return;
+        } else {
+          setError(`Error: ${response.status}`);
+          setLoading(false);
+          return;
+        }
+      }
+
+      setGeneratedRecipe(data.recipe);
+      setRecipeImage(data.image);
+    } catch (error: any) {
+      if (__DEV__) {
+        console.log("Error caught:", error.message);
+      }
+      setError(error.message || "Failed to generate recipe. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Save recipe function
+  const handleSaveRecipe = async () => {
+    if (!generatedRecipe || !recipeTitle) {
+      setError("No recipe to save");
+      return;
+    }
+
+    if (!currentUserId) {
+      setError("Please log in to save recipes");
+      return;
+    }
+
+    setSaveLoading(true);
+    setSaveSuccess(false);
+    setError(null);
+
+    try {
+      const response = await fetch(`${API_URL}/api/recipes/save-generated`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          recipe: generatedRecipe,
+          image: recipeImage,
+          title: recipeTitle,
+          userId: currentUserId,
+          cuisine: cuisine,
+          mealType: mealType,
+          servings: servings,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to save recipe");
+      }
+
+      setSaveSuccess(true);
+      // Success message disappears after 3 seconds
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch (error: any) {
+      setError(error.message || "Failed to save recipe");
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   const panResponder = useRef(
@@ -160,7 +314,6 @@ export default function GenerateRecipesPage() {
         isLooping
         isMuted
       />
-
       <View
         style={[
           StyleSheet.absoluteFill,
@@ -168,6 +321,7 @@ export default function GenerateRecipesPage() {
         ]}
       />
 
+      {/* BACK BUTTON (Visible only when panel is collapsed) */}
       {!isExpanded && (
         <TouchableOpacity
           style={styles.backButton}
@@ -181,7 +335,7 @@ export default function GenerateRecipesPage() {
         style={[
           styles.slidingPanel,
           {
-            height: height, // Panel now matches screen height
+            height: height,
             transform: [{ translateY: slideAnim }],
             backgroundColor: panelBgColor,
             borderTopLeftRadius: borderRadiusAnim,
@@ -209,7 +363,6 @@ export default function GenerateRecipesPage() {
           style={{ flex: 1, opacity: contentOpacity }}
           pointerEvents={isExpanded ? "auto" : "none"}
         >
-          {/* Header area remains draggable to close */}
           <View {...panResponder.panHandlers} style={styles.headerArea}>
             <View style={styles.dragHandle} />
             <View style={styles.headerRow}>
@@ -292,11 +445,13 @@ export default function GenerateRecipesPage() {
                 ))}
               </ScrollView>
 
-              <Text style={styles.label}>What are we making?</Text>
+              <Text style={styles.label}>
+                Are you making something specific? (Optional)
+              </Text>
               <View style={styles.descriptionWrapper}>
                 <TextInput
                   style={styles.descriptionInput}
-                  placeholder="e.g. 'Make a ribbon cake'..."
+                  placeholder="e.g. 'Make a low fat chocolate cake..."
                   placeholderTextColor="#555"
                   multiline
                   value={culinaryPrompt}
@@ -335,15 +490,106 @@ export default function GenerateRecipesPage() {
                 onSelect={setServings}
               />
 
-              <TouchableOpacity style={styles.generateBtn}>
-                <Ionicons
-                  name="flash"
-                  size={20}
-                  color={BRAND.bg}
-                  style={{ marginRight: 8 }}
-                />
-                <Text style={styles.generateBtnText}>CREATE MY MENU</Text>
+              <TouchableOpacity
+                style={styles.generateBtn}
+                onPress={handleGenerate}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color={BRAND.bg} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="flash"
+                      size={20}
+                      color={BRAND.bg}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={styles.generateBtnText}>CREATE MY MENU</Text>
+                  </>
+                )}
               </TouchableOpacity>
+
+              {error && (
+                <View style={styles.errorBox}>
+                  <Ionicons name="alert-circle" size={18} color="#FF5252" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              )}
+
+              {(generatedRecipe || loading) && (
+                <View style={styles.resultContainer}>
+                  <Text style={styles.label}>Your Result</Text>
+                  <View style={styles.imagePlaceholder}>
+                    {loading ? (
+                      <ActivityIndicator color={BRAND.accent} size="large" />
+                    ) : recipeImage === "QUOTA_EXCEEDED" ? (
+                      <View style={{ alignItems: "center" }}>
+                        <MaterialIcons
+                          name="image-not-supported"
+                          size={55}
+                          color={BRAND.textMuted}
+                        />
+                        <Text style={styles.quotaText}>
+                          AI Image Limit Reached for this Month
+                        </Text>
+                      </View>
+                    ) : recipeImage ? (
+                      <Image
+                        source={{ uri: recipeImage }}
+                        style={styles.resultImage}
+                      />
+                    ) : (
+                      <Ionicons
+                        name="restaurant-outline"
+                        size={48}
+                        color={BRAND.border}
+                      />
+                    )}
+                  </View>
+                  {generatedRecipe && (
+                    <View style={styles.recipeTextWrapper}>
+                      <Text style={styles.recipeText}>{generatedRecipe}</Text>
+
+                      {/* Save Button */}
+                      <TouchableOpacity
+                        style={[
+                          styles.saveButton,
+                          saveSuccess && styles.saveButtonSuccess,
+                        ]}
+                        onPress={handleSaveRecipe}
+                        disabled={saveLoading || !currentUserId}
+                      >
+                        {saveLoading ? (
+                          <ActivityIndicator color={BRAND.bg} size="small" />
+                        ) : saveSuccess ? (
+                          <>
+                            <Ionicons
+                              name="checkmark-circle"
+                              size={20}
+                              color={BRAND.bg}
+                            />
+                            <Text style={styles.saveButtonText}>Saved!</Text>
+                          </>
+                        ) : (
+                          <>
+                            <Ionicons
+                              name="bookmark"
+                              size={20}
+                              color={BRAND.bg}
+                            />
+                            <Text style={styles.saveButtonText}>
+                              {currentUserId
+                                ? "Save to My Recipes"
+                                : "Login to Save"}
+                            </Text>
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
             </ScrollView>
           </KeyboardAvoidingView>
         </Animated.View>
@@ -352,7 +598,6 @@ export default function GenerateRecipesPage() {
   );
 }
 
-// ... (FilterRow component stays same as your original) ...
 const FilterRow = ({ title, icon, data, selected, onSelect }: any) => (
   <View style={styles.filterRowContainer}>
     <View style={styles.filterHeader}>
@@ -409,7 +654,6 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 9999,
-    // Radius is now animated via borderRadiusAnim
   },
   peekButtonWrapper: {
     height: 180,
@@ -459,7 +703,7 @@ const styles = StyleSheet.create({
     letterSpacing: 2,
   },
   resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
-  scrollBody: { paddingHorizontal: 25, paddingBottom: 60 },
+  scrollBody: { paddingHorizontal: 25, paddingBottom: 100 },
   ingredientDisplayArea: {
     height: 50,
     marginBottom: 10,
@@ -554,5 +798,68 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "900",
     letterSpacing: 1,
+  },
+  resultContainer: { marginTop: 40 },
+  imagePlaceholder: {
+    width: "100%",
+    height: 300,
+    backgroundColor: BRAND.inputBg,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    overflow: "hidden",
+    marginBottom: 20,
+  },
+  resultImage: { width: "100%", height: "100%", resizeMode: "cover" },
+  recipeTextWrapper: {
+    backgroundColor: BRAND.surface,
+    padding: 20,
+    borderRadius: 25,
+  },
+  recipeText: { color: BRAND.textMain, fontSize: 16, lineHeight: 24 },
+  quotaText: {
+    color: BRAND.textMuted,
+    marginTop: 10,
+    fontWeight: "700",
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  errorBox: {
+    backgroundColor: "rgba(255, 82, 82, 0.1)",
+    padding: 12,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 20,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: "#FF5252",
+  },
+  errorText: {
+    color: "#FF5252",
+    fontSize: 14,
+    fontWeight: "600",
+    marginLeft: 10,
+    marginRight: 10,
+  },
+  // New styles for save button
+  saveButton: {
+    backgroundColor: BRAND.accent,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
+  },
+  saveButtonSuccess: {
+    backgroundColor: "#4CAF50",
+  },
+  saveButtonText: {
+    color: BRAND.bg,
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
