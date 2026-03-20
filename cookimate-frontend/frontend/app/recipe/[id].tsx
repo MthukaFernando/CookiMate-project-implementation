@@ -421,13 +421,15 @@ export default function RecipeDetails() {
         </View>
       </ScrollView>
 
-      {/*Floating chat FAB*/}
+      {/*Floating chat FAB - REMOVED TO USE GLOBAL FAB */}
+      {/* 
       <TouchableOpacity
         style={styles.chatFAB}
         onPress={() => setIsChatModalVisible(true)}
       >
         <Ionicons name="chatbubble-ellipses" size={28} color="#000" />
       </TouchableOpacity>
+      */}
 
       {/*AI Chat Modal */}
       <Modal

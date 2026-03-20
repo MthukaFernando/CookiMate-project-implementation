@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth'; 
 import { auth } from '../config/firebase'; // Ensure this path correctly points to your firebase config
 import { ActivityIndicator, View } from 'react-native';
+import { GlobalChatFAB } from '../components/GlobalChatFAB'; // Add this import
 
 export default function RootLayout() {
   // State to track the Firebase user and the initial loading phase
@@ -59,12 +60,19 @@ export default function RootLayout() {
     );
   }
 
-  // 4. Main Navigation Stack
+  // 4. Main Navigation Stack with Global Chat FAB
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* These match your (auth) and (tabs) folder names */}
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-    </Stack>
+    <View style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }}>
+        {/* These match your (auth) and (tabs) folder names */}
+        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        {/* Add these screens for chat navigation */}
+        <Stack.Screen name="GlobalChat" options={{ headerShown: false, presentation: 'card' }} />
+        <Stack.Screen name="RecipeChat" options={{ headerShown: false, presentation: 'card' }} />
+      </Stack>
+      {/* Global Chat FAB - appears on all screens */}
+      <GlobalChatFAB />
+    </View>
   );
 }
