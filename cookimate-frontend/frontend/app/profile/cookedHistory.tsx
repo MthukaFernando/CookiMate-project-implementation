@@ -17,7 +17,6 @@ import axios from "axios";
 import Constants from "expo-constants";
 import { auth } from "../../config/firebase";
 
-
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.25;
 
@@ -39,7 +38,7 @@ interface CookedItem {
 const CookedHistoryPage = () => {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [recipes, setRecipes] = useState([]);
+  const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchCookedHistory = async () => {
@@ -48,12 +47,15 @@ const CookedHistoryPage = () => {
       const uid = auth.currentUser?.uid;
       if (!uid) return;
 
-      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      // Define the expected response shape here
+      const response = await axios.get<{ cookedHistory: CookedItem[] }>(
+        `${API_URL}/api/users/${uid}`
+      );
 
-      // Map the cookedHistory array to just the recipe data
-      const history = response.data.cookedHistory.map((item: any) => ({
-        ...item.recipeId, // Spread recipe details
-        dateCooked: item.dateCooked, // Keep the date for display
+      // Transform the nested data into a flat list
+      const history = response.data.cookedHistory.map((item) => ({
+        ...item.recipeId,
+        dateCooked: item.dateCooked,
       }));
 
       setRecipes(history);
@@ -158,7 +160,8 @@ const styles = StyleSheet.create({
     borderColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
-  },listContent: { paddingHorizontal: 20, paddingTop: 10 },
+  },
+  listContent: { paddingHorizontal: 20, paddingTop: 10 },
   card: {
     flexDirection: "row",
     backgroundColor: "#121212",
@@ -175,23 +178,43 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginRight: 15,
   },
-  cardContent: { flex: 1, justifyContent: 'center' },
-  recipeTitle: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 4 },
+  cardContent: { flex: 1, justifyContent: "center" },
+  recipeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 4,
+  },
   cookedDate: { fontSize: 13, color: "#D4AF37", marginBottom: 10 },
   viewButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: "#D4AF37",
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 8,
     alignSelf: "flex-start",
   },
-  viewButtonText: { color: "#000000", fontWeight: "bold", fontSize: 12, marginRight: 4 },
-  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 100 },
+  viewButtonText: {
+    color: "#000000",
+    fontWeight: "bold",
+    fontSize: 12,
+    marginRight: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 100,
+  },
   emptyText: { color: "#666", fontSize: 18, marginTop: 20, marginBottom: 20 },
-  exploreButton: { backgroundColor: "#D4AF37", paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
-  exploreText: { fontWeight: "bold", color: "#000" }
+  exploreButton: {
+    backgroundColor: "#D4AF37",
+    paddingHorizontal: 30,
+    paddingVertical: 12,
+    borderRadius: 25,
+  },
+  exploreText: { fontWeight: "bold", color: "#000" },
 });
 
 export default CookedHistoryPage;
