@@ -2,7 +2,7 @@ import Post from "../models/Post.js";
 import User from "../models/user.js";
 import { cloudinary } from "../config/cloudinary.js";
 import dotenv from "dotenv";
-
+import axios from "axios";
 
 dotenv.config();
 
