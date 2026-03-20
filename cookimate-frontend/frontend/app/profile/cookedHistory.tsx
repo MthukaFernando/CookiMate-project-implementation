@@ -126,3 +126,25 @@ const CookedHistoryPage = () => {
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: "#000000" },
+  header: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 20,
+    paddingVertical: 15,
+  },
+  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#FFFFFF" },
+  backCircle: {
+    width: 40,
+    height: 40,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+    justifyContent: "center",
+    alignItems: "center",
+  },listContent: { paddingHorizontal: 20, paddingTop: 10 },
+})
