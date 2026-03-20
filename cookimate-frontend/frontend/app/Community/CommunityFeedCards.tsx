@@ -4,7 +4,7 @@ import {
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
   Platform, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
@@ -17,7 +17,6 @@ const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
 
-// Theme matching your home page palette
 const theme = {
   bg: "#0A0A0A",
   card: "#1E1E1E",
@@ -30,7 +29,7 @@ const theme = {
 
 export default function CommunityFeed() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -45,9 +44,12 @@ export default function CommunityFeed() {
 
   const currentUser = auth.currentUser;
 
+  // ✅ FIXED: pass uid so the backend can filter out blocked users' posts
   const fetchFeed = async () => {
     try {
-      const response = await axios.get(`${BASE_URL}/social/feed`);
+      const response = await axios.get(`${BASE_URL}/social/feed`, {
+        params: { uid: currentUser?.uid },
+      });
       setPosts(response.data);
     } catch (error) { 
       console.error(error); 
@@ -236,7 +238,6 @@ export default function CommunityFeed() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <StatusBar barStyle="light-content" />
-      {/* Container now uses dynamic padding top for all phones */}
       <View style={[styles.searchHeaderContainer, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity 
