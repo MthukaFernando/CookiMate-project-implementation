@@ -70,6 +70,7 @@ export default function CommunityFeed() {
   const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(
     new Set(),
   );
+  const [showAlreadyReported, setShowAlreadyReported] = useState(false);
 
   const currentUser = auth.currentUser;
 
@@ -132,7 +133,8 @@ export default function CommunityFeed() {
     setReportModalVisible(true);
     setShowOtherInput(false);
     setOtherReason("");
-    setShowThankYou(false); // Reset thank you state
+    setShowThankYou(false);
+    setShowAlreadyReported(false);
   };
 
   const submitReport = async (reason: string) => {
@@ -167,6 +169,7 @@ export default function CommunityFeed() {
     setOtherReason("");
     setReportingTargetId(null);
     setShowThankYou(false);
+    setShowAlreadyReported(false);
   };
 
   const handleSearch = async (text: string) => {
@@ -276,14 +279,17 @@ export default function CommunityFeed() {
 
               {currentUser?.uid !== item.user?.firebaseUid && (
                 <TouchableOpacity
-                  onPress={() =>
-                    isReported
-                      ? Alert.alert(
-                          "Already Reported",
-                          "You've already reported this post. Our team will review it shortly.",
-                        )
-                      : handleReportPress(item._id)
-                  }
+                  onPress={() => {
+                    if (isReported) {
+                      setReportingTargetId(item._id);
+                      setShowAlreadyReported(true);
+                      setShowThankYou(false);
+                      setShowOtherInput(false);
+                      setReportModalVisible(true);
+                    } else {
+                      handleReportPress(item._id);
+                    }
+                  }}
                   style={isReported ? styles.reportedFlagBtn : undefined}
                 >
                   <Ionicons
@@ -464,7 +470,43 @@ export default function CommunityFeed() {
         <View style={styles.modalOverlay}>
           <View style={styles.reportCard}>
             {/* Conditional Rendering for Thank You State */}
-            {showThankYou ? (
+            {showAlreadyReported ? (
+              <View style={styles.thankYouArea}>
+                <Ionicons
+                  name="flag"
+                  size={60}
+                  color={theme.error}
+                  style={{ marginBottom: 15 }}
+                />
+                <Text style={[styles.thankYouTitle, { color: theme.error }]}>
+                  Already Reported
+                </Text>
+                <Text style={styles.thankYouText}>
+                  You've already reported this post. Our team will review it
+                  shortly.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtn,
+                    {
+                      backgroundColor: theme.error,
+                      marginTop: 10,
+                      width: "100%",
+                    },
+                  ]}
+                  onPress={closeReportModal}
+                >
+                  <Text
+                    style={[
+                      styles.modalBtnText,
+                      { color: "#FFF", textAlign: "center" },
+                    ]}
+                  >
+                    Got It
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            ) : showThankYou ? (
               <View style={styles.thankYouArea}>
                 <Ionicons
                   name="checkmark-circle"
