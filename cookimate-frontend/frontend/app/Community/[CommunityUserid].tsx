@@ -89,6 +89,10 @@ export default function CommunityUserProfile() {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- REPORT STATES ---
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+
   const currentUser = auth.currentUser;
 
   const fetchProfile = async () => {
@@ -195,10 +199,38 @@ export default function CommunityUserProfile() {
     );
   };
 
+  // --- REPORT LOGIC ---
+  const handleReportPress = () => {
+    setReportModalVisible(true);
+    setShowThankYou(false);
+  };
+
+  const submitReport = async (reason: string) => {
+    if (!currentUser || !CommunityUserid) return;
+    try {
+      // Logic for user reporting targets the specific user ID
+      await axios.post(`${BASE_URL}/social/report`, {
+        reporter: currentUser.uid,
+        targetId: CommunityUserid,
+        targetType: 'user',
+        reason: reason
+      });
+      setShowThankYou(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not submit report.");
+    }
+  };
+
   const closeModal = () => {
     setSelectedPost(null);
     setShowModalComments(false);
     setCommentText("");
+  };
+
+  const closeReportModal = () => {
+    setReportModalVisible(false);
+    setShowThankYou(false);
   };
 
   if (loading) {
@@ -213,9 +245,19 @@ export default function CommunityUserProfile() {
 
   const ProfileHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
-      </TouchableOpacity>
+      <View style={styles.topActionRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+        </TouchableOpacity>
+
+        {/* Flag icon added for reporting functionality */}
+        {currentUser?.uid !== CommunityUserid && (
+          <TouchableOpacity onPress={handleReportPress} style={styles.reportBtn}>
+            <Ionicons name="flag-outline" size={20} color={COLORS.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.profileCard}>
         <Image
           source={{
@@ -272,6 +314,54 @@ export default function CommunityUserProfile() {
           </TouchableOpacity>
         )}
       />
+
+      {/* --- REPORT MODAL --- */}
+      <Modal 
+        visible={reportModalVisible} 
+        transparent 
+        animationType="fade"
+        onRequestClose={closeReportModal}
+      >
+        <View style={styles.reportOverlay}>
+          <View style={styles.reportCard}>
+            {showThankYou ? (
+              <View style={styles.thankYouArea}>
+                <Ionicons name="checkmark-circle" size={60} color={COLORS.primaryGold} />
+                <Text style={styles.thankYouTitle}>User Reported</Text>
+                <Text style={styles.thankYouText}>Thank you for your report. We will review this profile to ensure it meets our community guidelines.</Text>
+                <TouchableOpacity 
+                  style={[styles.modalBtnAction, { backgroundColor: COLORS.primaryGold, width: '100%' }]} 
+                  onPress={closeReportModal}
+                >
+                  <Text style={{ color: COLORS.background, fontWeight: 'bold', textAlign: 'center' }}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View>
+                <View style={styles.modalHeaderReport}>
+                  <Text style={styles.reportModalTitle}>Report User</Text>
+                  <TouchableOpacity onPress={closeReportModal}>
+                    <Ionicons name="close" size={24} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.reportSubTitle}>Why are you reporting this user?</Text>
+                
+                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map((reason) => (
+                  <TouchableOpacity 
+                    key={reason} 
+                    style={styles.optionBtn} 
+                    onPress={() => submitReport(reason)}
+                  >
+                    <Text style={styles.optionText}>{reason}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.primaryGold} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={!!selectedPost} transparent animationType="fade">
         <KeyboardAvoidingView
@@ -392,6 +482,11 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
+  topActionRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center' 
+  },
   backBtn: {
     width: 40,
     height: 40,
@@ -402,6 +497,13 @@ const styles = StyleSheet.create({
     marginTop: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
+  },
+  reportBtn: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    marginTop: 10,
   },
   profileCard: {
     backgroundColor: COLORS.surface,
@@ -445,7 +547,7 @@ const styles = StyleSheet.create({
   },
   followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
   followingBtnText: { color: "green", fontWeight: "bold" },
-  followBtnText: { color: "COLORS.background", fontWeight: "bold" },
+  followBtnText: { color: COLORS.background, fontWeight: "bold" },
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
@@ -491,7 +593,7 @@ const styles = StyleSheet.create({
   },
   overlayTitle: { color: COLORS.textLight, fontWeight: "bold", fontSize: 14 },
   overlayScroll: { flex: 1 },
-  commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: "wrap" },
+  commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: 'wrap' },
   cUser: { color: COLORS.primaryGold, fontWeight: "bold", fontSize: 13 },
   cText: { color: COLORS.textLight, fontSize: 14, lineHeight: 18 },
   noCommentsText: {
@@ -522,4 +624,44 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   bottomInput: { flex: 1, color: COLORS.textLight, fontSize: 14 },
+
+  // --- REPORT MODAL STYLES ---
+  reportOverlay: { 
+    flex: 1, 
+    backgroundColor: 'rgba(0,0,0,0.85)', 
+    justifyContent: 'center', 
+    alignItems: 'center' 
+  },
+  reportCard: { 
+    width: '88%', 
+    backgroundColor: COLORS.surface, 
+    borderRadius: 25, 
+    padding: 20, 
+    borderWidth: 1, 
+    borderColor: COLORS.border 
+  },
+  modalHeaderReport: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    marginBottom: 15 
+  },
+  reportModalTitle: { color: COLORS.primaryGold, fontSize: 18, fontWeight: 'bold' },
+  reportSubTitle: { color: COLORS.textLight, fontSize: 14, marginBottom: 15 },
+  optionBtn: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center',
+    backgroundColor: COLORS.surfaceLight, 
+    padding: 15, 
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1, 
+    borderColor: COLORS.border
+  },
+  optionText: { color: COLORS.textLight, fontWeight: '600' },
+  thankYouArea: { alignItems: 'center', padding: 10 },
+  thankYouTitle: { color: COLORS.primaryGold, fontSize: 20, fontWeight: 'bold', marginVertical: 10 },
+  thankYouText: { color: COLORS.textMuted, textAlign: 'center', marginBottom: 20, lineHeight: 20 },
+  modalBtnAction: { paddingVertical: 12, borderRadius: 10 },
 });
