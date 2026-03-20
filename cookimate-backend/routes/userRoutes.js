@@ -11,6 +11,7 @@ import {
   incrementCookCount,
   getCommunityProfile,
   addToMealPlan,
+  clearNotification,
   removeFromMealPlan
 } from "../controllers/userController.js";
 
@@ -28,4 +29,5 @@ router.get("/:uid", getUserByUid);
 router.put("/update/:uid", updateUser);
 router.post("/meal-plan/:uid", addToMealPlan);
 router.put("/meal-plan/remove/:uid", removeFromMealPlan);
+router.put("/:uid/clear-notification", clearNotification);
 export default router;

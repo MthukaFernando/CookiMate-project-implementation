@@ -53,6 +53,20 @@ export const createUser = async (req, res) => {
   }
 };
 
+// Clear warning notification
+export const clearNotification = async (req, res) => {
+  try {
+    const { uid } = req.params;
+    await User.findOneAndUpdate(
+      { firebaseUid: uid },
+      { $set: { lastMessage: "" } }
+    );
+    res.status(200).json({ message: "Notification cleared" });
+  } catch (err) {
+    res.status(500).json({ message: "Error clearing notification", error: err });
+  }
+};
+
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {

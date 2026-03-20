@@ -63,6 +63,10 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    lastMessage: {
+      type: String,
+      default: "",
+    },
     mealPlan: [
       {
         uniqueId: { type: String, required: true }, 
@@ -77,7 +81,7 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
     versionKey: false,
-  }
+  },
 );
 
 userSchema.index({ username: 'text' });
