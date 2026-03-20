@@ -2,22 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { 
   View, Text, Image, FlatList, TouchableOpacity, StyleSheet, 
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
-  Platform, ActivityIndicator, StatusBar, Alert
+  Platform, ActivityIndicator, StatusBar, Alert, Modal
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import axios from 'axios';
 import { auth } from "../../config/firebase";
-import { globalStyle } from '../globalStyleSheet.style';
 
 const { width } = Dimensions.get('window');
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
 
-// Theme matching your home page palette
 const theme = {
   bg: "#0A0A0A",
   card: "#1E1E1E",
@@ -25,12 +23,14 @@ const theme = {
   accent: "#FFD54F",
   text: "#FFFFFF",
   muted: "#AAAAAA",
-  border: "#333333"
+  border: "#333333",
+  error: "#FF3B30",
+  overlay: "rgba(0, 0, 0, 0.9)"
 };
 
 export default function CommunityFeed() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -42,6 +42,13 @@ export default function CommunityFeed() {
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // --- REPORT STATES ---
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherReason, setOtherReason] = useState('');
+  const [reportingTargetId, setReportingTargetId] = useState<string | null>(null);
+  const [showThankYou, setShowThankYou] = useState(false); // New State
 
   const currentUser = auth.currentUser;
 
@@ -80,6 +87,39 @@ export default function CommunityFeed() {
     fetchFeed(); 
     checkUserNotification();
   }, []);
+
+  // --- REPORT LOGIC ---
+  const handleReportPress = (targetId: string) => {
+    setReportingTargetId(targetId);
+    setReportModalVisible(true);
+    setShowOtherInput(false);
+    setOtherReason('');
+    setShowThankYou(false); // Reset thank you state
+  };
+
+  const submitReport = async (reason: string) => {
+    if (!currentUser || !reportingTargetId) return;
+    try {
+      await axios.post(`${BASE_URL}/social/report`, {
+        reporter: currentUser.uid,
+        targetId: reportingTargetId,
+        targetType: 'post',
+        reason: reason
+      });
+      setShowThankYou(true); // Show the custom thank you UI instead of Alert
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not submit report.");
+    }
+  };
+
+  const closeReportModal = () => {
+    setReportModalVisible(false);
+    setShowOtherInput(false);
+    setOtherReason('');
+    setReportingTargetId(null);
+    setShowThankYou(false);
+  };
 
   const handleSearch = async (text: string) => {
     setSearchQuery(text);
@@ -146,15 +186,23 @@ export default function CommunityFeed() {
       <View style={styles.centerContainer}>
         <View style={styles.card}>
           <View style={styles.headerArea}>
-            <TouchableOpacity style={styles.userRow} onPress={() => router.push(`/Community/${item.user?.firebaseUid}`)}>
-               <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
-               <View>
-                 <Text style={styles.username}>{item.user?.username}</Text>
-                 <Text style={styles.dateText}>
-                    {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                 </Text>
-               </View>
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <TouchableOpacity style={styles.userRow} onPress={() => router.push(`/Community/${item.user?.firebaseUid}`)}>
+                 <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
+                 <View>
+                   <Text style={styles.username}>{item.user?.username}</Text>
+                   <Text style={styles.dateText}>
+                      {new Date(item.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                   </Text>
+                 </View>
+              </TouchableOpacity>
+
+              {currentUser?.uid !== item.user?.firebaseUid && (
+                <TouchableOpacity onPress={() => handleReportPress(item._id)}>
+                  <Ionicons name="flag-outline" size={20} color={theme.muted} />
+                </TouchableOpacity>
+              )}
+            </View>
           </View>
 
           <View style={styles.imageBox}>
@@ -236,17 +284,12 @@ export default function CommunityFeed() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <StatusBar barStyle="light-content" />
-      {/* Container now uses dynamic padding top for all phones */}
+      
       <View style={[styles.searchHeaderContainer, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
-          <TouchableOpacity 
-            style={styles.backBtnAction} 
-            onPress={() => router.push('/')}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.backBtnAction} onPress={() => router.push('/')}>
             <Ionicons name="arrow-back" size={26} color={theme.gold} />
           </TouchableOpacity>
-
           <View style={styles.searchBar}>
             <Ionicons name="search" size={18} color={theme.muted} style={{ marginRight: 8 }} />
             <TextInput 
@@ -257,26 +300,10 @@ export default function CommunityFeed() {
               onChangeText={handleSearch} 
             />
           </View>
-          
           <TouchableOpacity onPress={() => router.push('/CommunityPost')}>
             <Ionicons name="add-circle" size={42} color={theme.gold} />
           </TouchableOpacity>
         </View>
-
-        {isSearching && searchResults.length > 0 && (
-          <View style={[styles.dropdown, { top: insets.top + 65 }]}>
-            {searchResults.map((u) => (
-              <TouchableOpacity 
-                key={u._id} 
-                style={styles.resultItem} 
-                onPress={() => { setIsSearching(false); setSearchQuery(''); router.push(`/Community/${u.firebaseUid}`); }}
-              >
-                <Image source={{ uri: u.profilePic }} style={styles.resAvatar} />
-                <Text style={styles.resName}>@{u.username}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
       </View>
 
       <FlatList 
@@ -284,9 +311,106 @@ export default function CommunityFeed() {
         renderItem={renderPost} 
         keyExtractor={p => p._id} 
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={fetchFeed} tintColor={theme.gold} />}
-        onScrollBeginDrag={() => setIsSearching(false)}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
+
+      {/* --- REFINED REPORT MODAL --- */}
+      <Modal 
+        visible={reportModalVisible} 
+        transparent 
+        animationType="fade"
+        onRequestClose={closeReportModal}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.reportCard}>
+            
+            {/* Conditional Rendering for Thank You State */}
+            {showThankYou ? (
+              <View style={styles.thankYouArea}>
+                <Ionicons name="checkmark-circle" size={60} color={theme.gold} style={{ marginBottom: 15 }} />
+                <Text style={styles.thankYouTitle}>Report Received</Text>
+                <Text style={styles.thankYouText}>Thank you for helping keep our community safe. Our team will review this content shortly.</Text>
+                <TouchableOpacity 
+                  style={[styles.modalBtn, { backgroundColor: theme.gold, marginTop: 10, width: '100%' }]} 
+                  onPress={closeReportModal}
+                >
+                  <Text style={[styles.modalBtnText, { color: '#000', textAlign: 'center' }]}>Close</Text>
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                {/* Modal Header */}
+                <View style={styles.modalHeader}>
+                  <Text style={styles.modalTitle}>Report Content</Text>
+                  <TouchableOpacity onPress={closeReportModal}>
+                    <Ionicons name="close" size={24} color={theme.muted} />
+                  </TouchableOpacity>
+                </View>
+
+                {!showOtherInput ? (
+                  <View style={styles.optionsList}>
+                    <Text style={styles.modalSubTitle}>Select a reason for reporting this post:</Text>
+                    
+                    <TouchableOpacity style={styles.optionBtn} onPress={() => submitReport("Harassment")}>
+                      <Text style={styles.optionText}>Harassment</Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.gold} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.optionBtn} onPress={() => submitReport("Spam")}>
+                      <Text style={styles.optionText}>Spam</Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.gold} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.optionBtn} onPress={() => submitReport("Inappropriate Content")}>
+                      <Text style={styles.optionText}>Inappropriate Content</Text>
+                      <Ionicons name="chevron-forward" size={18} color={theme.gold} />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={styles.optionBtn} onPress={() => setShowOtherInput(true)}>
+                      <Text style={styles.optionText}>Other...</Text>
+                      <Ionicons name="create-outline" size={18} color={theme.gold} />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View style={styles.otherInputArea}>
+                    <Text style={styles.modalSubTitle}>Describe the issue:</Text>
+                    <TextInput
+                      style={styles.modalTextInput}
+                      placeholder="Tell us more about why you are reporting this..."
+                      placeholderTextColor="#666"
+                      value={otherReason}
+                      onChangeText={setOtherReason}
+                      multiline
+                      autoFocus
+                    />
+                    <View style={styles.modalButtonRow}>
+                      <TouchableOpacity 
+                        style={[styles.modalBtn, { backgroundColor: '#333' }]} 
+                        onPress={() => setShowOtherInput(false)}
+                      >
+                        <Text style={styles.modalBtnText}>Back</Text>
+                      </TouchableOpacity>
+                      
+                      <TouchableOpacity 
+                        style={[styles.modalBtn, { backgroundColor: theme.gold }]} 
+                        onPress={() => {
+                          if (otherReason.trim()) {
+                            submitReport(`Other: ${otherReason}`);
+                          } else {
+                            Alert.alert("Input Required", "Please provide a reason.");
+                          }
+                        }}
+                      >
+                        <Text style={[styles.modalBtnText, { color: '#000' }]}>Submit</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+              </>
+            )}
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -299,34 +423,16 @@ const styles = StyleSheet.create({
   searchHeaderContainer: { zIndex: 100, backgroundColor: theme.bg, paddingHorizontal: 10, paddingBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backBtnAction: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.card,
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#D4AF37",
+    width: 40, height: 40, backgroundColor: theme.card, borderRadius: 22.5,
+    justifyContent: 'center', alignItems: 'center', marginRight: 10,
+    borderWidth: 1, borderColor: theme.gold,
   },
-
   searchBar: { 
-    flex: 1, 
-    backgroundColor: theme.card, 
-    borderRadius: 15, 
-    paddingHorizontal: 12, 
-    marginRight: 10, 
-    height: 45, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    borderWidth: 1,
-    borderColor: theme.border
+    flex: 1, backgroundColor: theme.card, borderRadius: 15, paddingHorizontal: 12, 
+    marginRight: 10, height: 45, flexDirection: 'row', alignItems: 'center', 
+    borderWidth: 1, borderColor: theme.border
   },
   input: { flex: 1, color: theme.text },
-  dropdown: { position: 'absolute', left: 10, right: 10, backgroundColor: theme.card, borderRadius: 15, elevation: 5, padding: 10, zIndex: 1000, borderWidth: 1, borderColor: theme.border },
-  resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: theme.border },
-  resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
-  resName: { fontWeight: '600', color: theme.text },
 
   centerContainer: { alignItems: 'center', marginTop: 20 },
   card: { width: width * 0.92, backgroundColor: theme.card, borderRadius: 25, padding: 15, borderWidth: 1, borderColor: theme.border },
@@ -340,17 +446,9 @@ const styles = StyleSheet.create({
   mainImg: { width: '100%', height: '100%' },
   
   commentOverlay: { 
-    position: 'absolute', 
-    bottom: 0, 
-    left: 0, 
-    right: 0, 
-    height: '75%', 
-    backgroundColor: 'rgba(10, 10, 10, 0.9)', 
-    padding: 15,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    borderTopColor: theme.gold
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: '75%', 
+    backgroundColor: 'rgba(10, 10, 10, 0.9)', padding: 15,
+    borderTopLeftRadius: 20, borderTopRightRadius: 20, borderTopWidth: 1, borderTopColor: theme.gold
   },
   overlayHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, borderBottomWidth: 0.5, borderBottomColor: theme.border, paddingBottom: 5 },
   overlayTitle: { color: theme.gold, fontWeight: 'bold', fontSize: 14 },
@@ -369,15 +467,63 @@ const styles = StyleSheet.create({
   count: { marginLeft: 6, fontWeight: '700', color: theme.text },
 
   bottomInputContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#000', 
-    borderRadius: 15, 
-    paddingHorizontal: 12, 
-    paddingVertical: 10,
-    marginTop: 15,
-    borderWidth: 1,
-    borderColor: theme.border
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', 
+    borderRadius: 15, paddingHorizontal: 12, paddingVertical: 10, marginTop: 15, 
+    borderWidth: 1, borderColor: theme.border
   },
-  bottomInput: { flex: 1, fontSize: 14, color: theme.text, height: 40 }
+  bottomInput: { flex: 1, fontSize: 14, color: theme.text, height: 40 },
+
+  // --- REFINED MODAL STYLES ---
+  modalOverlay: { 
+    flex: 1, backgroundColor: theme.overlay, 
+    justifyContent: 'center', alignItems: 'center' 
+  },
+  reportCard: { 
+    width: '88%', backgroundColor: theme.card, borderRadius: 25, 
+    padding: 20, borderWidth: 1, borderColor: theme.gold,
+    shadowColor: theme.gold, shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.2, shadowRadius: 20, elevation: 10
+  },
+  modalHeader: { 
+    flexDirection: 'row', justifyContent: 'space-between', 
+    alignItems: 'center', marginBottom: 15, borderBottomWidth: 0.5, 
+    borderBottomColor: theme.border, paddingBottom: 10 
+  },
+  modalTitle: { color: theme.gold, fontSize: 18, fontWeight: 'bold' },
+  modalSubTitle: { color: theme.text, fontSize: 14, marginBottom: 15, fontWeight: '500' },
+  optionsList: { gap: 10 },
+  optionBtn: { 
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    backgroundColor: '#000', padding: 15, borderRadius: 12,
+    borderWidth: 1, borderColor: theme.border
+  },
+  optionText: { color: theme.text, fontSize: 15, fontWeight: '600' },
+  otherInputArea: { gap: 10 },
+  modalTextInput: { 
+    backgroundColor: '#000', color: theme.text, borderRadius: 12, 
+    padding: 15, height: 120, textAlignVertical: 'top', 
+    borderWidth: 1, borderColor: theme.border, fontSize: 14
+  },
+  modalButtonRow: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10, gap: 10 },
+  modalBtn: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 10 },
+  modalBtnText: { color: '#FFF', fontWeight: 'bold' },
+
+  // --- THANK YOU AREA STYLES ---
+  thankYouArea: { 
+    alignItems: 'center', 
+    paddingVertical: 10 
+  },
+  thankYouTitle: { 
+    color: theme.gold, 
+    fontSize: 20, 
+    fontWeight: 'bold', 
+    marginBottom: 10 
+  },
+  thankYouText: { 
+    color: theme.text, 
+    fontSize: 14, 
+    textAlign: 'center', 
+    lineHeight: 20, 
+    marginBottom: 20 
+  }
 });
