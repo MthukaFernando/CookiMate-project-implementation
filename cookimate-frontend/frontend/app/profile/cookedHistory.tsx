@@ -49,7 +49,7 @@ const CookedHistoryPage = () => {
 
       // Define the expected response shape here
       const response = await axios.get<{ cookedHistory: CookedItem[] }>(
-        `${API_URL}/api/users/${uid}`
+        `${API_URL}/api/users/${uid}`,
       );
 
       // Transform the nested data into a flat list
@@ -121,7 +121,7 @@ const CookedHistoryPage = () => {
           <Text style={styles.emptyText}>No recipes cooked yet!</Text>
           <TouchableOpacity
             style={styles.exploreButton}
-            onPress={() => router.push("/myRecipes")}
+            onPress={() => router.push("/myRecipes" as any)}
           >
             <Text style={styles.exploreText}>Find a Recipe</Text>
           </TouchableOpacity>
