@@ -29,4 +29,28 @@ const CookedHistoryPage = () => {
   const insets = useSafeAreaInsets();
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchCookedHistory = async () => {
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+      
+      // We assume your backend returns the user object with populated recipe details
+      const response = await axios.get(`${API_URL}/api/users/${uid}`);
+      
+      // Map the cookedHistory array to just the recipe data
+      // Adjust this based on how your backend sends the data
+      const history = response.data.cookedHistory.map((item: any) => ({
+        ...item.recipeId, // Spread recipe details
+        dateCooked: item.dateCooked, // Keep the date for display
+      }));
+
+      setRecipes(history);
+    } catch (error) {
+      console.error("Error fetching cooked history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 }
