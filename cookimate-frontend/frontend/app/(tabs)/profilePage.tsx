@@ -231,7 +231,7 @@ const styles = StyleSheet.create({
     justifyContent: "center", 
     paddingHorizontal: 25, 
     paddingTop: 5,       
-    paddingBottom: 100,    
+    paddingBottom: 150,    
     backgroundColor: "#0A0A0A"
   },
   
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row', 
     flexWrap: 'wrap', 
     justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   statCard: {
     width: '48%',
