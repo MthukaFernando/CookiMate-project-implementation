@@ -239,3 +239,50 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
     });
   }
 };
+
+export const saveGeneratedRecipe = async (req, res) => {
+  const { recipe, image, title, userId, cuisine, mealType, servings } = req.body;
+
+  try {
+    // Validate required fields
+    if (!recipe || !title) {
+      return res.status(400).json({ error: "Missing required recipe data" });
+    }
+
+    if (!userId) {
+      return res.status(401).json({ error: "You must be logged in to save recipes" });
+    }
+
+    // Create a unique ID for the generated recipe
+    const recipeId = `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Prepare recipe object
+    const newRecipe = {
+      id: recipeId,
+      name: title,
+      description: `A delicious ${title} recipe created just for you!`,
+      image: image,
+      ingredients_raw_str: [],
+      steps: [],
+      cuisine: cuisine ? [cuisine] : ["Various"],
+      meal_type: mealType ? [mealType.toLowerCase()] : ["dish"],
+      totalTime: "Varies",
+      servings: servings ? parseInt(servings) : 4,
+      serving_size: "serving",
+      search_terms: [title.toLowerCase()],
+    };
+
+    // Save to database
+    const savedRecipe = await Recipe.create(newRecipe);
+    
+    res.status(201).json({ 
+      success: true, 
+      message: "Recipe saved to your collection!",
+      recipe: savedRecipe 
+    });
+    
+  } catch (error) {
+    console.error("Save Recipe Error:", error);
+    res.status(500).json({ error: "Failed to save recipe. Please try again." });
+  }
+};
