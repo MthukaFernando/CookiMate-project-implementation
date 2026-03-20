@@ -175,4 +175,10 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignSelf: "flex-start",
   },
-})
+  viewButtonText: { color: "#000000", fontWeight: "bold", fontSize: 12, marginRight: 4 },
+  emptyContainer: { flex: 1, justifyContent: "center", alignItems: "center", paddingBottom: 100 },
+  emptyText: { color: "#666", fontSize: 18, marginTop: 20, marginBottom: 20 },
+  exploreButton: { backgroundColor: "#D4AF37", paddingHorizontal: 30, paddingVertical: 12, borderRadius: 25 },
+  exploreText: { fontWeight: "bold", color: "#000" }
+});
+
