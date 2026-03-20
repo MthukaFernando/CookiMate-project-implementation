@@ -197,6 +197,16 @@ export default function GenerateRecipesPage() {
     
     setGeneratedRecipe(data.recipe);
     setRecipeImage(data.image);
+
+    // Extract and store the recipe title
+if (data.title) {
+  setRecipeTitle(data.title);
+} else if (data.recipe) {
+  // Try to extract title from first line of recipe
+  const firstLine = data.recipe.split('\n')[0];
+  setRecipeTitle(firstLine.trim());
+}
+
   } catch (error: any) {
     // Only log in development, but don't show console error to users
     if (__DEV__) {
