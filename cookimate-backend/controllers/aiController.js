@@ -244,28 +244,42 @@ export const chatWithRecipe = async (req, res) => {
   const { recipeId, message } = req.body;
 
   try {
-    
+    if (!message || message.trim() === "") {
+      return res.status(400).json({ reply: "Please type your question about this recipe." });
+    }
 
-    
-    const latestMessage = message.toLowerCase();
-    const words = latestMessage.replace(/[^a-z\s]/g, "").split(/\s+/);
-    const isCookingRelated = words.some((word) =>
-      STEMMED_ALLOWLIST.has(PorterStemmer.stem(word))
-    );
+    const lowerMessage = message.toLowerCase();
 
-    if (!isCookingRelated) {
+   
+    const containsForbidden = FORBIDDEN_WORDS.some((word) => lowerMessage.includes(word));
+    if (containsForbidden) {
       return res.status(200).json({
-        reply:
-          "I'm sorry, I can only answer questions about this recipe or cooking-related topics. Please ask about ingredients, steps, or preparation.",
+        reply: "Sorry, I cannot answer that. Please ask only about this recipe or cooking topics.",
       });
     }
 
-    // Fetch the recipe from DB
+   
     const recipe = await Recipe.findOne({ id: recipeId });
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
 
+   
+    const words = lowerMessage.replace(/[^a-z\s]/g, "").split(/\s+/);
+    const recipeWords = (recipe.ingredients_raw_str || []).join(" ").toLowerCase().split(/\s+/);
+
+    const isCookingRelated = words.some(
+      (word) =>
+        STEMMED_ALLOWLIST.has(PorterStemmer.stem(word)) || recipeWords.includes(word)
+    );
+
+    if (!isCookingRelated) {
+      return res.status(200).json({
+        reply: "I'm sorry, I can only answer questions about this recipe or cooking-related topics. Please ask about ingredients, steps, or preparation.",
+      });
+    }
+
+    
     const systemPrompt = `
 You are a helpful kitchen assistant for the "Cookimate" app.
 The user is currently cooking: "${recipe.name}".
@@ -277,10 +291,11 @@ Steps: ${recipe.steps?.join(" ") || "None"}
 
 INSTRUCTIONS:
 - ONLY answer questions related to this recipe.
-- If unrelated, guide user back politely.
+- If unrelated, politely redirect user to cooking topics.
 - Keep answers short and helpful.
 `;
 
+    
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
