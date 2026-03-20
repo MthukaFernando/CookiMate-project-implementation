@@ -9,6 +9,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get('window');
@@ -48,9 +49,13 @@ export default function CommunityFeed() {
   const [showOtherInput, setShowOtherInput] = useState(false);
   const [otherReason, setOtherReason] = useState('');
   const [reportingTargetId, setReportingTargetId] = useState<string | null>(null);
-  const [showThankYou, setShowThankYou] = useState(false); // New State
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [reportedPostIds, setReportedPostIds] = useState<Set<string>>(new Set());
 
   const currentUser = auth.currentUser;
+
+  // Key scoped per user so reports don't bleed across accounts
+  const REPORTED_POSTS_KEY = `reported_posts_${currentUser?.uid ?? 'guest'}`;
 
   const fetchFeed = async () => {
     try {
@@ -86,7 +91,19 @@ export default function CommunityFeed() {
   useEffect(() => { 
     fetchFeed(); 
     checkUserNotification();
+    loadReportedPosts();
   }, []);
+
+  const loadReportedPosts = async () => {
+    try {
+      const stored = await AsyncStorage.getItem(REPORTED_POSTS_KEY);
+      if (stored) {
+        setReportedPostIds(new Set(JSON.parse(stored)));
+      }
+    } catch (err) {
+      console.error('Failed to load reported posts', err);
+    }
+  };
 
   // --- REPORT LOGIC ---
   const handleReportPress = (targetId: string) => {
@@ -106,7 +123,14 @@ export default function CommunityFeed() {
         targetType: 'post',
         reason: reason
       });
-      setShowThankYou(true); // Show the custom thank you UI instead of Alert
+
+      // Persist the reported post ID so the flag stays colored after navigation
+      const updatedSet = new Set(reportedPostIds);
+      updatedSet.add(reportingTargetId);
+      setReportedPostIds(updatedSet);
+      await AsyncStorage.setItem(REPORTED_POSTS_KEY, JSON.stringify([...updatedSet]));
+
+      setShowThankYou(true);
     } catch (err) {
       console.error(err);
       Alert.alert("Error", "Could not submit report.");
@@ -181,6 +205,7 @@ export default function CommunityFeed() {
   const renderPost = ({ item }: { item: any }) => {
     const isLiked = item.likes?.includes(currentUser?.uid);
     const isInteracting = activeCommentPostId === item._id;
+    const isReported = reportedPostIds.has(item._id);
 
     return (
       <View style={styles.centerContainer}>
@@ -198,8 +223,15 @@ export default function CommunityFeed() {
               </TouchableOpacity>
 
               {currentUser?.uid !== item.user?.firebaseUid && (
-                <TouchableOpacity onPress={() => handleReportPress(item._id)}>
-                  <Ionicons name="flag-outline" size={20} color={theme.muted} />
+                <TouchableOpacity 
+                  onPress={() => !isReported && handleReportPress(item._id)}
+                  style={isReported ? styles.reportedFlagBtn : undefined}
+                >
+                  <Ionicons 
+                    name={isReported ? "flag" : "flag-outline"} 
+                    size={20} 
+                    color={isReported ? theme.error : theme.muted} 
+                  />
                 </TouchableOpacity>
               )}
             </View>
@@ -465,6 +497,7 @@ const styles = StyleSheet.create({
   actionRow: { flexDirection: 'row', marginTop: 15, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10 },
   iconBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 25 },
   count: { marginLeft: 6, fontWeight: '700', color: theme.text },
+  reportedFlagBtn: { opacity: 0.85 },
 
   bottomInputContainer: { 
     flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', 
