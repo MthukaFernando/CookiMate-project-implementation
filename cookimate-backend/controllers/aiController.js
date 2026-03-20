@@ -295,6 +295,14 @@ export const saveGeneratedRecipe = async (req, res) => {
       }
     }
 
+    // Prepare search terms for better searchability
+    const searchTerms = [
+      title.toLowerCase(),
+      ...ingredients.map((ing) => ing.toLowerCase()),
+      cuisine?.toLowerCase(),
+      mealType?.toLowerCase(),
+    ].filter(Boolean);
+
     // Prepare recipe object with parsed data
     const newRecipe = {
       id: recipeId,
