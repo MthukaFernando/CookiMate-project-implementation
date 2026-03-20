@@ -14,11 +14,11 @@ import {
   Animated,
   FlatList,
   ActivityIndicator,
+  Modal, // Added Modal
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // Required for cross-platform safe areas
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Video, ResizeMode } from "expo-av";
 import axios from "axios";
-import Constants from "expo-constants";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -44,6 +44,7 @@ type NavCardProps = {
   href: string;
   badgeText: string;
   iconName: string;
+  onPress?: () => void; // Added optional onPress
 };
 
 const NavCard = ({
@@ -52,6 +53,7 @@ const NavCard = ({
   href,
   badgeText,
   iconName,
+  onPress, // Destructured
 }: NavCardProps) => {
   const scale = new Animated.Value(1);
   const pressIn = () =>
@@ -62,7 +64,7 @@ const NavCard = ({
   return (
     <Animated.View style={{ transform: [{ scale }] }}>
       <Pressable
-        onPress={() => router.push(href as any)}
+        onPress={() => (onPress ? onPress() : router.push(href as any))} // Logic change here
         onPressIn={pressIn}
         onPressOut={pressOut}
         style={styles.navCard}
@@ -89,10 +91,11 @@ const NavCard = ({
 };
 
 function HomePage() {
-  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const insets = useSafeAreaInsets();
   const [message, setMessage] = useState("What would you like to cook?");
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isModalVisible, setIsModalVisible] = useState(false); // Added Modal State
   const videoRef = useRef(null);
 
   const floatAnim = useRef(new Animated.Value(0)).current;
@@ -163,7 +166,6 @@ function HomePage() {
   };
 
   return (
-    // Applied dynamic padding to the top based on device inset
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" />
 
@@ -219,6 +221,7 @@ function HomePage() {
               href="/details/generateRecipes"
               badgeText="AI powered"
               iconName="robot"
+              onPress={() => setIsModalVisible(true)} // Intercepting navigation
             />
             <NavCard
               title="Community"
@@ -246,9 +249,32 @@ function HomePage() {
           )}
         </View>
 
-        {/* Dynamic bottom spacing to avoid home indicator overlap */}
         <View style={{ height: 120 + insets.bottom }} />
       </ScrollView>
+
+      {/* --- COMING SOON MODAL --- */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={isModalVisible}
+        onRequestClose={() => setIsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <MaterialCommunityIcons name="robot-confused" size={60} color={theme.gold} />
+            <Text style={styles.modalTitle}>Coming Soon</Text>
+            <Text style={styles.modalSubtitle}>
+              Our AI recipe generator is currently under development.
+            </Text>
+            <Pressable
+              style={styles.modalCloseButton}
+              onPress={() => setIsModalVisible(false)}
+            >
+              <Text style={styles.modalCloseButtonText}>Got it!</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -389,6 +415,49 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   viewButtonTextSmall: { color: "#222", fontWeight: "bold", fontSize: 12 },
+  
+  // New Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  modalContent: {
+    width: "80%",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 30,
+    padding: 30,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(255, 215, 0, 0.3)",
+    elevation: 20,
+  },
+  modalTitle: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: "#fff",
+    marginTop: 15,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: "#aaa",
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 25,
+    lineHeight: 20,
+  },
+  modalCloseButton: {
+    backgroundColor: theme.gold,
+    paddingVertical: 12,
+    paddingHorizontal: 35,
+    borderRadius: 15,
+  },
+  modalCloseButtonText: {
+    color: "#000",
+    fontWeight: "800",
+    fontSize: 16,
+  },
 });
 
 export default HomePage;

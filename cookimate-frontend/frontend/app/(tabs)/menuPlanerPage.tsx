@@ -22,6 +22,7 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 
 const { width, height } = Dimensions.get("window");
+const SCREEN_HEIGHT = Dimensions.get("screen").height;
 const CAROUSEL_WIDTH = width * 0.9;
 
 
@@ -146,7 +147,7 @@ const Page = () => {
           animated: true,
         });
       }
-    }, 4000);
+    }, 2400);
     return () => clearInterval(timer);
   }, [currentIndex, carouselImages.length]);
 
@@ -279,6 +280,7 @@ const Page = () => {
         transparent={true}
         visible={isModalVisible}
         onRequestClose={handleCloseModal}
+        statusBarTranslucent={true} // Fix for Android status/nav bar
       >
         <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={handleCloseModal}>
           <TouchableOpacity activeOpacity={1} style={styles.formContainer}>
@@ -443,7 +445,8 @@ const styles = StyleSheet.create({
     resizeMode: "cover",
   },
   modalOverlay: {
-    flex: 1,
+    height: SCREEN_HEIGHT,
+    width: width,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "flex-end",
   },
@@ -457,6 +460,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderColor: "#ffb0053c",
     elevation: 20,
+    // Fix for Android navigation bar gap
+    marginBottom: Platform.OS === 'android' ? -1 : 0,
+    paddingBottom: Platform.OS === 'android' ? 30 : 20,
   },
   initialContent: { flex: 1, position: "relative" },
   dateContainer: { width: "100%", alignItems: "center", marginTop: 10 },
