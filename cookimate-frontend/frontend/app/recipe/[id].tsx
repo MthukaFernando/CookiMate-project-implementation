@@ -131,8 +131,6 @@ export default function RecipeDetails() {
   setIsChefThinking(true);
 
   try {
-    console.log("Sending to backend:", { recipeId: id, message: currentInput });
-
     // 2. Call the correct backend endpoint
     const response = await axios.post(`${API_URL}/api/recipes/chat-recipe`, {
       recipeId: id,  // recipe ID from useLocalSearchParams
