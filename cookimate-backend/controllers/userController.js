@@ -70,7 +70,7 @@ export const clearNotification = async (req, res) => {
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
+    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites").populate("cookedHistory.recipeId");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }

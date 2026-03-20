@@ -47,22 +47,23 @@ const CookedHistoryPage = () => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
 
+    // Fetch the user data
     const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
 
     if (response.data && response.data.cookedHistory) {
       const history = response.data.cookedHistory
-        .filter((item: any) => item.recipeId) 
+        .filter((item: any) => item.recipeId) //Filters out any broken links
         .map((item: any) => ({
-          // FLAG: Map the long MongoDB _id to 'id'
-          id: item.recipeId?._id || item.recipeId, 
-          name: item.recipeId?.name || "Unknown Recipe",
-          image: item.recipeId?.image,
+          // Accessing fields directly from the populated recipeId object
+          id: item.recipeId._id, 
+          name: item.recipeId.name, 
+          image: item.recipeId.image, 
           dateCooked: item.dateCooked,
         }));
       setRecipes(history);
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error fetching cooked history:", error);
   } finally {
     setLoading(false);
   }
@@ -77,8 +78,6 @@ const CookedHistoryPage = () => {
   const renderRecipeItem = ({ item }: { item: any }) => (
   <TouchableOpacity
     activeOpacity={0.9}
-    // FLAG: Use /recipe/${item.id}. 
-    // This assumes your file is at frontend/app/recipe/[id].tsx
     onPress={() => router.push(`/recipe/${item.id}` as any)} 
     style={styles.card}
   >
