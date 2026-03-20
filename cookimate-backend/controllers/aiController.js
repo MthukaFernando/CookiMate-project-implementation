@@ -239,3 +239,54 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
     });
   }
 };
+export const chatWithRecipe = async (req, res) => {
+  const { recipeId, message } = req.body;
+
+  try {
+    // 1. Fetch the specific recipe from MongoDB
+    const recipe = await Recipe.findOne({ id: recipeId });
+
+    if (!recipe) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    // 2. Initialize Groq
+    const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+
+    // 3. Create the Context-Aware System Prompt
+    // We "feed" the AI the recipe details so it knows what it's talking about.
+    const systemPrompt = `
+      You are a helpful kitchen assistant for the "Cookimate" app. 
+      The user is currently cooking: "${recipe.name}".
+      
+      RECIPE DETAILS:
+      Description: ${recipe.description}
+      Ingredients: ${recipe.ingredients_raw_str.join(", ")}
+      Steps: ${recipe.steps.join(" ")}
+      
+      INSTRUCTIONS:
+      - ONLY answer questions related to this specific recipe.
+      - If the user asks something completely unrelated to cooking or this recipe, 
+        politely guide them back to the meal.
+      - Keep answers concise and helpful for someone who is currently cooking.
+    `;
+
+    // 4. Send to Groq
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: message },
+      ],
+      model: "llama-3.3-70b-versatile",
+      temperature: 0.7,
+    });
+
+    res.status(200).json({
+      reply: chatCompletion.choices[0].message.content,
+    });
+
+  } catch (error) {
+    console.error("Chat Error:", error);
+    res.status(500).json({ error: "Chatbot is having trouble connecting." });
+  }
+}

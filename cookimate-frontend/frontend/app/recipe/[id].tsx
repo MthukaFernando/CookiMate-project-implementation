@@ -11,6 +11,9 @@ import {
   SafeAreaView,
   Animated,
   Alert,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -100,6 +103,55 @@ export default function RecipeDetails() {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(0);
 
+  //AI Chat State
+  const [isChatModalVisible, setIsChatModalVisible] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    {
+      role: "assistant",
+      content:
+        "👨‍🍳 Hi! I'm your CookiMate AI Chef. Ask me anything about this recipe!",
+    },
+  ]);
+  const [userQuestion, setUserQuestion] = useState("");
+  const [isChefThinking, setIsChefThinking] = useState(false);
+
+  //AI Chat Send Logic
+  const handleSendMessage = async () => {
+    if (!userQuestion.trim()) return;
+
+    const newMessages = [
+      ...chatMessages,
+      { role: "user", content: userQuestion },
+    ];
+    setChatMessages(newMessages);
+    const currentInput = userQuestion;
+    setUserQuestion("");
+    setIsChefThinking(true);
+
+    try {
+      const response = await axios.post(`${API_URL}/api/ai/chat`, {
+        recipeId: id,
+        userQuestion: currentInput,
+        chatHistory: chatMessages.slice(-4),
+      });
+
+      const data = response.data as any;
+
+      setChatMessages([
+        ...newMessages,
+        { role: "assistant", content: data.reply },
+      ]);
+    } catch (err) {
+      console.error("Chat Error:", err);
+      Alert.alert(
+        "Chef's Busy",
+        "I couldn't get an answer. Try again in a moment!",
+      );
+    } finally {
+      setIsChefThinking(false);
+    }
+  };
+
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
     setCookingMode(true);
@@ -147,7 +199,8 @@ export default function RecipeDetails() {
       try {
         if (!uid || !id) return;
         const response = await axios.get(`${API_URL}/api/users/${uid}`);
-        const favorites = response.data.favorites || [];
+        const data = response.data as any;
+        const favorites = data.favorites || [];
         const isFav = favorites.some((fav: any) => fav.id === id);
         setIsFavorite(isFav);
       } catch (error) {
@@ -155,7 +208,7 @@ export default function RecipeDetails() {
       }
     };
     if (id) checkFavorite(id as string);
-  }, [id]);
+  }, [id, uid]);
 
   const handleRemoveFavorite = async () => {
     try {
@@ -363,6 +416,85 @@ export default function RecipeDetails() {
         </View>
       </ScrollView>
 
+      {/*Floating chat FAB*/}
+      <TouchableOpacity
+        style={styles.chatFAB}
+        onPress={() => setIsChatModalVisible(true)}
+      >
+        <Ionicons name="chatbubble-ellipses" size={28} color="#000" />
+      </TouchableOpacity>
+
+      {/*AI Chat Modal */}
+      <Modal
+        visible={isChatModalVisible}
+        animationType="slide"
+        transparent={true}
+      >
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+        >
+          <SafeAreaView style={styles.chatModalOverlay}>
+            <View style={styles.chatContainer}>
+              <View style={styles.chatHeader}>
+                <Text style={styles.chatHeaderTitle}>Recipe Assistant</Text>
+                <TouchableOpacity onPress={() => setIsChatModalVisible(false)}>
+                  <Ionicons name="close-circle" size={28} color="#D4AF37" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView
+                contentContainerStyle={{ padding: 20 }}
+                ref={(ref) => ref?.scrollToEnd({ animated: true })}
+              >
+                {chatMessages.map((msg, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.messageBubble,
+                      msg.role === "user"
+                        ? styles.userBubble
+                        : styles.chefBubble,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        msg.role === "user" ? styles.userText : styles.chefText
+                      }
+                    >
+                      {msg.content}
+                    </Text>
+                  </View>
+                ))}
+                {isChefThinking && (
+                  <ActivityIndicator
+                    color="#D4AF37"
+                    style={{ alignSelf: "flex-start", margin: 10 }}
+                  />
+                )}
+              </ScrollView>
+
+              <View style={styles.chatInputRow}>
+                <TextInput
+                  style={styles.chatInput}
+                  placeholder="Ask a question..."
+                  placeholderTextColor="#999"
+                  value={userQuestion}
+                  onChangeText={setUserQuestion}
+                  multiline
+                />
+                <TouchableOpacity
+                  onPress={handleSendMessage}
+                  style={styles.sendButton}
+                >
+                  <Ionicons name="send" size={20} color="#000" />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </SafeAreaView>
+        </KeyboardAvoidingView>
+      </Modal>
+
       {/* Cooking Mode Modal */}
       <Modal
         visible={cookingMode}
@@ -526,6 +658,82 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   startCookingText: { color: "#000", fontSize: 18, fontWeight: "bold" },
+
+  //AI chat styles
+  chatFAB: {
+    position: "absolute",
+    bottom: 30,
+    right: 20,
+    backgroundColor: "#D4AF37",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 5,
+  },
+  chatModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "flex-end",
+  },
+  chatContainer: {
+    height: "80%",
+    backgroundColor: "#0A0A0A",
+    borderTopLeftRadius: 25,
+    borderTopRightRadius: 25,
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  chatHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: "#222",
+    alignItems: "center",
+  },
+  chatHeaderTitle: { color: "#D4AF37", fontSize: 18, fontWeight: "bold" },
+  messageBubble: {
+    padding: 12,
+    borderRadius: 18,
+    marginBottom: 10,
+    maxWidth: "85%",
+  },
+  userBubble: { alignSelf: "flex-end", backgroundColor: "#D4AF37" },
+  chefBubble: {
+    alignSelf: "flex-start",
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  userText: { color: "#000", fontWeight: "600" },
+  chefText: { color: "#FFF", lineHeight: 20 },
+  chatInputRow: {
+    flexDirection: "row",
+    padding: 15,
+    borderTopWidth: 1,
+    borderTopColor: "#222",
+    alignItems: "center",
+    backgroundColor: "#0A0A0A",
+  },
+  chatInput: {
+    flex: 1,
+    backgroundColor: "#1A1A1A",
+    borderRadius: 25,
+    paddingHorizontal: 15,
+    color: "#FFF",
+    height: 45,
+    marginRight: 10,
+  },
+  sendButton: {
+    backgroundColor: "#D4AF37",
+    width: 45,
+    height: 45,
+    borderRadius: 22.5,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   modalContainer: { flex: 1, backgroundColor: "#000000" },
   modalHeader: {
     flexDirection: "row",

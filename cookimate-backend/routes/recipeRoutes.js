@@ -1,7 +1,7 @@
 import express from 'express';
 import { getAllRecipes, getRecipeById, getSeasonalRecipes } from '../controllers/recipeController.js';
 import { getRandomRecipes } from "../controllers/recipeController.js";
-import { generateRecipeText } from '../controllers/aiController.js';
+import { generateRecipeText ,chatWithRecipe} from '../controllers/aiController.js';
 
 const router = express.Router();
 //To get recomandded recips in the home page
@@ -17,5 +17,8 @@ router.get('/seasonal', getSeasonalRecipes);
 router.get('/:id', getRecipeById);
 
 router.post('/generate-text', generateRecipeText);
+
+//to get the chat bot groq ai 
+router.post('/chat-recipe',chatWithRecipe)
 
 export default router;
