@@ -67,15 +67,21 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    blockedUsers: [
+      {
+        type: String, // store firebaseUid
+        default: [],
+      },
+    ],
     mealPlan: [
       {
-        uniqueId: { type: String, required: true }, 
-        recipeId: { type: String, required: true }, 
+        uniqueId: { type: String, required: true },
+        recipeId: { type: String, required: true },
         name: { type: String, required: true },
         image: { type: String },
         category: { type: String },
         date: { type: String, required: true },
-      }
+      },
     ],
   },
   {
@@ -84,7 +90,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-userSchema.index({ username: 'text' });
+userSchema.index({ username: "text" });
 userSchema.index({ followers: 1 });
 userSchema.index({ following: 1 });
 
