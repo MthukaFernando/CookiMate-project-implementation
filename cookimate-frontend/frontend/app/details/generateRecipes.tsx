@@ -19,6 +19,8 @@ import { Video, ResizeMode } from "expo-av";
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import Constants from "expo-constants";
+import { getAuth } from "firebase/auth";
+import { auth } from "../../config/firebase";
 
 // --- CONFIGURATION ---
 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -217,6 +219,8 @@ if (data.title) {
     setLoading(false);
   }
 };
+
+
 
 // Add save recipe function
 const handleSaveRecipe = async () => {
@@ -533,10 +537,42 @@ const handleSaveRecipe = async () => {
                     )}
                   </View>
                   {generatedRecipe && (
-                    <View style={styles.recipeTextWrapper}>
-                      <Text style={styles.recipeText}>{generatedRecipe}</Text>
-                    </View>
-                  )}
+  <View style={styles.recipeTextWrapper}>
+    <Text style={styles.recipeText}>{generatedRecipe}</Text>
+    
+    {/* Save Button */}
+    <TouchableOpacity
+      style={[
+        styles.saveButton, 
+        saveSuccess && styles.saveButtonSuccess,
+        !currentUserId && styles.saveButtonDisabled
+      ]}
+      onPress={handleSaveRecipe}
+      disabled={saveLoading || !currentUserId}
+    >
+      {saveLoading ? (
+        <ActivityIndicator color={BRAND.bg} size="small" />
+      ) : saveSuccess ? (
+        <>
+          <Ionicons name="checkmark-circle" size={20} color={BRAND.bg} />
+          <Text style={styles.saveButtonText}>Saved to My Recipes!</Text>
+        </>
+      ) : (
+        <>
+          <Ionicons name="bookmark" size={20} color={BRAND.bg} />
+          <Text style={styles.saveButtonText}>
+            {currentUserId ? "Save to My Recipes" : "Login to Save"}
+          </Text>
+        </>
+      )}
+    </TouchableOpacity>
+    {!currentUserId && (
+      <Text style={styles.loginPromptText}>
+        Please log in to save recipes to your collection
+      </Text>
+    )}
+  </View>
+)}
                 </View>
               )}
             </ScrollView>
@@ -790,5 +826,33 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     marginLeft: 10,
     marginRight: 10,
+  },
+  saveButton: {
+    backgroundColor: BRAND.accent,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginTop: 20,
+    gap: 8,
+  },
+  saveButtonSuccess: {
+    backgroundColor: "#4CAF50",
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: BRAND.bg,
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  loginPromptText: {
+    color: BRAND.textMuted,
+    fontSize: 12,
+    textAlign: "center",
+    marginTop: 8,
   },
 });
