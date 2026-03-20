@@ -22,8 +22,8 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window");
 const COLUMN_COUNT = 3;
@@ -46,16 +46,16 @@ const COLORS = {
   overlayBg: "rgba(20, 20, 20, 0.95)",
 };
 
+// AsyncStorage key scoped per reporter uid
+const getStorageKey = (reporterUid: string) => `reported_users_${reporterUid}`;
+
 interface Post {
-  id: string; // Ensure this matches what your backend returns (might need to be _id)
+  id: string;
   uri: string;
   caption?: string;
   likes: string[];
   comments: {
-    user: {
-      username: string;
-      profilePic: string;
-    };
+    user: { username: string; profilePic: string };
     text: string;
     createdAt: string;
   }[];
@@ -68,11 +68,7 @@ interface UserProfile {
   profilePic?: string;
   bio?: string;
   isFollowing: boolean;
-  stats: {
-    recipes: number;
-    followers: number;
-    following: number;
-  };
+  stats: { recipes: number; followers: number; following: number };
   posts: Post[];
 }
 
@@ -92,12 +88,41 @@ export default function CommunityUserProfile() {
 
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
-  const [hasReportedUser, setHasReportedUser] = useState(false);
+
+  // Whether the current user has already reported this profile
+  const [isUserReported, setIsUserReported] = useState(false);
 
   const currentUser = auth.currentUser;
 
-  // Key scoped per viewer so reports don't bleed across accounts
-  const REPORTED_USERS_KEY = `reported_users_${currentUser?.uid ?? 'guest'}`;
+  // -----------------------------------------------------------------
+  // Load persisted reported user IDs from AsyncStorage on mount
+  // -----------------------------------------------------------------
+  useEffect(() => {
+    if (!currentUser || !CommunityUserid) return;
+    const loadReportedStatus = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
+        if (raw) {
+          const ids: string[] = JSON.parse(raw);
+          setIsUserReported(ids.includes(CommunityUserid));
+        } else {
+          // First launch: fetch from server then cache locally
+          const res = await axios.get(
+            `${BASE_URL}/social/reports/by-user/${currentUser.uid}`,
+          );
+          const ids: string[] = res.data.reportedIds || [];
+          setIsUserReported(ids.includes(CommunityUserid));
+          await AsyncStorage.setItem(
+            getStorageKey(currentUser.uid),
+            JSON.stringify(ids),
+          );
+        }
+      } catch (err) {
+        console.log("Could not load reported user status:", err);
+      }
+    };
+    loadReportedStatus();
+  }, [currentUser, CommunityUserid]);
 
   const fetchProfile = async () => {
     try {
@@ -105,7 +130,9 @@ export default function CommunityUserProfile() {
       setLoading(true);
       const response = await axios.get(
         `${BASE_URL}/users/community/${CommunityUserid}`,
-        { params: { viewerId: currentUser?.uid } },
+        {
+          params: { viewerId: currentUser?.uid },
+        },
       );
       setProfile(response.data);
       setIsFollowing(response.data.isFollowing);
@@ -118,20 +145,7 @@ export default function CommunityUserProfile() {
 
   useEffect(() => {
     fetchProfile();
-    loadReportedStatus();
   }, [CommunityUserid]);
-
-  const loadReportedStatus = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(REPORTED_USERS_KEY);
-      if (stored && CommunityUserid) {
-        const reportedIds: string[] = JSON.parse(stored);
-        setHasReportedUser(reportedIds.includes(CommunityUserid));
-      }
-    } catch (err) {
-      console.error('Failed to load reported users', err);
-    }
-  };
 
   const handleFollowToggle = async () => {
     if (!currentUser || !profile) return;
@@ -158,35 +172,21 @@ export default function CommunityUserProfile() {
     }
   };
 
-  // --- FIXED FRONTEND LIKE LOGIC ---
   const handleLikeToggle = async () => {
     if (!currentUser || !selectedPost) return;
-
-    // Use current ID logic - checking if the ID exists (fallback to _id if backend uses that)
     const postId = selectedPost.id || (selectedPost as any)._id;
-
     try {
-      // 1. Send the request
       await axios.put(`${BASE_URL}/social/${postId}/like`, {
         userId: currentUser.uid,
       });
-
-      // 2. Since your backend returns "Post liked!" (a string),
-      // we must update the local state manually.
       const isCurrentlyLiked = (selectedPost.likes || []).includes(
         currentUser.uid,
       );
-
       const newLikes = isCurrentlyLiked
         ? selectedPost.likes.filter((uid) => uid !== currentUser.uid)
         : [...(selectedPost.likes || []), currentUser.uid];
-
       const updatedPost = { ...selectedPost, likes: newLikes };
-
-      // 3. Update the modal view
       setSelectedPost(updatedPost);
-
-      // 4. Update the profile list view
       setProfile((prev) =>
         prev
           ? {
@@ -213,7 +213,6 @@ export default function CommunityUserProfile() {
         userId: currentUser.uid,
         text: commentText,
       });
-      // Comments endpoint returns the object, so we can use res.data directly
       setSelectedPost(res.data);
       setCommentText("");
       setProfile((prev) =>
@@ -271,6 +270,13 @@ export default function CommunityUserProfile() {
   };
 
   const handleReportPress = () => {
+    if (isUserReported) {
+      Alert.alert(
+        "Already Reported",
+        "You have already flagged this user. Our team is reviewing the report.",
+      );
+      return;
+    }
     setReportModalVisible(true);
     setShowThankYou(false);
   };
@@ -284,15 +290,22 @@ export default function CommunityUserProfile() {
         targetType: "user",
         reason: reason,
       });
-
-      // Persist the reported user ID so the flag stays colored after navigation
-      const stored = await AsyncStorage.getItem(REPORTED_USERS_KEY);
-      const reportedIds: string[] = stored ? JSON.parse(stored) : [];
-      if (!reportedIds.includes(CommunityUserid)) {
-        reportedIds.push(CommunityUserid);
-        await AsyncStorage.setItem(REPORTED_USERS_KEY, JSON.stringify(reportedIds));
+      // Update state
+      setIsUserReported(true);
+      // Persist to AsyncStorage
+      try {
+        const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
+        const existing: string[] = raw ? JSON.parse(raw) : [];
+        if (!existing.includes(CommunityUserid)) {
+          existing.push(CommunityUserid);
+          await AsyncStorage.setItem(
+            getStorageKey(currentUser.uid),
+            JSON.stringify(existing),
+          );
+        }
+      } catch (storageErr) {
+        console.log("AsyncStorage write failed:", storageErr);
       }
-      setHasReportedUser(true);
       setShowThankYou(true);
     } catch (err) {
       console.error(err);
@@ -305,7 +318,6 @@ export default function CommunityUserProfile() {
     setShowModalComments(false);
     setCommentText("");
   };
-
   const closeReportModal = () => {
     setReportModalVisible(false);
     setShowThankYou(false);
@@ -330,13 +342,21 @@ export default function CommunityUserProfile() {
 
         {currentUser?.uid !== CommunityUserid && (
           <TouchableOpacity
-            onPress={() => !hasReportedUser && handleReportPress()}
+            onPress={() =>
+              isUserReported
+                ? Alert.alert(
+                    "Already Reported",
+                    "You've already reported this user. Our team will review it shortly.",
+                  )
+                : handleReportPress()
+            }
             style={styles.reportBtn}
           >
-            <Ionicons 
-              name={hasReportedUser ? "flag" : "flag-outline"} 
-              size={20} 
-              color={hasReportedUser ? COLORS.accentRed : COLORS.textMuted} 
+            {/* Filled red flag when reported, hollow muted flag otherwise */}
+            <Ionicons
+              name={isUserReported ? "flag" : "flag-outline"}
+              size={20}
+              color={isUserReported ? COLORS.accentRed : COLORS.textMuted}
             />
           </TouchableOpacity>
         )}
@@ -410,6 +430,7 @@ export default function CommunityUserProfile() {
         )}
       />
 
+      {/* --- REPORT USER MODAL --- */}
       <Modal visible={reportModalVisible} transparent animationType="fade">
         <View style={styles.reportOverlay}>
           <View style={styles.reportCard}>
@@ -422,7 +443,7 @@ export default function CommunityUserProfile() {
                 />
                 <Text style={styles.thankYouTitle}>User Reported</Text>
                 <Text style={styles.thankYouText}>
-                  Thank you for your report.
+                  Thank you for your report. Our team will review this account.
                 </Text>
                 <TouchableOpacity
                   style={[
@@ -472,6 +493,7 @@ export default function CommunityUserProfile() {
         </View>
       </Modal>
 
+      {/* --- POST DETAIL MODAL --- */}
       <Modal visible={!!selectedPost} transparent animationType="fade">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
