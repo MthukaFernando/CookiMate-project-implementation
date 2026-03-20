@@ -67,6 +67,7 @@ interface UserProfile {
   profilePic?: string;
   bio?: string;
   isFollowing: boolean;
+  blockedByCurrentUser?: boolean;
   stats: {
     recipes: number;
     followers: number;
@@ -85,6 +86,7 @@ export default function CommunityUserProfile() {
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [showModalComments, setShowModalComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +103,7 @@ export default function CommunityUserProfile() {
       );
       setProfile(response.data);
       setIsFollowing(response.data.isFollowing);
+      setIsBlocked(response.data.blockedByCurrentUser || false);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -135,6 +138,40 @@ export default function CommunityUserProfile() {
     } catch (error) {
       console.error("Follow error:", error);
     }
+  };
+
+  const handleBlockUser = async () => {
+    if (!currentUser) return;
+    Alert.alert(
+      isBlocked ? "Unblock User" : "Block User",
+      isBlocked
+        ? "Do you want to unblock this user?"
+        : "Are you sure you want to block this user?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isBlocked ? "Unblock" : "Block",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.put(`${BASE_URL}/users/block`, {
+                currentUserUid: currentUser.uid,
+                targetUserUid: CommunityUserid,
+              });
+              setIsBlocked(!isBlocked);
+              Alert.alert(
+                isBlocked ? "Unblocked" : "Blocked",
+                `User has been ${isBlocked ? "unblocked" : "blocked"}`,
+              );
+              if (!isBlocked) router.replace("/Community/CommunityFeedCards");
+            } catch (err) {
+              console.error(err);
+              Alert.alert("Error", "Could not update block status.");
+            }
+          },
+        },
+      ],
+    );
   };
 
   const handleCommentSubmit = async () => {
@@ -179,10 +216,12 @@ export default function CommunityUserProfile() {
           onPress: async () => {
             try {
               await axios.delete(`${BASE_URL}/social/${postId}`, {
-                data: { userId: currentUser?.uid }
+                data: { userId: currentUser?.uid },
               });
               setProfile((prev) =>
-                prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) } : prev
+                prev
+                  ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) }
+                  : prev,
               );
               closeModal();
             } catch (error) {
@@ -191,7 +230,7 @@ export default function CommunityUserProfile() {
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -213,9 +252,30 @@ export default function CommunityUserProfile() {
 
   const ProfileHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
-      </TouchableOpacity>
+      {/* Top row: back button on left, block button on right */}
+      <View style={styles.topRow}>
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+        </TouchableOpacity>
+
+        {/* Block button in the top-right corner — only shown for other users */}
+        {currentUser?.uid !== CommunityUserid && (
+          <TouchableOpacity
+            style={[styles.blockCornerBtn, isBlocked && styles.blockCornerBtnActive]}
+            onPress={handleBlockUser}
+          >
+            <Ionicons
+              name={isBlocked ? "ban" : "ban-outline"}
+              size={18}
+              color={isBlocked ? COLORS.textMuted : COLORS.accentRed}
+            />
+            <Text style={[styles.blockCornerText, isBlocked && { color: COLORS.textMuted }]}>
+              {isBlocked ? "Unblock" : "Block"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
       <View style={styles.profileCard}>
         <Image
           source={{
@@ -281,15 +341,11 @@ export default function CommunityUserProfile() {
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View style={styles.modalCard}>
             <View style={styles.modalHeader}>
-              <Image
-                source={{ uri: profile.profilePic }}
-                style={styles.modalAvatar}
-              />
+              <Image source={{ uri: profile.profilePic }} style={styles.modalAvatar} />
               <Text style={styles.modalUserTitle}>{profile.username}</Text>
-              
-              <View style={{ flexDirection: 'row', marginLeft: 'auto', alignItems: 'center', gap: 15 }}>
-                {currentUser?.uid === CommunityUserid && (
-                  <TouchableOpacity onPress={() => selectedPost && handleDeletePost(selectedPost.id)}>
+              <View style={{ flexDirection: "row", marginLeft: "auto", alignItems: "center", gap: 15 }}>
+                {currentUser?.uid === CommunityUserid && selectedPost && (
+                  <TouchableOpacity onPress={() => handleDeletePost(selectedPost.id)}>
                     <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
                   </TouchableOpacity>
                 )}
@@ -301,7 +357,7 @@ export default function CommunityUserProfile() {
 
             {selectedPost && (
               <View>
-                <ScrollView bounces={false} >
+                <ScrollView bounces={false}>
                   <View style={styles.imageWrapper}>
                     <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
 
@@ -392,6 +448,15 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
+
+  // ✅ NEW: top row holds back btn + block btn
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+
   backBtn: {
     width: 40,
     height: 40,
@@ -399,10 +464,31 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+
+  // ✅ NEW: block button styled as a small pill in the top-right corner
+  blockCornerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.accentRed,
+    backgroundColor: "transparent",
+  },
+  blockCornerBtnActive: {
+    borderColor: COLORS.border,
+  },
+  blockCornerText: {
+    color: COLORS.accentRed,
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
   profileCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 30,
@@ -445,7 +531,8 @@ const styles = StyleSheet.create({
   },
   followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
   followingBtnText: { color: "green", fontWeight: "bold" },
-  followBtnText: { color: "COLORS.background", fontWeight: "bold" },
+  followBtnText: { color: COLORS.background, fontWeight: "bold" },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
@@ -460,12 +547,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  modalHeader: { 
-    flexDirection: "row", 
-    alignItems: "center", 
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border 
+    borderBottomColor: COLORS.border,
   },
   modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: COLORS.primaryGold },
   modalUserTitle: { color: COLORS.textLight, fontWeight: "bold" },
@@ -494,17 +581,8 @@ const styles = StyleSheet.create({
   commentLine: { flexDirection: "row", marginBottom: 12, flexWrap: "wrap" },
   cUser: { color: COLORS.primaryGold, fontWeight: "bold", fontSize: 13 },
   cText: { color: COLORS.textLight, fontSize: 14, lineHeight: 18 },
-  noCommentsText: {
-    color: COLORS.textMuted,
-    fontSize: 13,
-    textAlign: "center",
-    marginTop: 40,
-  },
-  modalActionRow: {
-    flexDirection: "row",
-    padding: 15,
-    gap: 20,
-  },
+  noCommentsText: { color: COLORS.textMuted, fontSize: 13, textAlign: "center", marginTop: 40 },
+  modalActionRow: { flexDirection: "row", padding: 15, gap: 20 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
   actionText: { fontWeight: "700", color: COLORS.textLight },
   captionArea: { paddingHorizontal: 15, paddingBottom: 15 },
