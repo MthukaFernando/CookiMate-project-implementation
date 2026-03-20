@@ -2,8 +2,8 @@ import Groq from "groq-sdk";
 import pkg from "natural";
 const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
-import Recipe from "../models/Recipe.js";
-import User from "../models/User.js";
+import Recipe from "../models/Recipe.js"; // Add static import
+import User from "../models/User.js"; // Add static import
 
 // Pre-compute stemmed allowlist once at startup (not per request)
 const STEMMED_ALLOWLIST = new Set(
@@ -244,6 +244,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
   }
 };
 
+// Save Generated Recipe
 export const saveGeneratedRecipe = async (req, res) => {
   const { recipe, image, title, userId, cuisine, mealType, servings } =
     req.body;
@@ -259,6 +260,7 @@ export const saveGeneratedRecipe = async (req, res) => {
         .status(401)
         .json({ error: "You must be logged in to save recipes" });
     }
+
     // Parse the recipe text to extract structured data
     const lines = recipe.split("\n");
     let ingredients = [];
@@ -295,6 +297,9 @@ export const saveGeneratedRecipe = async (req, res) => {
       }
     }
 
+    // Create a unique ID for the generated recipe
+    const recipeId = `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
     // Prepare search terms for better searchability
     const searchTerms = [
       title.toLowerCase(),
@@ -303,7 +308,7 @@ export const saveGeneratedRecipe = async (req, res) => {
       mealType?.toLowerCase(),
     ].filter(Boolean);
 
-    // Prepare recipe object with parsed data
+    // Prepare recipe object for database matching your schema
     const newRecipe = {
       id: recipeId,
       name: title,
@@ -333,24 +338,9 @@ export const saveGeneratedRecipe = async (req, res) => {
     // Save to database
     const savedRecipe = await Recipe.create(newRecipe);
 
-    // Add to user's favorites - Fixed version
+    // Add to user's favorites - Using the imported User model directly
     try {
-      // Find user by firebaseUid instead of _id
-      const user = await User.findOne({ firebaseUid: userId });
-
-      if (!user) {
-        console.log(`User with firebaseUid ${userId} not found`);
-        // Recipe saved, but user not found - still return success
-        return res.status(201).json({
-          success: true,
-          message:
-            "Recipe saved, but could not add to favorites (user not found)",
-          recipe: savedRecipe,
-        });
-      }
-
-      // Add to user's favorites using the user's _id
-      await User.findByIdAndUpdate(user._id, {
+      await User.findByIdAndUpdate(userId, {
         $addToSet: { favorites: savedRecipe._id },
       });
       console.log(`✅ Recipe "${title}" saved to user ${userId}'s favorites`);
