@@ -46,7 +46,7 @@ const CookedHistoryPage = () => {
   try {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
-    
+
     const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
     
     if (response.data && response.data.cookedHistory) {
@@ -121,7 +121,7 @@ const CookedHistoryPage = () => {
           <Text style={styles.emptyText}>No recipes cooked yet!</Text>
           <TouchableOpacity
             style={styles.exploreButton}
-            onPress={() => router.push("/myRecipes" as any)}
+            onPress={() => router.push("/details/myRecipes" as any)}
           >
             <Text style={styles.exploreText}>Find a Recipe</Text>
           </TouchableOpacity>
