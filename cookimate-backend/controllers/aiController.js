@@ -321,6 +321,15 @@ export const saveGeneratedRecipe = async (req, res) => {
       search_terms: searchTerms,
     };
 
+    // Check if recipe with same name already exists
+    const existingRecipe = await Recipe.findOne({ name: title });
+
+    if (existingRecipe) {
+      return res
+        .status(400)
+        .json({ error: "A recipe with this name already exists" });
+    }
+
     // Save to database
     const savedRecipe = await Recipe.create(newRecipe);
 
