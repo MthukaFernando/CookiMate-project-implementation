@@ -256,7 +256,9 @@ export const incrementCookCount = async (req, res) => {
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: updatedUser.cookedHistory
+    const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory
      });
   } catch (error) {
     res.status(500).json({ message: error.message });
