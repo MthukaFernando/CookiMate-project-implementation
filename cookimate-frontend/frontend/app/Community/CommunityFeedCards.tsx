@@ -73,11 +73,8 @@ export default function CommunityFeed() {
   const [showAlreadyReported, setShowAlreadyReported] = useState(false);
 
   const currentUser = auth.currentUser;
-
-  // Key scoped per user so reports don't bleed across accounts
   const REPORTED_POSTS_KEY = `reported_posts_${currentUser?.uid ?? "guest"}`;
 
-  // pass uid so the backend can filter out blocked users' posts
   const fetchFeed = async () => {
     try {
       const response = await axios.get(`${BASE_URL}/social/feed`, {
@@ -130,7 +127,6 @@ export default function CommunityFeed() {
     }
   };
 
-  // --- REPORT LOGIC ---
   const handleReportPress = (targetId: string) => {
     setReportingTargetId(targetId);
     setReportModalVisible(true);
@@ -150,7 +146,6 @@ export default function CommunityFeed() {
         reason: reason,
       });
 
-      // Persist the reported post ID so the flag stays colored after navigation
       const updatedSet = new Set(reportedPostIds);
       updatedSet.add(reportingTargetId);
       setReportedPostIds(updatedSet);
@@ -447,6 +442,29 @@ export default function CommunityFeed() {
             <Ionicons name="add-circle" size={42} color={theme.gold} />
           </TouchableOpacity>
         </View>
+
+        {/* SEARCH RESULTS DROPDOWN */}
+        {isSearching && searchResults.length > 0 && (
+          <View style={[styles.dropdown, { top: insets.top + 65 }]}>
+            {searchResults.map((u) => (
+              <TouchableOpacity
+                key={u._id}
+                style={styles.resultItem}
+                onPress={() => {
+                  setIsSearching(false);
+                  setSearchQuery("");
+                  router.push(`/Community/${u.firebaseUid}`);
+                }}
+              >
+                <Image
+                  source={{ uri: u.profilePic }}
+                  style={styles.resAvatar}
+                />
+                <Text style={styles.resName}>@{u.username}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
 
       <FlatList
@@ -460,10 +478,11 @@ export default function CommunityFeed() {
             tintColor={theme.gold}
           />
         }
+        onScrollBeginDrag={() => setIsSearching(false)}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
 
-      {/* --- REFINED REPORT MODAL --- */}
+      {/* --- REPORT MODAL --- */}
       <Modal
         visible={reportModalVisible}
         transparent
@@ -472,7 +491,6 @@ export default function CommunityFeed() {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.reportCard}>
-            {/* Conditional Rendering for Thank You State */}
             {showAlreadyReported ? (
               <View style={styles.thankYouArea}>
                 <Ionicons
@@ -545,7 +563,6 @@ export default function CommunityFeed() {
               </View>
             ) : (
               <>
-                {/* Modal Header */}
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>Report Content</Text>
                   <TouchableOpacity onPress={closeReportModal}>
@@ -709,6 +726,29 @@ const styles = StyleSheet.create({
   },
   input: { flex: 1, color: theme.text },
 
+  // --- SEARCH DROPDOWN STYLES ---
+  dropdown: {
+    position: "absolute",
+    left: 10,
+    right: 10,
+    backgroundColor: theme.card,
+    borderRadius: 15,
+    elevation: 5,
+    padding: 10,
+    zIndex: 1000,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  resultItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: theme.border,
+  },
+  resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
+  resName: { fontWeight: "600", color: theme.text },
+
   centerContainer: { alignItems: "center", marginTop: 20 },
   card: {
     width: width * 0.92,
@@ -802,7 +842,6 @@ const styles = StyleSheet.create({
   },
   bottomInput: { flex: 1, fontSize: 14, color: theme.text, height: 40 },
 
-  // --- REFINED MODAL STYLES ---
   modalOverlay: {
     flex: 1,
     backgroundColor: theme.overlay,
@@ -871,7 +910,6 @@ const styles = StyleSheet.create({
   modalBtn: { paddingVertical: 12, paddingHorizontal: 25, borderRadius: 10 },
   modalBtnText: { color: "#FFF", fontWeight: "bold" },
 
-  // --- THANK YOU AREA STYLES ---
   thankYouArea: {
     alignItems: "center",
     paddingVertical: 10,
