@@ -116,45 +116,48 @@ export default function RecipeDetails() {
   const [isChefThinking, setIsChefThinking] = useState(false);
 
   //AI Chat Send Logic
-  const handleSendMessage = async () => {
-    if (!userQuestion.trim()) return;
+ const handleSendMessage = async () => {
+  if (!userQuestion.trim()) return;
 
-    // 1. Prepare messages for local UI state
-    const newMessages = [
-      ...chatMessages,
-      { role: "user", content: userQuestion },
-    ];
-    setChatMessages(newMessages);
-    
-    const currentInput = userQuestion;
-    setUserQuestion("");
-    setIsChefThinking(true);
+  // 1. Prepare messages for local UI state
+  const newMessages = [
+    ...chatMessages,
+    { role: "user", content: userQuestion },
+  ];
+  setChatMessages(newMessages);
 
-    try {
-      // 2. Call the specific backend endpoint you created
-      // Note: We change 'userQuestion' to 'message' to match your backend req.body
-      const response = await axios.post(`${API_URL}/api/ai/chat-recipe`, {
-        recipeId: id, // from useLocalSearchParams
-        message: currentInput, 
-      });
+  const currentInput = userQuestion;
+  setUserQuestion("");
+  setIsChefThinking(true);
 
-      const data = response.data;
+  try {
+    console.log("Sending to backend:", { recipeId: id, message: currentInput });
 
-      // 3. Update UI with AI reply
-      setChatMessages([
-        ...newMessages,
-        { role: "assistant", content: data.reply },
-      ]);
-    } catch (err) {
-      console.error("Chat Error:", err);
-      Alert.alert(
-        "Chef's Busy",
-        "I couldn't get an answer. Check if your backend and Groq key are ready!"
-      );
-    } finally {
-      setIsChefThinking(false);
-    }
-  };
+    // 2. Call the correct backend endpoint
+    const response = await axios.post(`${API_URL}/api/recipes/chat-recipe`, {
+      recipeId: id,  // recipe ID from useLocalSearchParams
+      message: currentInput,
+    });
+
+    const data = response.data;
+
+    console.log("AI reply received:", data.reply);
+
+    // 3. Update UI with AI reply
+    setChatMessages([
+      ...newMessages,
+      { role: "assistant", content: data.reply },
+    ]);
+  } catch (err) {
+    console.error("Chat Error:", err);
+    Alert.alert(
+      "Chef's Busy",
+      "I couldn't get an answer. Check if your backend and Groq key are ready!"
+    );
+  } finally {
+    setIsChefThinking(false);
+  }
+};
 
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
