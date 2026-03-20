@@ -36,11 +36,9 @@ const CookedHistoryPage = () => {
       const uid = auth.currentUser?.uid;
       if (!uid) return;
 
-      // We assume your backend returns the user object with populated recipe details
       const response = await axios.get(`${API_URL}/api/users/${uid}`);
 
       // Map the cookedHistory array to just the recipe data
-      // Adjust this based on how your backend sends the data
       const history = response.data.cookedHistory.map((item: any) => ({
         ...item.recipeId, // Spread recipe details
         dateCooked: item.dateCooked, // Keep the date for display
@@ -80,5 +78,51 @@ const CookedHistoryPage = () => {
         </View>
       </View>
     </TouchableOpacity>
+  );
+
+  return (
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+      <StatusBar style="light" />
+
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backCircle}
+          onPress={() => router.back()}
+        >
+          <Ionicons name="arrow-back" size={20} color="#D4AF37" />
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Cooking History</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      {loading ? (
+        <ActivityIndicator
+          size="large"
+          color="#D4AF37"
+          style={{ marginTop: 50 }}
+        />
+      ) : recipes.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <MaterialCommunityIcons name="chef-hat" size={80} color="#333" />
+          <Text style={styles.emptyText}>No recipes cooked yet!</Text>
+          <TouchableOpacity
+            style={styles.exploreButton}
+            onPress={() => router.push("/myRecipes")}
+          >
+            <Text style={styles.exploreText}>Find a Recipe</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <FlatList
+          data={recipes}
+          keyExtractor={(item, index) => index.toString()}
+          renderItem={renderRecipeItem}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 20 },
+          ]}
+        />
+      )}
+    </View>
   );
 };
