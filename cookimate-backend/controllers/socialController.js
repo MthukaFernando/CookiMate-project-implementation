@@ -82,16 +82,16 @@ export const getFeed = async (req, res) => {
     if (uid) {
       const currentUser = await User.findOne({ firebaseUid: uid });
       if (currentUser && Array.isArray(currentUser.blockedUsers)) {
-        // ✅ blockedUsers is now a flat [String] array of firebaseUids
+        
         blockedUids = currentUser.blockedUsers;
       }
     }
  
-    console.log("Filtering out posts from UIDs:", blockedUids);
+    
  
     const posts = await Post.find({
       moderationStatus: { $ne: "rejected" },
-      // ✅ post.user is a firebaseUid string — $nin correctly excludes blocked ones
+      
       user: { $nin: blockedUids },
     })
       .sort({ createdAt: -1 })
