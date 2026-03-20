@@ -119,24 +119,28 @@ export default function RecipeDetails() {
   const handleSendMessage = async () => {
     if (!userQuestion.trim()) return;
 
+    // 1. Prepare messages for local UI state
     const newMessages = [
       ...chatMessages,
       { role: "user", content: userQuestion },
     ];
     setChatMessages(newMessages);
+    
     const currentInput = userQuestion;
     setUserQuestion("");
     setIsChefThinking(true);
 
     try {
-      const response = await axios.post(`${API_URL}/api/ai/chat`, {
-        recipeId: id,
-        userQuestion: currentInput,
-        chatHistory: chatMessages.slice(-4),
+      // 2. Call the specific backend endpoint you created
+      // Note: We change 'userQuestion' to 'message' to match your backend req.body
+      const response = await axios.post(`${API_URL}/api/ai/chat-recipe`, {
+        recipeId: id, // from useLocalSearchParams
+        message: currentInput, 
       });
 
-      const data = response.data as any;
+      const data = response.data;
 
+      // 3. Update UI with AI reply
       setChatMessages([
         ...newMessages,
         { role: "assistant", content: data.reply },
@@ -145,7 +149,7 @@ export default function RecipeDetails() {
       console.error("Chat Error:", err);
       Alert.alert(
         "Chef's Busy",
-        "I couldn't get an answer. Try again in a moment!",
+        "I couldn't get an answer. Check if your backend and Groq key are ready!"
       );
     } finally {
       setIsChefThinking(false);

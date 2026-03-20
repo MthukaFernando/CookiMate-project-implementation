@@ -19,6 +19,6 @@ router.get('/:id', getRecipeById);
 router.post('/generate-text', generateRecipeText);
 
 //to get the chat bot groq ai 
-router.post('/chat-recipe',chatWithRecipe)
+router.post("/chat-recipe", chatWithRecipe);
 
 export default router;
