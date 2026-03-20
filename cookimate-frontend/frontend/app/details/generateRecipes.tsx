@@ -149,7 +149,7 @@ export default function GenerateRecipesPage() {
   };
 
   const handleGenerate = async () => {
-    setError(null);
+  setError(null);
 
   if (selectedIngredients.length === 0 && !culinaryPrompt.trim()) {
     setError("Please add some ingredients or describe what you'd like to cook");
@@ -160,7 +160,7 @@ export default function GenerateRecipesPage() {
   setGeneratedRecipe(null);
   setRecipeImage(null);
 
-    try {
+  try {
     const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -176,19 +176,26 @@ export default function GenerateRecipesPage() {
     
     const data = await response.json();
     
-if (!response.ok) {
-  // If the backend returns an error message, display it
-  if (data.error) {
-    throw new Error(data.error);
-  } else {
-    throw new Error(`Error: ${response.status}`);
-  }
-}
+    if (!response.ok) {
+      // If the backend returns an error message, display it without console error
+      if (data.error) {
+        setError(data.error);
+        setLoading(false);
+        return; // Just return without throwing
+      } else {
+        setError(`Error: ${response.status}`);
+        setLoading(false);
+        return;
+      }
+    }
     
     setGeneratedRecipe(data.recipe);
     setRecipeImage(data.image);
   } catch (error: any) {
-    console.error("Fetch Error:", error.message);
+    // Only log in development, but don't show console error to users
+    if (__DEV__) {
+      console.log("Error caught:", error.message); // Changed from console.error to console.log
+    }
     setError(error.message || "Failed to generate recipe. Please try again.");
   } finally {
     setLoading(false);
