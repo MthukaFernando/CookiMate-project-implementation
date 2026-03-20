@@ -290,3 +290,50 @@ export const chatWithRecipe = async (req, res) => {
     res.status(500).json({ error: "Chatbot is having trouble connecting." });
   }
 }
+
+// Chatbot integration
+export const handleGlobalChat = async (req, res) => {
+  try {
+    const { messages } = req.body; // Array of {role: "user", content: "..."}
+
+    if (!messages || messages.length === 0) {
+      return res.status(400).json({ error: "No messages provided" });
+    }
+
+    // 1. Get the latest message
+    const latestMessage = messages[messages.length - 1].content.toLowerCase();
+    
+    // 2. Validate it's cooking related using your existing dictionary logic
+    const words = latestMessage.split(/\s+/);
+    const isCookingRelated = words.some((word) => 
+      STEMMED_ALLOWLIST.has(PorterStemmer.stem(word))
+    );
+
+    // If the user asks something totally random (e.g., "who is the president")
+    if (!isCookingRelated) {
+      return res.status(200).json({
+        reply: "I'm sorry, I'm only trained to help with cooking and recipes! Is there a dish you'd like to talk about?"
+      });
+    }
+
+    // 3. Call Groq for a conversational response (No JSON mode)
+    const chatCompletion = await groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are the CookiMate assistant. You are a professional chef. Only discuss cooking, ingredients, nutrition, and kitchen advice. Keep answers helpful and short. If the user asks for a recipe, give them a brief overview of how to make it."
+        },
+        ...messages
+      ],
+      model: "llama-3.3-70b-versatile",
+    });
+
+    res.status(200).json({
+      reply: chatCompletion.choices[0].message.content,
+    });
+
+  } catch (error) {
+    console.error("Global Chat Error:", error);
+    res.status(500).json({ error: "The AI chef is currently unavailable." });
+  }
+};
