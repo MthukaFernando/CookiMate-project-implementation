@@ -164,4 +164,15 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   cardContent: { flex: 1, justifyContent: 'center' },
+  recipeTitle: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 4 },
+  cookedDate: { fontSize: 13, color: "#D4AF37", marginBottom: 10 },
+  viewButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: "#D4AF37",
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
 })
