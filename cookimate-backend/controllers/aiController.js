@@ -1,5 +1,6 @@
 import Groq from "groq-sdk";
 
+
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
   //Using hugging face key from .env
@@ -97,35 +98,32 @@ export const chatWithRecipe = async (req, res) => {
   const { recipeId, message } = req.body;
 
   try {
-    // 1. Fetch the specific recipe from MongoDB
+    console.log("Incoming:", recipeId, message);
+
+    // ✅ Use custom id field
     const recipe = await Recipe.findOne({ id: recipeId });
 
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
 
-    // 2. Initialize Groq
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-    // 3. Create the Context-Aware System Prompt
-    // We "feed" the AI the recipe details so it knows what it's talking about.
     const systemPrompt = `
-      You are a helpful kitchen assistant for the "Cookimate" app. 
-      The user is currently cooking: "${recipe.name}".
-      
-      RECIPE DETAILS:
-      Description: ${recipe.description}
-      Ingredients: ${recipe.ingredients_raw_str.join(", ")}
-      Steps: ${recipe.steps.join(" ")}
-      
-      INSTRUCTIONS:
-      - ONLY answer questions related to this specific recipe.
-      - If the user asks something completely unrelated to cooking or this recipe, 
-        politely guide them back to the meal.
-      - Keep answers concise and helpful for someone who is currently cooking.
-    `;
+You are a helpful kitchen assistant for the "Cookimate" app.
+The user is currently cooking: "${recipe.name}".
 
-    // 4. Send to Groq
+RECIPE DETAILS:
+Description: ${recipe.description || "No description"}
+Ingredients: ${recipe.ingredients_raw_str?.join(", ") || "None"}
+Steps: ${recipe.steps?.join(" ") || "None"}
+
+INSTRUCTIONS:
+- ONLY answer questions related to this recipe.
+- If unrelated, guide user back politely.
+- Keep answers short and helpful.
+`;
+
     const chatCompletion = await groq.chat.completions.create({
       messages: [
         { role: "system", content: systemPrompt },
@@ -141,6 +139,6 @@ export const chatWithRecipe = async (req, res) => {
 
   } catch (error) {
     console.error("Chat Error:", error);
-    res.status(500).json({ error: "Chatbot is having trouble connecting." });
+    res.status(500).json({ error: "Chatbot failed." });
   }
-}
+};
