@@ -239,16 +239,25 @@ export const searchUsers = async (req, res) => {
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params; // Using firebaseUid for consistency
+    const { recipeId } = req.body; // Expecting the MongoDB _id of the recipe
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { $inc: { recipesCookedCount: 1 }, // Directly increments the number by 1
+      $push: {
+        cookedHistory: {
+          recipeId: recipeId,
+          dateCooked: new Date()
+        }
+      }
+    },
       { new: true }
-    );
+    ).populate("cookedHistory.recipeId");
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount });
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: updatedUser.cookedHistory
+     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
