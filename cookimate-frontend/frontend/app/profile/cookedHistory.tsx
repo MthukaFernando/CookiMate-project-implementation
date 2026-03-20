@@ -16,3 +16,11 @@ import { useRouter, useFocusEffect } from "expo-router";
 import axios from "axios";
 import Constants from "expo-constants";
 import { auth } from "../../config/firebase";
+
+const { width } = Dimensions.get("window");
+const IMAGE_SIZE = width * 0.25;
+
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
+
