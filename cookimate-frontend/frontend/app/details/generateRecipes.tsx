@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   StyleSheet,
   Text,
@@ -104,6 +104,26 @@ export default function GenerateRecipesPage() {
 
   const slideAnim = useRef(new Animated.Value(COLLAPSED_Y)).current;
 
+  // Get current user on mount
+  useEffect(() => {
+    const user = auth.currentUser;
+    if (user) {
+      setCurrentUserId(user.uid);
+    }
+  }, []);
+
+  // Extract recipe title from generated recipe (first line or first few words)
+  useEffect(() => {
+    if (generatedRecipe) {
+      const lines = generatedRecipe.split("\n");
+      const firstLine = lines[0].trim();
+      // Use first line as title, or first 50 chars if line is too long
+      const title =
+        firstLine.length > 50 ? firstLine.substring(0, 47) + "..." : firstLine;
+      setRecipeTitle(title || "Untitled Recipe");
+    }
+  }, [generatedRecipe]);
+
   // --- ANIMATIONS ---
   const panelBgColor = slideAnim.interpolate({
     inputRange: [EXPANDED_Y, COLLAPSED_Y],
@@ -144,6 +164,7 @@ export default function GenerateRecipesPage() {
     setGeneratedRecipe(null);
     setRecipeImage(null);
     setError(null);
+    setSaveSuccess(false);
   };
 
   const addIngredient = (name: string) => {
@@ -169,6 +190,7 @@ export default function GenerateRecipesPage() {
     setLoading(true);
     setGeneratedRecipe(null);
     setRecipeImage(null);
+    setSaveSuccess(false);
 
     try {
       const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
@@ -187,11 +209,10 @@ export default function GenerateRecipesPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        // If the backend returns an error message, display it without console error
         if (data.error) {
           setError(data.error);
           setLoading(false);
-          return; // Just return without throwing
+          return;
         } else {
           setError(`Error: ${response.status}`);
           setLoading(false);
@@ -201,19 +222,9 @@ export default function GenerateRecipesPage() {
 
       setGeneratedRecipe(data.recipe);
       setRecipeImage(data.image);
-
-      // Extract and store the recipe title
-      if (data.title) {
-        setRecipeTitle(data.title);
-      } else if (data.recipe) {
-        // Try to extract title from first line of recipe
-        const firstLine = data.recipe.split("\n")[0];
-        setRecipeTitle(firstLine.trim());
-      }
     } catch (error: any) {
-      // Only log in development, but don't show console error to users
       if (__DEV__) {
-        console.log("Error caught:", error.message); // Changed from console.error to console.log
+        console.log("Error caught:", error.message);
       }
       setError(error.message || "Failed to generate recipe. Please try again.");
     } finally {
@@ -221,7 +232,7 @@ export default function GenerateRecipesPage() {
     }
   };
 
-  // Add save recipe function
+  // Save recipe function
   const handleSaveRecipe = async () => {
     if (!generatedRecipe || !recipeTitle) {
       setError("No recipe to save");
@@ -259,6 +270,7 @@ export default function GenerateRecipesPage() {
       }
 
       setSaveSuccess(true);
+      // Success message disappears after 3 seconds
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
       setError(error.message || "Failed to save recipe");
@@ -505,13 +517,6 @@ export default function GenerateRecipesPage() {
                 </View>
               )}
 
-              {error && (
-                <View style={styles.errorBox}>
-                  <Ionicons name="alert-circle" size={18} color="#FF5252" />
-                  <Text style={styles.errorText}>{error}</Text>
-                </View>
-              )}
-
               {(generatedRecipe || loading) && (
                 <View style={styles.resultContainer}>
                   <Text style={styles.label}>Your Result</Text>
@@ -551,7 +556,6 @@ export default function GenerateRecipesPage() {
                         style={[
                           styles.saveButton,
                           saveSuccess && styles.saveButtonSuccess,
-                          !currentUserId && styles.saveButtonDisabled,
                         ]}
                         onPress={handleSaveRecipe}
                         disabled={saveLoading || !currentUserId}
@@ -565,9 +569,7 @@ export default function GenerateRecipesPage() {
                               size={20}
                               color={BRAND.bg}
                             />
-                            <Text style={styles.saveButtonText}>
-                              Saved to My Recipes!
-                            </Text>
+                            <Text style={styles.saveButtonText}>Saved!</Text>
                           </>
                         ) : (
                           <>
@@ -584,11 +586,6 @@ export default function GenerateRecipesPage() {
                           </>
                         )}
                       </TouchableOpacity>
-                      {!currentUserId && (
-                        <Text style={styles.loginPromptText}>
-                          Please log in to save recipes to your collection
-                        </Text>
-                      )}
                     </View>
                   )}
                 </View>
@@ -845,12 +842,13 @@ const styles = StyleSheet.create({
     marginLeft: 10,
     marginRight: 10,
   },
+  // New styles for save button
   saveButton: {
     backgroundColor: BRAND.accent,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 14,
+    paddingVertical: 12,
     paddingHorizontal: 20,
     borderRadius: 12,
     marginTop: 20,
@@ -859,18 +857,9 @@ const styles = StyleSheet.create({
   saveButtonSuccess: {
     backgroundColor: "#4CAF50",
   },
-  saveButtonDisabled: {
-    opacity: 0.5,
-  },
   saveButtonText: {
     color: BRAND.bg,
     fontSize: 16,
     fontWeight: "bold",
-  },
-  loginPromptText: {
-    color: BRAND.textMuted,
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 8,
   },
 });
