@@ -87,7 +87,7 @@ export const getFeed = async (req, res) => {
       }
     }
  
-    console.log("Filtering out posts from UIDs:", blockedUids);
+    
  
     const posts = await Post.find({
       moderationStatus: { $ne: "rejected" },
