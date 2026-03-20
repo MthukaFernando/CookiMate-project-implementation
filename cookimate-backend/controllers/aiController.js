@@ -2,7 +2,7 @@ import Groq from "groq-sdk";
 import pkg from "natural";
 const { PorterStemmer } = pkg;
 import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
-import Recipe from "../models/Recipe.js";  
+import Recipe from "../models/Recipe.js";
 import User from "../models/User.js";
 
 // Pre-compute stemmed allowlist once at startup (not per request)
@@ -57,16 +57,16 @@ async function generateRecipeImage(recipeTitle) {
 // Enhanced sanitization function that returns more detailed status
 function sanitizeIngredient(ingredient, index) {
   if (!ingredient) return { valid: false, reason: "Empty ingredient" };
-  
+
   const lowerIngredient = ingredient.toLowerCase();
-  
+
   // Check for forbidden words
   for (const word of FORBIDDEN_WORDS) {
     if (lowerIngredient.includes(word)) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         reason: `Ingredient "${ingredient}" contains forbidden word: "${word}"`,
-        ingredient 
+        ingredient,
       };
     }
   }
@@ -84,10 +84,10 @@ function sanitizeIngredient(ingredient, index) {
 
   for (const pattern of jailbreakPatterns) {
     if (pattern.test(lowerIngredient)) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         reason: `Ingredient "${ingredient}" contains invalid pattern`,
-        ingredient 
+        ingredient,
       };
     }
   }
@@ -97,7 +97,7 @@ function sanitizeIngredient(ingredient, index) {
     .replace(/[^a-z\s]/g, "")
     .split(/\s+/)
     .filter(Boolean);
-  
+
   if (words.length > 0) {
     const culinaryCount = words.filter((w) =>
       STEMMED_ALLOWLIST.has(PorterStemmer.stem(w)),
@@ -107,10 +107,10 @@ function sanitizeIngredient(ingredient, index) {
 
     // Reject if less than 30% of words are culinary-related
     if (ratio < 0.3) {
-      return { 
-        valid: false, 
+      return {
+        valid: false,
         reason: `Ingredient "${ingredient}" doesn't appear to be food-related`,
-        ingredient 
+        ingredient,
       };
     }
   }
@@ -121,7 +121,7 @@ function sanitizeIngredient(ingredient, index) {
 // The "Culinary Firewall" function (kept for backward compatibility)
 function sanitizePrompt(userPrompt) {
   if (!userPrompt) return "";
-  
+
   const result = sanitizeIngredient(userPrompt, 0);
   return result.valid ? result.cleaned : "INVALID_PROMPT";
 }
@@ -137,7 +137,9 @@ export const generateRecipeText = async (req, res) => {
       const result = sanitizeIngredient(ingredients[i], i);
       if (!result.valid) {
         return res.status(400).json({
-          error: result.reason || "Invalid ingredient detected. Please check your ingredients and try again."
+          error:
+            result.reason ||
+            "Invalid ingredient detected. Please check your ingredients and try again.",
         });
       }
       if (result.cleaned) {
@@ -243,7 +245,8 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
 };
 
 export const saveGeneratedRecipe = async (req, res) => {
-  const { recipe, image, title, userId, cuisine, mealType, servings } = req.body;
+  const { recipe, image, title, userId, cuisine, mealType, servings } =
+    req.body;
 
   try {
     // Validate required fields
@@ -252,7 +255,9 @@ export const saveGeneratedRecipe = async (req, res) => {
     }
 
     if (!userId) {
-      return res.status(401).json({ error: "You must be logged in to save recipes" });
+      return res
+        .status(401)
+        .json({ error: "You must be logged in to save recipes" });
     }
 
     // Create a unique ID for the generated recipe
@@ -276,13 +281,38 @@ export const saveGeneratedRecipe = async (req, res) => {
 
     // Save to database
     const savedRecipe = await Recipe.create(newRecipe);
-    
-    res.status(201).json({ 
-      success: true, 
+
+    // Add to user's favorites - Fixed version
+    try {
+      // Find user by firebaseUid instead of _id
+      const user = await User.findOne({ firebaseUid: userId });
+
+      if (!user) {
+        console.log(`User with firebaseUid ${userId} not found`);
+        // Recipe saved, but user not found - still return success
+        return res.status(201).json({
+          success: true,
+          message:
+            "Recipe saved, but could not add to favorites (user not found)",
+          recipe: savedRecipe,
+        });
+      }
+
+      // Add to user's favorites using the user's _id
+      await User.findByIdAndUpdate(user._id, {
+        $addToSet: { favorites: savedRecipe._id },
+      });
+      console.log(`✅ Recipe "${title}" saved to user ${userId}'s favorites`);
+    } catch (favError) {
+      console.error("Could not add to favorites:", favError);
+      // Recipe is saved, just not favorited - still return success
+    }
+
+    res.status(201).json({
+      success: true,
       message: "Recipe saved to your collection!",
-      recipe: savedRecipe 
+      recipe: savedRecipe,
     });
-    
   } catch (error) {
     console.error("Save Recipe Error:", error);
     res.status(500).json({ error: "Failed to save recipe. Please try again." });
