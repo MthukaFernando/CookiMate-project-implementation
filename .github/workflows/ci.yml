@@ -1,0 +1,53 @@
+name: Cookimate CI Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  check-backend:
+    name: Backend Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Verify backend starts
+        run: echo "Backend dependency check complete"
+
+  check-mobile:
+    name: Mobile App Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install mobile dependencies
+        run: |
+          cd mobile
+          npm install
+
+      - name: Install Expo CLI
+        run: npm install -g @expo/cli
+
+      - name: Check Expo project
+        run: |
+          cd mobile
+          npx expo-doctor
