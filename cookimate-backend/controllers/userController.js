@@ -262,7 +262,21 @@ export const incrementCookCount = async (req, res) => {
       { new: true }
     ).populate("cookedHistory.recipeId");
     } else {
-
+      // User's first time cooking recipe, sp $push with timesCooked: 1
+      updatedUser = await User.findOneAndUpdate(
+        { firebaseUid: uid },
+        { 
+          $inc: { recipesCookedCount: 1 },
+          $push: { 
+            cookedHistory: { 
+              recipeId: recipeId, 
+              dateCooked: new Date(),
+              timesCooked: 1 
+            } 
+          }
+        },
+        { new: true }
+      ).populate("cookedHistory.recipeId");
     }
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
