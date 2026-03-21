@@ -5,6 +5,7 @@ import {
   likePost,
   addComment,
   deletePost,
+  handleDeleteComment,
 } from "../controllers/socialController.js";
 import { upload } from "../config/cloudinary.js"; // 1. Import the upload engine
 
@@ -19,5 +20,6 @@ router.get("/feed", getFeed);
 router.put("/:id/like", likePost);
 router.post("/:postId/comment", addComment);
 router.delete("/:postId", deletePost);
+router.delete("/:postId/comment/:commentId", handleDeleteComment);
 
 export default router;
