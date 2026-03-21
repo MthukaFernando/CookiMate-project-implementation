@@ -1,88 +1,104 @@
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, KeyboardAvoidingView, ScrollView, Platform, Alert, ActivityIndicator } from 'react-native';
-import { Link, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { signInWithEmailAndPassword, sendEmailVerification, signOut } from 'firebase/auth';
-import { auth } from '../../config/firebase'; 
-import { Ionicons } from '@expo/vector-icons'; // Import Icons
+import {
+  View,
+  Text,
+  StyleSheet,
+  ImageBackground,
+  TouchableOpacity,
+  TextInput,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Alert,
+  ActivityIndicator,
+} from "react-native";
+import { Link, useRouter } from "expo-router";
+import { useState } from "react";
+import {
+  signInWithEmailAndPassword,
+  sendEmailVerification,
+  signOut,
+} from "firebase/auth";
+import { auth } from "../../config/firebase";
+import { Ionicons } from "@expo/vector-icons";
 
 export default function LoginPage() {
-  const router = useRouter(); 
+  const router = useRouter();
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // State for visibility
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter both email and password.');
+      Alert.alert("Error", "Please enter both email and password.");
       return;
     }
 
     setLoading(true);
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password,
+      );
       const user = userCredential.user;
-      await user.reload(); 
+      await user.reload();
       const refreshedUser = auth.currentUser;
 
-      // Check if the user is verified
       if (refreshedUser && !refreshedUser.emailVerified) {
         setLoading(false);
-        
         Alert.alert(
-          'Email Not Verified',
-          'Please verify your email before logging in. Check your inbox for the link.',
+          "Email Not Verified",
+          "Please verify your email before logging in.",
           [
-            { 
-              text: 'Resend Link', 
+            {
+              text: "Resend Link",
               onPress: async () => {
                 try {
                   await sendEmailVerification(refreshedUser);
-                  Alert.alert('Sent', 'A new verification link has been sent.');
+                  Alert.alert("Sent", "A new verification link has been sent.");
                 } catch (err) {
-                  Alert.alert('Error', 'Could not resend email. Try again later.');
+                  Alert.alert("Error", "Could not resend email.");
                 }
-              } 
+              },
             },
-            { text: 'OK', style: 'cancel' }
-          ]
+            { text: "OK", style: "cancel" },
+          ],
         );
         await signOut(auth);
-        return; 
+        return;
       }
 
-      // If verified, proceed to the home page
       setLoading(false);
-      router.replace('/');
-      
+      router.replace("/");
     } catch (error: any) {
       setLoading(false);
-      console.log(error.code);
       let msg = "Login failed. Please try again.";
-      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+      if (error.code === "auth/invalid-credential")
         msg = "Invalid email or password.";
-      } else if (error.code === 'auth/invalid-email') {
-        msg = "The email address is invalid.";
-      }
-      Alert.alert('Login Error', msg);
+      Alert.alert("Login Error", msg);
     }
   };
 
   const navigateToForgot = () => {
-    router.push('/forgotPassword'); 
+    router.push("/forgotPassword");
   };
 
   return (
     <ImageBackground
-      source={require('../../assets/images/background.jpeg')}
+      source={require("../../assets/images/background.jpeg")}
       style={styles.container}
-      resizeMode="cover" 
+      resizeMode="cover"
     >
-      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <ScrollView contentContainerStyle={styles.scrollContent}>
           <View style={styles.card}>
-            
+            <Text style={styles.title}>Welcome Back</Text>
+
             <Text style={styles.label}>Email</Text>
             <TextInput
               style={styles.input}
@@ -104,29 +120,39 @@ export default function LoginPage() {
                 value={password}
                 onChangeText={setPassword}
               />
-              <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeIcon}>
-                <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="gray" />
+              <TouchableOpacity
+                onPress={() => setShowPassword(!showPassword)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#D4AF37"
+                />
               </TouchableOpacity>
             </View>
-            
+
             <TouchableOpacity onPress={navigateToForgot}>
               <Text style={styles.forgot}>Forgot password?</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity style={styles.loginButton} onPress={handleLogin} disabled={loading}>
+            <TouchableOpacity
+              style={styles.loginButton}
+              onPress={handleLogin}
+              disabled={loading}
+            >
               {loading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#000" />
               ) : (
                 <Text style={styles.loginText}>Log in</Text>
               )}
             </TouchableOpacity>
 
             <View style={styles.bottomRow}>
-              <View style={styles.navContainer}>
-                <Link href="/signupPage" style={styles.link}>
-                  Don't have an account? Sign up
-                </Link>
-              </View>
+              <Link href="/signupPage" style={styles.link}>
+                Don't have an account?{" "}
+                <Text style={{ fontWeight: "bold" }}>Sign up</Text>
+              </Link>
             </View>
           </View>
         </ScrollView>
@@ -141,86 +167,89 @@ const styles = StyleSheet.create({
   },
   keyboardAvoiding: {
     flex: 1,
-    width: '100%',
+    width: "100%",
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     paddingVertical: 40,
   },
-  navContainer: {
-    flexDirection: 'row',    
-    justifyContent: 'space-between', 
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  link: {
-    color: 'black',
-    fontSize: 16,
+  title: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#D4AF37",
+    textAlign: "center",
+    marginBottom: 30,
   },
   card: {
-    width: '90%',
-    backgroundColor: 'rgba(255, 241, 196, 0.75)',
-    padding: 20,
-    borderRadius: 12,
+    width: "90%",
+    backgroundColor: "rgba(18, 18, 18, 0.85)",
+    padding: 30,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.3)", 
   },
   label: {
     fontSize: 14,
-    marginBottom: 6,
-    color: "#160303",
+    marginBottom: 8,
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   input: {
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: "#ffffff",
-    borderRadius: 8,
-    height: 40,
-    padding: 10,
-    marginBottom: 15,
+    backgroundColor: "rgba(26, 26, 26, 0.9)",
+    borderColor: "#333333",
+    borderRadius: 10,
+    height: 50,
+    padding: 12,
+    marginBottom: 20,
+    color: "#FFFFFF",
   },
   passwordContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     borderWidth: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderColor: "#ffffff",
-    borderRadius: 8,
-    height: 40,
-    paddingHorizontal: 10,
+    backgroundColor: "rgba(26, 26, 26, 0.9)",
+    borderColor: "#333333",
+    borderRadius: 10,
+    height: 50,
+    paddingHorizontal: 12,
     marginBottom: 15,
   },
   passwordInput: {
     flex: 1,
-    height: '100%',
-    color: '#000',
+    height: "100%",
+    color: "#FFFFFF",
   },
   eyeIcon: {
     padding: 4,
   },
   loginButton: {
-    backgroundColor: "#5f4436e6",
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 5,
-  },
-  loginText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  bottomRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
+    backgroundColor: "#D4AF37",
+    paddingVertical: 15,
+    borderRadius: 12,
     alignItems: "center",
     marginTop: 15,
   },
+  loginText: {
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  bottomRow: {
+    marginTop: 25,
+    alignItems: "center",
+  },
+  link: {
+    color: "#D4AF37",
+    fontSize: 15,
+  },
   forgot: {
     fontSize: 13,
-    color: "#333",
-    textDecorationLine: 'underline',
-    alignSelf: 'flex-start',
-    marginBottom: 10,
+    color: "#FF8C00",
+    textDecorationLine: "underline",
+    alignSelf: "flex-end",
+    marginBottom: 15,
   },
 });
