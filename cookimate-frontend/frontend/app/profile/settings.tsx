@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -237,6 +237,71 @@ const renderIcon = (item: any, size: number = 20) => {
 
 // ── Modals defined OUTSIDE Settings so they never remount on state change ─────
 
+
+// ── Themed Alert (replaces native Alert.alert for consistent dark styling) ────
+interface ThemedAlertButton { text: string; onPress?: () => void; style?: "default" | "cancel" | "destructive"; }
+interface ThemedAlertConfig { title: string; message?: string; buttons?: ThemedAlertButton[]; type?: "info" | "success" | "error" | "warning"; }
+
+const ThemedAlert = ({
+  visible, title, message, buttons, type = "info", onClose,
+}: ThemedAlertConfig & { visible: boolean; onClose: () => void }) => {
+  const iconMap = { success: "check-circle", error: "alert-circle", warning: "alert-triangle", info: "info" };
+  const colorMap = { success: "#4CAF50", error: "#FF4444", warning: "#FF9800", info: "#D4AF37" };
+  const icon  = iconMap[type];
+  const color = colorMap[type];
+
+  return (
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <View style={alertStyles.overlay}>
+        <View style={alertStyles.card}>
+          <View style={[alertStyles.iconCircle, { backgroundColor: color + "22", borderColor: color + "55" }]}>
+            <Feather name={icon as any} size={28} color={color} />
+          </View>
+          <Text style={alertStyles.title}>{title}</Text>
+          {message ? <Text style={alertStyles.message}>{message}</Text> : null}
+          <View style={[alertStyles.btnRow, (buttons?.length ?? 1) === 1 && { justifyContent: "center" }]}>
+            {(buttons ?? [{ text: "OK" }]).map((btn, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[
+                  alertStyles.btn,
+                  btn.style === "destructive" && alertStyles.btnDestructive,
+                  btn.style === "cancel"      && alertStyles.btnCancel,
+                  btn.style !== "destructive" && btn.style !== "cancel" && alertStyles.btnPrimary,
+                  (buttons?.length ?? 1) > 1  && alertStyles.btnFlex,
+                ]}
+                onPress={() => { onClose(); btn.onPress?.(); }}
+              >
+                <Text style={[
+                  alertStyles.btnText,
+                  btn.style === "destructive" && { color: "#FF4444" },
+                  btn.style === "cancel"      && { color: "#A6A6A6" },
+                  btn.style !== "destructive" && btn.style !== "cancel" && { color: "#0A0A0A" },
+                ]}>
+                  {btn.text}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// Hook to imperatively show themed alerts — mirrors the Alert.alert API
+const useThemedAlert = () => {
+  const [alertConfig, setAlertConfig] = useState<(ThemedAlertConfig & { visible: boolean }) | null>(null);
+  const showAlert = useCallback((title: string, message?: string, buttons?: ThemedAlertButton[], type?: ThemedAlertConfig["type"]) => {
+    setAlertConfig({ visible: true, title, message, buttons, type });
+  }, []);
+  const hideAlert = useCallback(() => setAlertConfig(prev => prev ? { ...prev, visible: false } : null), []);
+  const AlertComponent = alertConfig
+    ? <ThemedAlert {...alertConfig} onClose={hideAlert} />
+    : null;
+  return { showAlert, AlertComponent };
+};
+
 const DietaryModal = ({
   visible,
   onClose,
@@ -436,6 +501,7 @@ const ChangePasswordModal = ({
   const [showNew, setShowNew]                 = useState(false);
   const [showConfirm, setShowConfirm]         = useState(false);
   const [saving, setSaving]                   = useState(false);
+  const { showAlert, AlertComponent: PwAlert } = useThemedAlert();
 
   const reset = () => {
     setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
@@ -445,32 +511,32 @@ const ChangePasswordModal = ({
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      Alert.alert("Missing Fields", "Please fill in all fields."); return;
+      showAlert("Missing Fields", "Please fill in all fields.", undefined, "warning"); return;
     }
     if (newPassword.length < 6) {
-      Alert.alert("Too Short", "New password must be at least 6 characters."); return;
+      showAlert("Too Short", "New password must be at least 6 characters.", undefined, "warning"); return;
     }
     if (newPassword !== confirmPassword) {
-      Alert.alert("Mismatch", "New passwords do not match."); return;
+      showAlert("Mismatch", "New passwords do not match.", undefined, "warning"); return;
     }
     if (newPassword === currentPassword) {
-      Alert.alert("Same Password", "New password must be different from your current one."); return;
+      showAlert("Same Password", "New password must be different from your current one.", undefined, "warning"); return;
     }
     const user = auth.currentUser;
-    if (!user?.email) { Alert.alert("Error", "No user session found."); return; }
+    if (!user?.email) { showAlert("Error", "No user session found.", undefined, "error"); return; }
     setSaving(true);
     try {
       const credential = EmailAuthProvider.credential(user.email, currentPassword);
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
-      Alert.alert("Success", "Password updated successfully!", [{ text: "OK", onPress: handleClose }]);
+      showAlert("Success", "Password updated successfully!", [{ text: "OK", onPress: handleClose }], "success");
     } catch (err: any) {
       if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        Alert.alert("Wrong Password", "Your current password is incorrect.");
+        showAlert("Wrong Password", "Your current password is incorrect.", undefined, "error");
       } else if (err.code === "auth/too-many-requests") {
-        Alert.alert("Too Many Attempts", "Too many failed attempts. Try again later.");
+        showAlert("Too Many Attempts", "Too many failed attempts. Try again later.", undefined, "error");
       } else {
-        Alert.alert("Error", err.message || "Failed to change password.");
+        showAlert("Error", err.message || "Failed to change password.", undefined, "error");
       }
     } finally {
       setSaving(false);
@@ -522,6 +588,7 @@ const ChangePasswordModal = ({
           </TouchableOpacity>
         </View>
       </View>
+      {PwAlert}
     </Modal>
   );
 };
@@ -535,10 +602,11 @@ const DeleteAccountModal = ({
 }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const { showAlert, AlertComponent: DelAlert } = useThemedAlert();
 
   const handleClose = () => { setPassword(""); setShowPassword(false); onClose(); };
   const handleConfirm = () => {
-    if (!password.trim()) { Alert.alert("Required", "Please enter your password."); return; }
+    if (!password.trim()) { showAlert("Required", "Please enter your password.", undefined, "warning"); return; }
     onConfirm(password);
   };
 
@@ -580,6 +648,7 @@ const DeleteAccountModal = ({
           </TouchableOpacity>
         </View>
       </View>
+      {DelAlert}
     </Modal>
   );
 };
@@ -603,6 +672,7 @@ const Settings = () => {
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
+  const { showAlert, AlertComponent: SettingsAlert } = useThemedAlert();
 
   // Load all settings from AsyncStorage on mount — no API calls needed
   useEffect(() => {
@@ -667,9 +737,9 @@ const Settings = () => {
     try {
       setLoading(true);
       await persistDietary(dietaryPreferences, allergies, customPreferences);
-      Alert.alert("Success", "Dietary preferences saved!");
+      showAlert("Success", "Dietary preferences saved!", undefined, "success");
     } catch (err) {
-      Alert.alert("Error", "Failed to save dietary preferences");
+      showAlert("Error", "Failed to save dietary preferences", undefined, "error");
     } finally {
       setLoading(false);
     }
@@ -690,7 +760,7 @@ const Settings = () => {
 
   // ── Logout: sign out Firebase, clear token, go to login ───────────────────
   const handleLogout = () => {
-    Alert.alert("Log Out", "Are you sure you want to log out?", [
+    showAlert("Log Out", "Are you sure you want to log out?", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Log Out",
@@ -703,7 +773,7 @@ const Settings = () => {
             // Adjust this path if your login file lives elsewhere (e.g. "/login").
             router.replace("/(auth)/loginPage" as any);
           } catch (error) {
-            Alert.alert("Error", "Failed to log out. Please try again.");
+            showAlert("Error", "Failed to log out. Please try again.", undefined, "error");
           }
         },
       },
@@ -717,7 +787,7 @@ const Settings = () => {
 
   const confirmDeleteAccount = async (password: string) => {
     const user = auth.currentUser;
-    if (!user?.email) { Alert.alert("Error", "No user session found."); return; }
+    if (!user?.email) { showAlert("Error", "No user session found.", undefined, "error"); return; }
     setDeleting(true);
     try {
       // Re-authenticate — Firebase requires this before deleting an account
@@ -732,11 +802,11 @@ const Settings = () => {
       router.replace("/(auth)/loginPage" as any);
     } catch (err: any) {
       if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        Alert.alert("Wrong Password", "Incorrect password. Account not deleted.");
+        showAlert("Wrong Password", "Incorrect password. Account not deleted.", undefined, "error");
       } else if (err.code === "auth/too-many-requests") {
-        Alert.alert("Too Many Attempts", "Too many failed attempts. Try again later.");
+        showAlert("Too Many Attempts", "Too many failed attempts. Try again later.", undefined, "error");
       } else {
-        Alert.alert("Error", "Failed to delete account. Please try again.");
+        showAlert("Error", "Failed to delete account. Please try again.", undefined, "error");
       }
     } finally {
       setDeleting(false);
@@ -986,6 +1056,7 @@ const Settings = () => {
         onAdd={addCustomPreference}
       />
 
+      {SettingsAlert}
       {loading && (
         <View style={styles.loadingOverlay}>
           <ActivityIndicator size="large" color="#D4AF37" />
@@ -1134,6 +1205,71 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+});
+
+const alertStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  card: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 24,
+    padding: 24,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  iconCircle: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#FFFFFF",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  message: {
+    fontSize: 14,
+    color: "#A6A6A6",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  btnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 20,
+    width: "100%",
+  },
+  btnFlex: { flex: 1 },
+  btn: {
+    paddingVertical: 13,
+    paddingHorizontal: 20,
+    borderRadius: 14,
+    alignItems: "center",
+    minWidth: 100,
+  },
+  btnPrimary:     { backgroundColor: "#D4AF37" },
+  btnDestructive: { backgroundColor: "rgba(255,68,68,0.15)", borderWidth: 1, borderColor: "#FF4444" },
+  btnCancel:      { backgroundColor: "#2A2A2A" },
+  btnText: { fontSize: 15, fontWeight: "600" },
 });
 
 export default Settings;
