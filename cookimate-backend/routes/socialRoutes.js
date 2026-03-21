@@ -8,6 +8,7 @@ import {
   deleteComment,
 } from "../controllers/socialController.js";
 import { upload } from "../config/cloudinary.js"; // 1. Import the upload engine
+import { createReport } from "../controllers/reportController.js";
 
 const router = express.Router();
 
@@ -21,5 +22,6 @@ router.put("/:id/like", likePost);
 router.post("/:postId/comment", addComment);
 router.delete("/:postId", deletePost);
 router.delete("/:postId/comment/:commentId", deleteComment);
+router.post("/report", createReport);
 
 export default router;

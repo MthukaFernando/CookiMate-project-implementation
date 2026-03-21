@@ -13,13 +13,15 @@ import {
   getCommunityProfile,
   addToMealPlan,
   clearNotification,
-  removeFromMealPlan
+  removeFromMealPlan,
+  toggleBlockUser
 } from "../controllers/userController.js";
 
 const router = express.Router();
 
 router.post("/", createUser);
 router.get("/levels", getLevels);
+router.put("/block", toggleBlockUser);
 router.get("/search", searchUsers);
 router.put("/follow", toggleFollow);
 router.put("/favorites/:uid", addToFavorites); 
