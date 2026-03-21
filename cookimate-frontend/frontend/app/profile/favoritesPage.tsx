@@ -162,46 +162,44 @@ const FavoritesPage = () => {
   );
 
   const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
-    Alert.alert(
-      "Delete Recipe",
-      `Are you sure you want to delete "${recipeName}"? This will remove it from your favorites and permanently delete it.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const uid = auth.currentUser?.uid;
-              if (!uid) {
-                Alert.alert("Error", "You must be logged in to delete recipes");
-                return;
-              }
-
-              const response = await axios.delete(
-                `${API_URL}/api/recipes/generated/${recipeId}`,
-                {
-                  data: { userId: uid }
-                }
-              );
-
-              if (response.data.success) {
-                Alert.alert("Success", "Recipe deleted successfully");
-                // Refresh the favorites list
-                fetchFavorites();
-              }
-            } catch (error: any) {
-              console.error("Error deleting recipe:", error);
-              Alert.alert(
-                "Error", 
-                error.response?.data?.message || "Failed to delete recipe"
-              );
+  Alert.alert(
+    "Delete Recipe",
+    `Are you sure you want to delete "${recipeName}"? This will remove it from your favorites and permanently delete it.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const uid = auth.currentUser?.uid;
+            if (!uid) {
+              Alert.alert("Error", "You must be logged in to delete recipes");
+              return;
             }
+
+            // Use the correct URL pattern with userId in the path
+            const response = await axios.delete(
+              `${API_URL}/api/recipes/generated/${recipeId}/${uid}`
+            );
+
+            if (response.data.success) {
+              Alert.alert("Success", "Recipe deleted successfully");
+              // Refresh the favorites list
+              fetchFavorites();
+            }
+          } catch (error: any) {
+            console.error("Error deleting recipe:", error);
+            Alert.alert(
+              "Error", 
+              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe"
+            );
           }
         }
-      ]
-    );
-  };
+      }
+    ]
+  );
+};
 
   const confirmRemove = (recipeId: string, isGenerated: boolean = false, recipeName: string = "") => {
     if (isGenerated) {
