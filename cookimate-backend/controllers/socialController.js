@@ -182,4 +182,32 @@ export const deletePost = async (req, res) => {
   }
 };
 
-export const handleDeleteComment  = async (req, res) => {}
+export const deleteComment = async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const { userId } = req.body; // This is the logged-in user's UID
+
+    const updatedPost = await Post.findOneAndUpdate(
+      { 
+        _id: postId, 
+        "comments._id": commentId, // Target the specific comment ID
+        "comments.user": userId    // Safety: Ensure the UID matches the commenter
+      },
+      { $pull: { comments: { _id: commentId } } }, // Remove that specific comment object
+      { new: true }
+    ).populate({
+      path: "comments.user",
+      model: "User",
+      foreignField: "firebaseUid",
+      select: "username profilePic",
+    });
+
+    if (!updatedPost) {
+      return res.status(403).json({ message: "Not authorized or comment missing" });
+    }
+
+    res.status(200).json(updatedPost);
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
