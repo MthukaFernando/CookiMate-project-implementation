@@ -7,6 +7,7 @@ import recipeRoutes from "./routes/recipeRoutes.js";
 import socialRoutes from "./routes/socialRoutes.js";
 import gamificationRoutes from "./routes/gamificationRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
+import userPreferences from "./routes/userPreferences.js";
 import { initDictionary } from "./utils/dictionaryService.js";
 import { initDictionaryForController } from "./controllers/aiController.js";
 
@@ -27,6 +28,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/users", userRoutes);
+app.use("/api/users", userPreferences); 
 app.use("/api/recipes", recipeRoutes);
 app.use("/api/social", socialRoutes);
 app.use("/api/gamification", gamificationRoutes);

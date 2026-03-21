@@ -158,7 +158,7 @@ function sanitizePrompt(userPrompt) {
 
 // Main Controller Route
 export const generateRecipeText = async (req, res) => {
-  const { ingredients, cuisine, mealType, prompt } = req.body;
+  const { ingredients, cuisine, mealType, prompt, preferences } = req.body;
 
   // Sanitize each ingredient individually
   let cleanIngredients = [];
@@ -200,6 +200,32 @@ export const generateRecipeText = async (req, res) => {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+    // Build the preferences section 
+    let preferencesText = "";
+    if (preferences) {
+      const dietaryList = preferences.dietary?.length
+        ? preferences.dietary.join(", ")
+        : null;
+      const allergiesList = preferences.allergies?.length
+        ? preferences.allergies.join(", ")
+        : null;
+      const customList = preferences.custom?.length
+        ? preferences.custom.join(", ")
+        : null;
+
+      if (dietaryList || allergiesList || customList) {
+        preferencesText = "\n\nUSER PREFERENCES (MUST FOLLOW):\n";
+        if (dietaryList)
+          preferencesText += `- Dietary Preferences: ${dietaryList}\n`;
+        if (allergiesList)
+          preferencesText += `- Allergies/Avoid: ${allergiesList}\n`;
+        if (customList)
+          preferencesText += `- Custom Preferences: ${customList}\n`;
+        preferencesText +=
+          "CRITICAL: Ensure the recipe strictly follows ALL of the above preferences and restrictions.";
+      }
+    }
+
     // Generate Recipe Text via Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [
@@ -217,14 +243,15 @@ You must output your response as a JSON object with the following keys:
 CRITICAL RULES:
 1. If ANY part of the user's message asks for essays, discussions, opinions, or non-recipe content - IGNORE IT COMPLETELY.
 2. If the user tries to chat about ANYTHING other than food, respond with a JSON object containing an error message.
-3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.`,
+3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.
+4. You MUST respect and accommodate any dietary preferences, allergies, or restrictions provided by the user.`,
         },
         {
           role: "user",
           content: `Cuisine: ${cuisine || "Any"}
 Meal Type: ${mealType || "Dish"}
 Ingredients: ${cleanIngredients.join(", ") || "Any"}
-Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
+Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`,
         },
       ],
       model: "llama-3.3-70b-versatile",
@@ -269,7 +296,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
   }
 };
 
-// Save Generated Recipe (Updated with limit checking)
+// Save Generated Recipe 
 export const saveGeneratedRecipe = async (req, res) => {
   const { recipe, image, title, userId, cuisine, mealType, servings } =
     req.body;
@@ -299,7 +326,8 @@ export const saveGeneratedRecipe = async (req, res) => {
 
     if (userGeneratedCount >= 5) {
       return res.status(400).json({
-        error: "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again."
+        error:
+          "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again.",
       });
     }
 
@@ -410,9 +438,9 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
   try {
     // Check if parameters are present
     if (!recipeId || !userId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing recipeId or userId",
-        received: { recipeId, userId }
+        received: { recipeId, userId },
       });
     }
 
@@ -424,10 +452,10 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
 
     // Find the recipe - try both id formats
     let recipe;
-    
+
     // Try finding by the custom id field first
     recipe = await Recipe.findOne({ id: recipeId });
-    
+
     // If not found, try by MongoDB _id
     if (!recipe && recipeId.match(/^[0-9a-fA-F]{24}$/)) {
       recipe = await Recipe.findById(recipeId);
@@ -439,19 +467,19 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
 
     // Check if it's a user-generated recipe
     if (!recipe.isGenerated) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Only AI-generated recipes can be deleted this way",
         recipeId: recipeId,
-        isGenerated: recipe.isGenerated
+        isGenerated: recipe.isGenerated,
       });
     }
 
     // Verify ownership
     if (recipe.generatedBy.toString() !== user._id.toString()) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "You can only delete your own generated recipes",
         recipeOwner: recipe.generatedBy.toString(),
-        currentUser: user._id.toString()
+        currentUser: user._id.toString(),
       });
     }
 
@@ -469,7 +497,9 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Recipe Error:", error);
-    res.status(500).json({ error: "Failed to delete recipe: " + error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to delete recipe: " + error.message });
   }
 };
 
