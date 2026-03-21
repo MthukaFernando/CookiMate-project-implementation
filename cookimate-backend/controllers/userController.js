@@ -357,3 +357,26 @@ export const removeFromMealPlan = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Delete user account and all associated data
+export const deleteUser = async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Remove this user from other users' followers/following lists
+    await User.updateMany(
+      { $or: [{ followers: user._id }, { following: user._id }] },
+      { $pull: { followers: user._id, following: user._id } }
+    );
+
+    // Delete the user document itself
+    await User.findByIdAndDelete(user._id);
+
+    res.status(200).json({ message: "User account deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
