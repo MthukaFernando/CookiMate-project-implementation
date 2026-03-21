@@ -250,18 +250,19 @@ export const incrementCookCount = async (req, res) => {
     let updatedUser;
 
     if (user){
-      const updatedUser = await User.findOneAndUpdate(
-      { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
-      "cookedHistory.$.timesCooked":1
-        $push: {
-          cookedHistory: {
-            recipeId: recipeId,
-            dateCooked: new Date()
-          }
-        }}, 
+      // Recipe exists in history, so count increases and date is updated
+      updatedUser = await User.findOneAndUpdate(
+      { firebaseUid: uid,
+        "cookedHistory.recipeId": recipeId
+       },
+      { $inc: { recipesCookedCount: 1 // Directly increments the number by 1
+      "cookedHistory.$.timesCooked":1},
+      $set: { "cookedHistory.$.dateCooked": new Date() }
+      },
       { new: true }
     ).populate("cookedHistory.recipeId");
+    } else {
+
     }
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
