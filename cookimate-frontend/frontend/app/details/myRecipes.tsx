@@ -13,14 +13,15 @@ import {
   Alert,
   Platform,
 } from "react-native";
-import { StatusBar } from "expo-status-bar"; // Added for status bar control
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // Better safe area handling
+import { StatusBar } from "expo-status-bar";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Dropdown } from "react-native-element-dropdown";
 import axios from "axios";
 import Constants from "expo-constants";
 import { auth } from "../../config/firebase";
+import GlobalChatbot from "../GlobalChatbot"; // 1. Added Import
 
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
@@ -83,7 +84,7 @@ const dietOptions = [
 
 const MyRecipesPage = () => {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Get precise safe area values
+  const insets = useSafeAreaInsets();
   const { selectedCategory, selectedDate } = useLocalSearchParams();
   const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const [selectedRecipeData, setSelectedRecipeData] = useState<any>(null);
@@ -478,6 +479,8 @@ const MyRecipesPage = () => {
           ]}
         />
       )}
+      {/* 2. Added GlobalChatbot here */}
+      <GlobalChatbot />
     </View>
   );
 };
@@ -488,7 +491,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 20,
-    paddingTop: 10, // Reduced as insets handle the bulk
+    paddingTop: 10,
     marginBottom: 10,
     gap: 8,
   },
