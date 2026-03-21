@@ -217,6 +217,11 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
   },
+  infoRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   cardImage: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
