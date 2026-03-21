@@ -104,7 +104,7 @@ const CookedHistoryPage = () => {
   const filteredRecipes = recipes.filter(item => 
     item.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
-  
+
   useFocusEffect(
     useCallback(() => {
       fetchCookedHistory();
@@ -162,13 +162,30 @@ const CookedHistoryPage = () => {
         <View style={{ width: 40 }} />
       </View>
 
+      {/* SEARCH BAR SECTION */}
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={18} color="#666" />
+        <TextInput
+          placeholder="Search recipes..."
+          placeholderTextColor="#666"
+          style={styles.searchInput}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={18} color="#666" />
+          </TouchableOpacity>
+        )}
+      </View>
+      
       {loading ? (
         <ActivityIndicator
           size="large"
           color="#D4AF37"
           style={{ marginTop: 50 }}
         />
-      ) : recipes.length === 0 ? (
+      ) : filteredRecipes.length === 0 ? (
         <View style={styles.emptyContainer}>
           <MaterialCommunityIcons name="chef-hat" size={80} color="#333" />
           <Text style={styles.emptyText}>No recipes cooked yet!</Text>
@@ -181,7 +198,7 @@ const CookedHistoryPage = () => {
         </View>
       ) : (
         <FlatList
-          data={recipes}
+          data={filteredRecipes}
           keyExtractor={(item, index) => index.toString()}
           renderItem={renderRecipeItem}
           contentContainerStyle={[
