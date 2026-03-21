@@ -255,7 +255,7 @@ export const incrementCookCount = async (req, res) => {
       { firebaseUid: uid,
         "cookedHistory.recipeId": recipeId
        },
-      { $inc: { recipesCookedCount: 1 // Directly increments the number by 1
+      { $inc: { recipesCookedCount: 1, // Directly increments the number by 1
       "cookedHistory.$.timesCooked":1},
       $set: { "cookedHistory.$.dateCooked": new Date() }
       },
