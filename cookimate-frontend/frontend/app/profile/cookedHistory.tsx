@@ -8,6 +8,8 @@ import {
   StyleSheet,
   Dimensions,
   ActivityIndicator,
+  TextInput,
+  Alert,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +42,7 @@ const CookedHistoryPage = () => {
   const insets = useSafeAreaInsets();
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchCookedHistory = async () => {
   setLoading(true);
