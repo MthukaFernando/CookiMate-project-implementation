@@ -299,9 +299,7 @@ export const saveGeneratedRecipe = async (req, res) => {
 
     if (userGeneratedCount >= 5) {
       return res.status(400).json({
-        error: "LIMIT_REACHED",
-        message:
-          "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again.",
+        error: "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again."
       });
     }
 
@@ -407,27 +405,54 @@ export const saveGeneratedRecipe = async (req, res) => {
 export const deleteUserGeneratedRecipe = async (req, res) => {
   const { recipeId, userId } = req.params;
 
+  console.log("Delete request received:", { recipeId, userId }); // Debug log
+
   try {
+    // Check if parameters are present
+    if (!recipeId || !userId) {
+      return res.status(400).json({ 
+        error: "Missing recipeId or userId",
+        received: { recipeId, userId }
+      });
+    }
+
     // Find the user
     const user = await User.findOne({ firebaseUid: userId });
     if (!user) {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Find the recipe and verify it belongs to this user
-    const recipe = await Recipe.findOne({ id: recipeId });
+    // Find the recipe - try both id formats
+    let recipe;
+    
+    // Try finding by the custom id field first
+    recipe = await Recipe.findOne({ id: recipeId });
+    
+    // If not found, try by MongoDB _id
+    if (!recipe && recipeId.match(/^[0-9a-fA-F]{24}$/)) {
+      recipe = await Recipe.findById(recipeId);
+    }
+
     if (!recipe) {
       return res.status(404).json({ error: "Recipe not found" });
     }
 
-    // Check if it's a user-generated recipe and belongs to this user
-    if (
-      !recipe.isGenerated ||
-      recipe.generatedBy.toString() !== user._id.toString()
-    ) {
-      return res
-        .status(403)
-        .json({ error: "You can only delete your own generated recipes" });
+    // Check if it's a user-generated recipe
+    if (!recipe.isGenerated) {
+      return res.status(403).json({ 
+        error: "Only AI-generated recipes can be deleted this way",
+        recipeId: recipeId,
+        isGenerated: recipe.isGenerated
+      });
+    }
+
+    // Verify ownership
+    if (recipe.generatedBy.toString() !== user._id.toString()) {
+      return res.status(403).json({ 
+        error: "You can only delete your own generated recipes",
+        recipeOwner: recipe.generatedBy.toString(),
+        currentUser: user._id.toString()
+      });
     }
 
     // Remove from user's favorites if present
@@ -444,7 +469,7 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Recipe Error:", error);
-    res.status(500).json({ error: "Failed to delete recipe" });
+    res.status(500).json({ error: "Failed to delete recipe: " + error.message });
   }
 };
 
