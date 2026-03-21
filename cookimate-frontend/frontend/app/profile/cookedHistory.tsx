@@ -101,8 +101,8 @@ const CookedHistoryPage = () => {
   };
 
   // SEARCH FILTER LOGIC
-  const filteredRecipes = recipes.filter(item => 
-    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredRecipes = recipes.filter((item) =>
+    item.name.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   useFocusEffect(
@@ -112,49 +112,53 @@ const CookedHistoryPage = () => {
   );
 
   const renderRecipeItem = ({ item }: { item: any }) => (
-    <TouchableOpacity
-      activeOpacity={0.9}
-      onPress={() => router.push(`/recipe/${item.id}` as any)}
-      style={styles.card}
-    >
-      <Image source={{ uri: item.image }} style={styles.cardImage} />
-
-      <View style={styles.cardContent}>
+  <TouchableOpacity
+    activeOpacity={0.9}
+    onPress={() => router.push(`/recipe/${item.id}` as any)} 
+    style={styles.card}
+  >
+    <Image 
+      source={{ uri: item.image }} 
+      style={styles.cardImage} 
+    />
+    
+    <View style={styles.cardContent}>
       {/* Container for Title and Delete Button */}
-      <View style={styles.titleRow}>
-        <Text style={styles.recipeTitle} numberOfLines={1}>
+      <View style={styles.cardHeaderRow}>
+        <Text style={[styles.recipeTitle, { flex: 1 }]} numberOfLines={1}>
           {item.name}
         </Text>
         <TouchableOpacity 
-          onPress={() => handleDelete(item.id)} // Assuming you have a delete function
+          onPress={() => handleDelete(item.id)}
           style={styles.deleteButton}
         >
           <Ionicons name="trash-outline" size={18} color="#FF4444" />
         </TouchableOpacity>
       </View>
-
-        <View style={styles.infoRow}>
-          <Ionicons name="calendar-outline" size={12} color="#BBBBBB" />
-          <Text style={styles.cookedDate}>
-            Last: {new Date(item.dateCooked).toLocaleDateString()}
-          </Text>
-        </View>
-
-        <View style={styles.viewButton}>
-          <Text style={styles.viewButtonText}>View Again</Text>
-          <Ionicons name="chevron-forward" size={14} color="black" />
-        </View>
-
-        {/* Badge Overlay for mastery */}
-        {item.timesCooked > 1 && (
-          <View style={styles.masteryBadge}>
-            <Ionicons name="flame" size={12} color="#000" />
-            <Text style={styles.masteryText}>x{item.timesCooked}</Text>
-          </View>
-        )}
+      
+      <View style={styles.infoRow}>
+        <Ionicons name="calendar-outline" size={14} color="#D4AF37" />
+        {/* Spacing between icon and date */}
+        <Text style={[styles.cookedDate, { marginLeft: 10 }]}>
+          Last: {new Date(item.dateCooked).toLocaleDateString()}
+        </Text>
       </View>
-    </TouchableOpacity>
-  );
+
+      <View style={styles.viewButton}>
+        <Text style={styles.viewButtonText}>View Again</Text>
+        <Ionicons name="chevron-forward" size={14} color="black" />
+      </View>
+
+      {/* Mastery Badge in Bottom Right */}
+      {item.timesCooked > 1 && (
+        <View style={styles.masteryBadge}>
+          <Ionicons name="flame" size={12} color="#D4AF37" style={{ marginRight: 2 }} />
+          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+        </View>
+      )}
+    </View>
+  </TouchableOpacity>
+);
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -182,7 +186,7 @@ const CookedHistoryPage = () => {
           onChangeText={setSearchQuery}
         />
         {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
+          <TouchableOpacity onPress={() => setSearchQuery("")}>
             <Ionicons name="close-circle" size={18} color="#666" />
           </TouchableOpacity>
         )}
@@ -229,7 +233,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 15,
   },
-  headerTitle: { fontSize: 20, fontWeight: "bold", color: "#FFFFFF" },
+  headerTitle: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF", flex: 1, marginRight: 2 },
   backCircle: {
     width: 40,
     height: 40,
@@ -256,45 +260,46 @@ const styles = StyleSheet.create({
     marginRight: 15,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A1A1A',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1A1A1A",
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 20,
     paddingHorizontal: 15,
     height: 45,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: "#333",
   },
   searchInput: {
     flex: 1,
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 15,
     marginLeft: 10,
   },
+  // Row to hold title and trash icon inside the card content
   cardHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 4,
   },
   deleteButton: {
     padding: 5,
+    marginTop: -2, // Slight adjustment to align with top of text
   },
-  // Mastery badge adjusted to bottom right
   masteryBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(212, 175, 55, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderColor: "rgba(212, 175, 55, 0.3)",
   },
   masteryText: {
     color: "#D4AF37",
@@ -304,22 +309,31 @@ const styles = StyleSheet.create({
   infoRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 8,
+    marginBottom: 10, // Increased for better vertical rhythm
+    marginTop: 2,
   },
   cardImage: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
     borderRadius: 15,
-    marginRight: 15,
   },
-  cardContent: { flex: 1, justifyContent: "center", position: "relative" },
+  cardContent: { 
+    flex: 1, 
+    justifyContent: "center", 
+    position: "relative" // Keeps absolute Mastery badge contained
+  },
   recipeTitle: {
-    fontSize: 18,
+    fontSize: 16, // Adjusted slightly to give trash icon space
     fontWeight: "bold",
     color: "#FFFFFF",
-    marginBottom: 4,
+    flex: 1,
+    marginRight: 10,
   },
-  cookedDate: { fontSize: 13, color: "#D4AF37", marginBottom: 10 },
+  cookedDate: { 
+    fontSize: 13, 
+    color: "#D4AF37",
+    marginLeft: 8, // Spacing between icon and date text
+  },
   viewButton: {
     flexDirection: "row",
     alignItems: "center",
