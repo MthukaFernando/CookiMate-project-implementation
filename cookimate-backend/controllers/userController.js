@@ -294,18 +294,33 @@ export const deleteFromHistory = async (req, res) => {
   try {
     const { uid, recipeId } = req.params;
 
-    // Use $pull to remove the specific recipe object from the array
+    // 1. Find the user first to get the 'timesCooked' for this specific recipe
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Find the specific entry in the history array
+    const historyEntry = user.cookedHistory.find(
+      (item) => item.recipeId.toString() === recipeId
+    );
+
+    // If it doesn't exist, just return the current state
+    if (!historyEntry) {
+      return res.status(200).json({ 
+        count: user.recipesCookedCount, 
+        cookedHistory: user.cookedHistory 
+      });
+    }
+
+    // 2. Remove the recipe AND subtract its specific count from the total
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $pull: { cookedHistory: { recipeId: recipeId } } },
+      { 
+        $pull: { cookedHistory: { recipeId: recipeId } },
+        $inc: { recipesCookedCount: -historyEntry.timesCooked } // Subtract the mastery level
+      },
       { new: true }
     ).populate("cookedHistory.recipeId");
 
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
-    // Filter and return the updated history so the frontend stays in sync
     const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
     
     res.status(200).json({ 
