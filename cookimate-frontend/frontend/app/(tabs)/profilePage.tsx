@@ -8,13 +8,14 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView, // Added for better device compatibility
+  SafeAreaView,
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
+import GlobalChatbot from "../GlobalChatbot"; // 1. Added Import
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -57,7 +58,7 @@ const ProfilePage = () => {
     <SafeAreaView style={styles.safeArea}>
       <ScrollView 
         style={globalStyle.container} 
-        contentContainerStyle={styles.scrollContent} // Applied centering here
+        contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
       
@@ -152,6 +153,8 @@ const ProfilePage = () => {
         </View>
         
       </ScrollView>
+      {/* 2. Added GlobalChatbot here at the root level */}
+      <GlobalChatbot />
     </SafeAreaView>
   );
 };
@@ -191,7 +194,6 @@ const BadgeItem = ({ imageUrl, title }: { imageUrl: string, title: string }) => 
 );
 
 /* --- STYLES --- */
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -204,22 +206,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A0A0A" 
   },
   scrollContent: { 
-    flexGrow: 1,           
+    flexGrow: 1,          
     justifyContent: "center", 
     paddingHorizontal: 25, 
-    paddingTop: 5,       // Small fixed buffer for the top
-    paddingBottom: 60,    // Extra space at bottom to balance the visual center
+    paddingTop: 5,       
+    paddingBottom: 100, // Slightly increased to ensure bottom items aren't behind the FAB
     backgroundColor: "#0A0A0A"
   },
   
-  // Top Profile Card
   topSubContainer: {
     backgroundColor: '#000000',
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
     borderColor: '#ffffff',
-    // Removed marginTop: 20 so it centers properly
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -301,7 +301,6 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  // Level Bar
   levelContainer: { 
     marginTop: 20 
   },
@@ -331,7 +330,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#D4AF37' 
   },
 
-  // Bottom Cards
   bottomSubContainer: {
     backgroundColor: '#1A1A1A',
     borderRadius: 25,
@@ -397,7 +395,6 @@ const styles = StyleSheet.create({
     color: '#A6A6A6' 
   },
 
-  // Achievements
   badgeScroll: { 
     gap: 15, 
     paddingRight: 10 
