@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Recipe from "../models/Recipe.js";
 import SeasonalRecipe from "../models/SeasonalRecipe.js";
 import User from "../models/user.js"; // Add this import
@@ -69,11 +70,28 @@ export const getAllRecipes = async (req, res) => {
 
 export const getRecipeById = async (req, res) => {
   try {
-    let recipe = await Recipe.findOne({ id: req.params.id });
-    if (!recipe) recipe = await SeasonalRecipe.findOne({ id: req.params.id });
-    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
+    const { id } = req.params;
+    let recipe = null;
+
+    // Check 1: valid MongoDB ObjectId? (Used by Completed History)
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      recipe = await Recipe.findById(id);
+      if (!recipe) recipe = await SeasonalRecipe.findById(id);
+    }
+
+    // Check 2: If not found, search the custom "id" field (Used by Home/Search page)
+    if (!recipe) {
+      recipe = await Recipe.findOne({ id: id });
+      if (!recipe) recipe = await SeasonalRecipe.findOne({ id: id });
+    }
+
+    if (!recipe) {
+      return res.status(404).json({ message: "Recipe not found" });
+    }
+
     res.json(recipe);
   } catch (error) {
+    console.error("Error fetching recipe:", error);
     res.status(500).json({ message: error.message });
   }
 };
