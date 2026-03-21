@@ -112,53 +112,55 @@ const CookedHistoryPage = () => {
   );
 
   const renderRecipeItem = ({ item }: { item: any }) => (
-  <TouchableOpacity
-    activeOpacity={0.9}
-    onPress={() => router.push(`/recipe/${item.id}` as any)} 
-    style={styles.card}
-  >
-    <Image 
-      source={{ uri: item.image }} 
-      style={styles.cardImage} 
-    />
-    
-    <View style={styles.cardContent}>
-      {/* Container for Title and Delete Button */}
-      <View style={styles.cardHeaderRow}>
-        <Text style={[styles.recipeTitle, { flex: 1 }]} numberOfLines={1}>
-          {item.name}
-        </Text>
-        <TouchableOpacity 
-          onPress={() => handleDelete(item.id)}
-          style={styles.deleteButton}
-        >
-          <Ionicons name="trash-outline" size={18} color="#FF4444" />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.infoRow}>
-        <Ionicons name="calendar-outline" size={14} color="#D4AF37" />
-        {/* Spacing between icon and date */}
-        <Text style={[styles.cookedDate, { marginLeft: 10 }]}>
-          Last: {new Date(item.dateCooked).toLocaleDateString()}
-        </Text>
-      </View>
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => router.push(`/recipe/${item.id}` as any)}
+      style={styles.card}
+    >
+      <Image source={{ uri: item.image }} style={styles.cardImage} />
 
-      <View style={styles.viewButton}>
-        <Text style={styles.viewButtonText}>View Again</Text>
-        <Ionicons name="chevron-forward" size={14} color="black" />
-      </View>
-
-      {/* Mastery Badge in Bottom Right */}
-      {item.timesCooked > 1 && (
-        <View style={styles.masteryBadge}>
-          <Ionicons name="flame" size={12} color="#D4AF37" style={{ marginRight: 2 }} />
-          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+      <View style={styles.cardContent}>
+        {/* Container for Title and Delete Button */}
+        <View style={styles.cardHeaderRow}>
+          <Text style={[styles.recipeTitle, { flex: 1 }]} numberOfLines={1}>
+            {item.name}
+          </Text>
+          <TouchableOpacity
+            onPress={() => handleDelete(item.id)}
+            style={styles.deleteButton}
+          >
+            <Ionicons name="trash-outline" size={18} color="#FF4444" />
+          </TouchableOpacity>
         </View>
-      )}
-    </View>
-  </TouchableOpacity>
-);
+
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={14} color="#D4AF37" />
+          {/* Spacing between icon and date */}
+          <Text style={[styles.cookedDate, { marginLeft: 10 }]}>
+            Last: {new Date(item.dateCooked).toLocaleDateString()}
+          </Text>
+        </View>
+
+        <View style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>View Again</Text>
+          <Ionicons name="chevron-forward" size={14} color="black" />
+        </View>
+
+        {/* Mastery Badge in Bottom Right */}
+        {item.timesCooked > 1 && (
+          <View style={styles.masteryBadge}>
+            <Ionicons
+              name="flame"
+              size={12}
+              color="#D4AF37"
+              style={{ marginRight: 2 }}
+            />
+            <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -169,7 +171,7 @@ const CookedHistoryPage = () => {
           style={styles.backCircle}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={20} color="#D4AF37" />
+          <Ionicons name="chevron-back" size={24} color="#D4AF37" />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cooking History</Text>
         <View style={{ width: 40 }} />
@@ -229,11 +231,16 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingVertical: 15,
+    // Adds space between the back button and the title
+    gap: 15,
   },
-  headerTitle: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF", flex: 1, marginRight: 2 },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+  },
   backCircle: {
     width: 40,
     height: 40,
@@ -247,13 +254,13 @@ const styles = StyleSheet.create({
   listContent: { paddingHorizontal: 20, paddingTop: 10 },
   card: {
     flexDirection: "row",
-    backgroundColor: "#121212",
-    borderRadius: 20,
-    marginBottom: 15,
-    padding: 12,
+    backgroundColor: "#161616",
+    borderRadius: 22, 
+    marginBottom: 16,
+    padding: 14,
     alignItems: "center",
     borderWidth: 1,
-    borderColor: "#1A1A1A",
+    borderColor: "#282828",
   },
   imageContainer: {
     position: "relative",
@@ -317,20 +324,24 @@ const styles = StyleSheet.create({
     height: IMAGE_SIZE,
     borderRadius: 15,
   },
-  cardContent: { 
+  cardContent: {
     flex: 1, 
-    justifyContent: "center", 
-    position: "relative" // Keeps absolute Mastery badge contained
+    marginLeft: 20, 
+    justifyContent: "space-between",
+    height: 100,
+    position: "relative"
   },
   recipeTitle: {
-    fontSize: 16, // Adjusted slightly to give trash icon space
-    fontWeight: "bold",
+    fontSize: 17,
+    fontWeight: "700",
     color: "#FFFFFF",
     flex: 1,
     marginRight: 10,
+    letterSpacing: 0.3,
+    lineHeight: 22,
   },
-  cookedDate: { 
-    fontSize: 13, 
+  cookedDate: {
+    fontSize: 13,
     color: "#D4AF37",
     marginLeft: 8, // Spacing between icon and date text
   },
