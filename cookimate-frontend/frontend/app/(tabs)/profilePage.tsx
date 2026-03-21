@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView, // Added for better device compatibility
+  SafeAreaView, 
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -26,24 +26,35 @@ const ProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [gamification, setGamification] = useState<any>(null);
+  const [completedLevels, setCompletedLevels] = useState<any[]>([]); 
   const [loading, setLoading] = useState(true);
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
 
-  const fetchUser = async () => {
+  const fetchData = async () => {
     try {
       // 1. Fetch basic user data using Firebase UID
       const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
       const userData = userResponse.data;
       setUser(userData);
 
-      // 2. Fetch gamification data using MongoDB _id
       if (userData && userData._id) {
+        // 2. Fetch gamification data using MongoDB _id
         try {
           const gamificationResponse = await axios.get(
-            `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
+            `${API_URL}/api/gamification/user/${userData._id}/dashboard`
           );
           setGamification(gamificationResponse.data);
+
+          // 3. Fetch all levels to figure out which ones are completed
+          const currentLevelNum = gamificationResponse.data.currentLevels?.gamification?.levelNumber || 1;
+          const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
+          const allLevels = levelsRes.data;
+          
+          // Filter to only include levels the user has finished
+          const finished = allLevels.filter((lvl: any) => lvl.levelNumber < currentLevelNum);
+          setCompletedLevels(finished);
+
         } catch (gamificationErr) {
           console.log("No gamification data found for this user yet.");
         }
@@ -57,8 +68,8 @@ const ProfilePage = () => {
 
   useFocusEffect(
     useCallback(() => {
-      fetchUser();
-    }, []),
+      fetchData();
+    }, [])
   );
 
   if (loading) {
@@ -69,14 +80,51 @@ const ProfilePage = () => {
     );
   }
 
+  // --- PROGRESS BAR CALCULATION ---
+  let progressPercent = 0;
+  let currentLevelName = "Rookie Cook";
+  let currentPoints = 0;
+  let nextLevelPoints = 100;
+
+  if (gamification) {
+    currentPoints = gamification.points?.gamification || 0;
+    const currentLevel = gamification.currentLevels?.gamification;
+    const nextLevel = gamification.nextLevels?.gamification;
+    
+    if (currentLevel) {
+      currentLevelName = currentLevel.levelName;
+      
+      if (nextLevel) {
+        nextLevelPoints = nextLevel.minPoints;
+        const currentLevelMin = currentLevel.minPoints;
+        
+        // Calculate points earned inside the CURRENT level
+        const pointsEarnedThisLevel = currentPoints - currentLevelMin;
+        
+        // Calculate total points needed to pass this specific level
+        const totalPointsNeededThisLevel = nextLevel.minPoints - currentLevelMin;
+        
+        if (totalPointsNeededThisLevel > 0) {
+           progressPercent = (pointsEarnedThisLevel / totalPointsNeededThisLevel) * 100;
+        }
+      } else {
+        // User is at max level!
+        progressPercent = 100;
+      }
+    }
+  }
+
+  // Ensure it stays between 0 and 100
+  progressPercent = Math.max(0, Math.min(progressPercent, 100));
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={globalStyle.container}
-        contentContainerStyle={styles.scrollContent} // Applied centering here
+        contentContainerStyle={styles.scrollContent} 
         showsVerticalScrollIndicator={false}
       >
-        {/* 1. TOP PROFILE CARD (The Header) */}
+        {/* 1. TOP PROFILE CARD */}
         <View style={styles.topSubContainer}>
           <View style={styles.profileHeader}>
             <View style={styles.mascotCircle}>
@@ -115,17 +163,17 @@ const ProfilePage = () => {
             </View>
           </View>
 
-          {/* Level Progress */}
+          {/* Dynamic Level Progress */}
           <View style={styles.levelContainer}>
             <View style={styles.levelLabelRow}>
-              <Text style={styles.levelLabel}>Level {user?.level || 1}</Text>
-              <Text style={styles.pointsLabel}>{user?.points || 0} XP</Text>
+              <Text style={styles.levelLabel}>{currentLevelName}</Text>
+              <Text style={styles.pointsLabel}>{Math.round(progressPercent)} / 100%</Text>
             </View>
             <View style={styles.progressBar}>
               <View
                 style={[
                   styles.progressFill,
-                  { width: `${user?.points % 100 || 20}%` },
+                  { width: `${progressPercent}%` }, 
                 ]}
               />
             </View>
@@ -139,25 +187,25 @@ const ProfilePage = () => {
             <StatItem
               icon="coffee"
               label="Cooked"
-              value={user?.recipesCookedCount || 0}
+              value={gamification?.stats?.recipesCooked || 0}
               onPress={() => router.push("/profile/cookedHistory" as any)}
             />
             <StatItem
               icon="heart"
               label="Favs"
-              value={user?.favorites?.length || 0}
+              value={gamification?.stats?.favoritesSaved || 0}
               onPress={() => router.push("/profile/favoritesPage")}
             />
             <StatItem
               icon="award"
               label="Levels"
-              value={user?.level || 1}
+              value={gamification?.currentLevels?.gamification?.levelNumber || 1}
               onPress={() => router.push("/profile/levelsPage")}
             />
             <StatItem
               icon="users"
               label="Fans"
-              value={user?.followers || 0}
+              value={user?.followers?.length || 0}
               onPress={() => console.log("Route to Followers")}
             />
           </View>
@@ -171,10 +219,19 @@ const ProfilePage = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.badgeScroll}
           >
-            <BadgeItem
-              imageUrl="https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png"
-              title="Social"
-            />
+            {completedLevels.length === 0 ? (
+              <Text style={{ color: '#A6A6A6', fontStyle: 'italic' }}>
+                Complete levels and earn badges!
+              </Text>
+            ) : (
+              completedLevels.map((lvl, index) => (
+                <BadgeItem
+                  key={index}
+                  imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR} 
+                  title={lvl.levelName}
+                />
+              ))
+            )}
           </ScrollView>
         </View>
       </ScrollView>
@@ -182,7 +239,7 @@ const ProfilePage = () => {
   );
 };
 
-/* --- SUB-COMPONENTS REMAINED UNCHANGED --- */
+/* --- SUB-COMPONENTS --- */
 const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity
     activeOpacity={0.7}
@@ -225,7 +282,6 @@ const BadgeItem = ({
 );
 
 /* --- STYLES --- */
-
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
@@ -241,8 +297,8 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     justifyContent: "center",
     paddingHorizontal: 25,
-    paddingTop: 5, // Small fixed buffer for the top
-    paddingBottom: 60, // Extra space at bottom to balance the visual center
+    paddingTop: 5, 
+    paddingBottom: 60, 
     backgroundColor: "#0A0A0A",
   },
 
@@ -253,7 +309,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 1,
     borderColor: "#ffffff",
-    // Removed marginTop: 20 so it centers properly
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,

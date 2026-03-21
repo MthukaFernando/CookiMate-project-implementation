@@ -14,13 +14,23 @@ import { useRouter } from "expo-router";
 import { Feather } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
-
+import { auth } from "../../config/firebase"; // <-- Make sure this path is correct!
 
 const { width } = Dimensions.get("window");
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const API_URL = `http://${address}:5000`;
+
+// Helper map to connect requirement names to the actual stat names in your database
+const statKeysMap: any = {
+  cookRecipes: "recipesCooked",
+  saveFavorites: "favoritesSaved",
+  shareRecipes: "postsShared",
+  getLikes: "likesReceived",
+  useAIGenerator: "aiGenerations",
+  planMeals: "mealsPlanned"
+};
 
 const LevelsPage = () => {
   const router = useRouter();
@@ -29,19 +39,52 @@ const LevelsPage = () => {
   const [selectedLevel, setSelectedLevel] = useState<any>(null);
   const [modalVisible, setModalVisible] = useState(false);
   
+  // New states for tracking user progress
+  const [userStats, setUserStats] = useState<any>({});
+  const [currentLevelNum, setCurrentLevelNum] = useState<number>(1);
 
   useEffect(() => {
-    const fetchLevels = async () => {
+    const fetchData = async () => {
       try {
-        const response = await axios.get(`${API_URL}/api/gamification/levels`);
-        setLevels(response.data);
+        const uid = auth.currentUser?.uid;
+        if (!uid) return;
+
+        // 1. Get user's MongoDB _id
+        const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+        const mongoId = userRes.data._id;
+
+        // 2. Get user's current gamification dashboard & stats
+        let myLevelNum = 1;
+        let myStats = {};
+        try {
+          const dashRes = await axios.get(`${API_URL}/api/gamification/user/${mongoId}/dashboard`);
+          if (dashRes.data && dashRes.data.currentLevels && dashRes.data.currentLevels.gamification) {
+             myLevelNum = dashRes.data.currentLevels.gamification.levelNumber;
+             myStats = dashRes.data.stats;
+          }
+        } catch (e) {
+          console.log("No dashboard found, using defaults");
+        }
+        
+        setUserStats(myStats);
+        setCurrentLevelNum(myLevelNum);
+
+        // 3. Fetch all levels and filter out the completed ones
+        const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
+        const allLevels = levelsRes.data;
+        
+        // Only show levels the user has NOT completed yet
+        const upcomingLevels = allLevels.filter((lvl: any) => lvl.levelNumber > myLevelNum);
+        setLevels(upcomingLevels);
+
       } catch (err) {
         console.error(err);
       } finally {
         setLoading(false);
       }
     };
-    fetchLevels();
+    
+    fetchData();
   }, []);
 
   if (loading) {
@@ -66,16 +109,20 @@ const LevelsPage = () => {
         contentContainerStyle={styles.scrollList} 
         showsVerticalScrollIndicator={false}
       >
-        {levels.map((lvl: any) => (
-          <LevelCard 
-            key={lvl.levelNumber} 
-            level={lvl} 
-            onOpenReqs={() => {
-              setSelectedLevel(lvl);
-              setModalVisible(true);
-            }}
-          />
-        ))}
+        {levels.length === 0 ? (
+          <Text style={{color: '#fff', textAlign: 'center', marginTop: 20}}>You have reached the maximum level!</Text>
+        ) : (
+          levels.map((lvl: any) => (
+            <LevelCard 
+              key={lvl.levelNumber} 
+              level={lvl} 
+              onOpenReqs={() => {
+                setSelectedLevel(lvl);
+                setModalVisible(true);
+              }}
+            />
+          ))
+        )}
       </ScrollView>
 
       <Modal
@@ -97,13 +144,37 @@ const LevelsPage = () => {
             
             <ScrollView showsVerticalScrollIndicator={false}>
               {selectedLevel && Object.entries(selectedLevel.requirements).map(([key, value]) => {
-                if (value === 0) return null;
+                if (value === 0) return null; // Skip tasks that aren't required
+                
+                // Get the user's current progress for this specific task
+                const statKey = statKeysMap[key];
+                const currentValue = userStats[statKey] || 0;
+                const requiredValue = value as number;
+                
+                // Calculate percentage (cap at 100%)
+                const progressPercent = Math.min((currentValue / requiredValue) * 100, 100);
+                const isCompleted = currentValue >= requiredValue;
+
                 return (
-                  <View key={key} style={styles.requirementRow}>
-                    <Feather name="check-circle" size={18} color="#ff9500" />
-                    <Text style={styles.requirementText} numberOfLines={1}>
-                      {key.replace(/([A-Z])/g, ' $1').toLowerCase()}: {value as number}
-                    </Text>
+                  <View key={key} style={styles.requirementBlock}>
+                    <View style={styles.requirementRow}>
+                      <View style={styles.reqTextGroup}>
+                        <Feather 
+                          name={isCompleted ? "check-circle" : "circle"} 
+                          size={18} 
+                          color={isCompleted ? "#ff9500" : "#888"} 
+                        />
+                        <Text style={[styles.requirementText, isCompleted && styles.completedText]} numberOfLines={1}>
+                          {key.replace(/([A-Z])/g, ' $1').toLowerCase()}
+                        </Text>
+                      </View>
+                      <Text style={styles.progressText}>{currentValue} / {requiredValue}</Text>
+                    </View>
+                    
+                    {/* Custom Progress Bar */}
+                    <View style={styles.progressBarBackground}>
+                      <View style={[styles.progressBarFill, { width: `${progressPercent}%` }]} />
+                    </View>
                   </View>
                 );
               })}
@@ -153,7 +224,7 @@ const styles = StyleSheet.create({
     flex: 1, 
     justifyContent: "center", 
     alignItems: "center", 
-    backgroundColor: "#f2ece2" 
+    backgroundColor: "#0A0A0A" 
   },
   header: {
     flexDirection: 'row',
@@ -253,7 +324,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1A1A1A',
     borderRadius: 30,
     padding: 25,
-    maxHeight: '70%',
+    maxHeight: '75%',
     elevation: 20
   },
   closeModalBtn: {
@@ -267,12 +338,21 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: 'center'
   },
+  requirementBlock: {
+    marginBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333',
+    paddingBottom: 15
+  },
   requirementRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#fffd8b',
+    justifyContent: 'space-between',
+    marginBottom: 8
+  },
+  reqTextGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12
   },
   requirementText: {
@@ -280,6 +360,27 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textTransform: 'capitalize'
   },
+  completedText: {
+    color: '#ff9500',
+    fontWeight: 'bold'
+  },
+  progressText: {
+    fontSize: 14,
+    color: '#888',
+    fontWeight: 'bold'
+  },
+  progressBarBackground: {
+    height: 8,
+    backgroundColor: '#333',
+    borderRadius: 4,
+    width: '100%',
+    overflow: 'hidden'
+  },
+  progressBarFill: {
+    height: '100%',
+    backgroundColor: '#ff9500',
+    borderRadius: 4
+  }
 });
 
 export default LevelsPage;
