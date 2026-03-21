@@ -99,6 +99,12 @@ const CookedHistoryPage = () => {
       ],
     );
   };
+
+  // SEARCH FILTER LOGIC
+  const filteredRecipes = recipes.filter(item => 
+    item.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
   useFocusEffect(
     useCallback(() => {
       fetchCookedHistory();
