@@ -1,18 +1,39 @@
 import Groq from "groq-sdk";
 import pkg from "natural";
 const { PorterStemmer } = pkg;
-import { ALLOWLIST, FORBIDDEN_WORDS } from "./dictionary.js";
-import Recipe from "../models/Recipe.js"; // Add static import
-import User from "../models/user.js"; // Add static import
+import {
+  getDictionary,
+  isDictionaryLoaded,
+} from "../utils/dictionaryService.js";
+import Recipe from "../models/Recipe.js";
+import User from "../models/user.js";
 
-// Pre-compute stemmed allowlist once at startup (not per request)
-const STEMMED_ALLOWLIST = new Set(
-  [...ALLOWLIST].map((w) => PorterStemmer.stem(w)),
-);
+// Cache for stemmed allowlist
+let STEMMED_ALLOWLIST = null;
+let ALLOWLIST = null;
+let FORBIDDEN_WORDS = null;
+
+export async function initDictionaryForController() {
+  try {
+    if (!isDictionaryLoaded()) {
+      console.warn("⚠️ Dictionary not loaded yet, waiting...");
+      return false;
+    }
+
+    const dict = getDictionary();
+    ALLOWLIST = dict.allowlist;
+    FORBIDDEN_WORDS = dict.forbiddenWords;
+    STEMMED_ALLOWLIST = dict.stemmedAllowlist;
+    console.log("✅ Dictionary loaded in aiController");
+    return true;
+  } catch (error) {
+    console.error("Failed to load dictionary in aiController:", error);
+    return false;
+  }
+}
 
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
-  //Using hugging face key from .env
   const HF_TOKEN = process.env.HF_TOKEN;
 
   console.log("Generating AI Image for:", recipeTitle);
@@ -35,7 +56,6 @@ async function generateRecipeImage(recipeTitle) {
       },
     );
 
-    // Check for quota limits
     if (response.status === 402 || response.status === 429) {
       console.warn("⚠️ AI Quota reached for this month.");
       return "QUOTA_EXCEEDED";
@@ -54,8 +74,18 @@ async function generateRecipeImage(recipeTitle) {
   }
 }
 
-// Enhanced sanitization function that returns more detailed status
+// Enhanced sanitization function
 function sanitizeIngredient(ingredient, index) {
+  // Wait for dictionary to load
+  if (!ALLOWLIST || !FORBIDDEN_WORDS || !STEMMED_ALLOWLIST) {
+    console.warn("Dictionary not loaded yet, using fallback sanitization");
+    // Fallback: basic sanitization
+    if (!ingredient || ingredient.length < 2) {
+      return { valid: false, reason: "Invalid ingredient" };
+    }
+    return { valid: true, cleaned: ingredient.trim() };
+  }
+
   if (!ingredient) return { valid: false, reason: "Empty ingredient" };
 
   const lowerIngredient = ingredient.toLowerCase();
@@ -118,7 +148,7 @@ function sanitizeIngredient(ingredient, index) {
   return { valid: true, cleaned: ingredient.trim() };
 }
 
-// The "Culinary Firewall" function (kept for backward compatibility)
+// The "Culinary Firewall" function
 function sanitizePrompt(userPrompt) {
   if (!userPrompt) return "";
 
@@ -201,10 +231,8 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
       response_format: { type: "json_object" },
     });
 
-    // Parse the JSON response
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
 
-    // Validate that we have the required fields
     if (
       !responseData.title ||
       !responseData.ingredients ||
@@ -213,13 +241,11 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
       throw new Error("Invalid recipe format received from AI");
     }
 
-    // Format the text for frontend display
     const recipeText = `${responseData.title}\n\nIngredients:\n${responseData.ingredients.join("\n")}\n\nInstructions:\n${responseData.instructions.join("\n")}\n\nChef's Note: ${responseData.chef_note || "Enjoy your meal!"}`;
 
     const recipeTitle = responseData.title;
     console.log("🍴 Recipe Created:", recipeTitle);
 
-    // Generate Image using the Title
     const imageUri = await generateRecipeImage(recipeTitle);
 
     console.log("✅ Sending data to mobile app...");
@@ -231,7 +257,6 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
   } catch (error) {
     console.error("Master Route Error:", error);
 
-    // Handle JSON parse errors specifically
     if (error instanceof SyntaxError) {
       return res.status(500).json({
         error: "The Chef returned an invalid response. Please try again.",
@@ -244,12 +269,12 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
   }
 };
 
-// Save Generated Recipe
+// Save Generated Recipe (Updated with limit checking)
 export const saveGeneratedRecipe = async (req, res) => {
-  const { recipe, image, title, userId, cuisine, mealType, servings } = req.body;
+  const { recipe, image, title, userId, cuisine, mealType, servings } =
+    req.body;
 
   try {
-    // Validate required fields
     if (!recipe || !title) {
       return res.status(400).json({ error: "Missing required recipe data" });
     }
@@ -260,7 +285,24 @@ export const saveGeneratedRecipe = async (req, res) => {
         .json({ error: "You must be logged in to save recipes" });
     }
 
-    // Parse the recipe text to extract structured data
+    // Find the user first
+    const user = await User.findOne({ firebaseUid: userId });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Check how many user-generated recipes this user already has
+    const userGeneratedCount = await Recipe.countDocuments({
+      generatedBy: user._id,
+      isGenerated: true,
+    });
+
+    if (userGeneratedCount >= 5) {
+      return res.status(400).json({
+        error: "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again."
+      });
+    }
+
     const lines = recipe.split("\n");
     let ingredients = [];
     let instructions = [];
@@ -296,18 +338,15 @@ export const saveGeneratedRecipe = async (req, res) => {
       }
     }
 
-    // Create a unique ID for the generated recipe
     const recipeId = `generated_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Prepare search terms for better searchability
     const searchTerms = [
       title.toLowerCase(),
       ...ingredients.map((ing) => ing.toLowerCase()),
-      cuisine?.toLowerCase(),
-      mealType?.toLowerCase(),
+      cuisine ? cuisine.toLowerCase() : null,
+      mealType ? mealType.toLowerCase() : null,
     ].filter(Boolean);
 
-    // Prepare recipe object for database matching your schema
     const newRecipe = {
       id: recipeId,
       name: title,
@@ -323,49 +362,33 @@ export const saveGeneratedRecipe = async (req, res) => {
       servings: servings ? parseInt(servings) : 4,
       serving_size: "serving",
       search_terms: searchTerms,
-      isGenerated: true, // NEW: Mark as generated
-      generatedBy: userId, // NEW: Track which user generated it
+      isGenerated: true,
+      generatedBy: user._id, // Store MongoDB _id
     };
 
-    // Check if recipe with same name already exists
-    const existingRecipe = await Recipe.findOne({ name: title });
+    // Check if recipe with same name already exists for this user
+    const existingRecipe = await Recipe.findOne({
+      name: title,
+      isGenerated: true,
+      generatedBy: user._id,
+    });
 
     if (existingRecipe) {
       return res
         .status(400)
-        .json({ error: "A recipe with this name already exists" });
+        .json({ error: "You already have a recipe with this name" });
     }
 
-    // Save to database
     const savedRecipe = await Recipe.create(newRecipe);
 
-    // Find user by firebaseUid, then update favorites
-    try {
-      // Find the user document using firebaseUid
-      const user = await User.findOne({ firebaseUid: userId });
+    // Add to user's favorites
+    await User.findByIdAndUpdate(user._id, {
+      $addToSet: { favorites: savedRecipe._id },
+    });
 
-      if (!user) {
-        console.log(`⚠️ User with firebaseUid ${userId} not found in database`);
-        // Recipe saved, but user not found - still return success
-        return res.status(201).json({
-          success: true,
-          message:
-            "Recipe saved, but could not add to favorites (user not found)",
-          recipe: savedRecipe,
-        });
-      }
-
-      // Now update the user's favorites using their MongoDB _id
-      await User.findByIdAndUpdate(user._id, {
-        $addToSet: { favorites: savedRecipe._id },
-      });
-      console.log(
-        `✅ Recipe "${title}" saved and added to user ${userId}'s favorites`,
-      );
-    } catch (favError) {
-      console.error("Could not add to favorites:", favError);
-      // Recipe is saved, just not favorited - still return success
-    }
+    console.log(
+      `✅ Recipe "${title}" saved and added to user ${userId}'s favorites (${userGeneratedCount + 1}/5 generated recipes)`,
+    );
 
     res.status(201).json({
       success: true,
@@ -375,5 +398,99 @@ export const saveGeneratedRecipe = async (req, res) => {
   } catch (error) {
     console.error("Save Recipe Error:", error);
     res.status(500).json({ error: "Failed to save recipe. Please try again." });
+  }
+};
+
+// Delete user-generated recipe
+export const deleteUserGeneratedRecipe = async (req, res) => {
+  const { recipeId, userId } = req.params;
+
+  console.log("Delete request received:", { recipeId, userId }); // Debug log
+
+  try {
+    // Check if parameters are present
+    if (!recipeId || !userId) {
+      return res.status(400).json({ 
+        error: "Missing recipeId or userId",
+        received: { recipeId, userId }
+      });
+    }
+
+    // Find the user
+    const user = await User.findOne({ firebaseUid: userId });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    // Find the recipe - try both id formats
+    let recipe;
+    
+    // Try finding by the custom id field first
+    recipe = await Recipe.findOne({ id: recipeId });
+    
+    // If not found, try by MongoDB _id
+    if (!recipe && recipeId.match(/^[0-9a-fA-F]{24}$/)) {
+      recipe = await Recipe.findById(recipeId);
+    }
+
+    if (!recipe) {
+      return res.status(404).json({ error: "Recipe not found" });
+    }
+
+    // Check if it's a user-generated recipe
+    if (!recipe.isGenerated) {
+      return res.status(403).json({ 
+        error: "Only AI-generated recipes can be deleted this way",
+        recipeId: recipeId,
+        isGenerated: recipe.isGenerated
+      });
+    }
+
+    // Verify ownership
+    if (recipe.generatedBy.toString() !== user._id.toString()) {
+      return res.status(403).json({ 
+        error: "You can only delete your own generated recipes",
+        recipeOwner: recipe.generatedBy.toString(),
+        currentUser: user._id.toString()
+      });
+    }
+
+    // Remove from user's favorites if present
+    await User.findByIdAndUpdate(user._id, {
+      $pull: { favorites: recipe._id },
+    });
+
+    // Delete the recipe
+    await Recipe.deleteOne({ _id: recipe._id });
+
+    res.status(200).json({
+      success: true,
+      message: "Recipe deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete Recipe Error:", error);
+    res.status(500).json({ error: "Failed to delete recipe: " + error.message });
+  }
+};
+
+// Get user's generated recipes count
+export const getUserGeneratedRecipesCount = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const user = await User.findOne({ firebaseUid: userId });
+    if (!user) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const count = await Recipe.countDocuments({
+      generatedBy: user._id,
+      isGenerated: true,
+    });
+
+    res.status(200).json({ count });
+  } catch (error) {
+    console.error("Failed to get count:", error);
+    res.status(500).json({ error: "Failed to get count" });
   }
 };

@@ -63,6 +63,19 @@ const userSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    //cooked history
+    cookedHistory: [
+      {
+        recipeId: { 
+          type: mongoose.Schema.Types.ObjectId, 
+          ref: "Recipe" 
+        },
+        dateCooked: { 
+          type: Date, 
+          default: Date.now 
+        },
+      }
+    ],
     lastMessage: {
       type: String,
       default: "",

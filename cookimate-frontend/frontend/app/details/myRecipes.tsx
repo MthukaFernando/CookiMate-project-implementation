@@ -189,50 +189,48 @@ const MyRecipesPage = () => {
   };
 
   const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
-    Alert.alert(
-      "Delete Recipe",
-      `Are you sure you want to delete "${recipeName}"? This action cannot be undone.`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              const uid = auth.currentUser?.uid;
-              if (!uid) {
-                Alert.alert("Error", "You must be logged in to delete recipes");
-                return;
-              }
-
-              const response = await axios.delete(
-                `${API_URL}/api/recipes/generated/${recipeId}`,
-                {
-                  data: { userId: uid } // Send userId in the request body
-                }
-              );
-
-              if (response.data.success) {
-                Alert.alert("Success", "Recipe deleted successfully");
-                // Refresh the recipes list
-                fetchRecipes();
-                // Also refresh favorites if needed
-                if (favorites.includes(recipeId)) {
-                  setFavorites(favorites.filter(id => id !== recipeId));
-                }
-              }
-            } catch (error: any) {
-              console.error("Error deleting recipe:", error);
-              Alert.alert(
-                "Error", 
-                error.response?.data?.message || "Failed to delete recipe"
-              );
+  Alert.alert(
+    "Delete Recipe",
+    `Are you sure you want to delete "${recipeName}"? This action cannot be undone.`,
+    [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: async () => {
+          try {
+            const uid = auth.currentUser?.uid;
+            if (!uid) {
+              Alert.alert("Error", "You must be logged in to delete recipes");
+              return;
             }
+
+            // Use the correct URL pattern with userId in the path
+            const response = await axios.delete(
+              `${API_URL}/api/recipes/generated/${recipeId}/${uid}`
+            );
+
+            if (response.data.success) {
+              Alert.alert("Success", "Recipe deleted successfully");
+              // Refresh the recipes list
+              fetchRecipes();
+              // Also refresh favorites if needed
+              if (favorites.includes(recipeId)) {
+                setFavorites(favorites.filter(id => id !== recipeId));
+              }
+            }
+          } catch (error: any) {
+            console.error("Error deleting recipe:", error);
+            Alert.alert(
+              "Error", 
+              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe"
+            );
           }
         }
-      ]
-    );
-  };
+      }
+    ]
+  );
+};
 
   const fetchRecipes = async () => {
     setLoading(true);

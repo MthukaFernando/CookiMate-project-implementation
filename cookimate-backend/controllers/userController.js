@@ -32,11 +32,11 @@ export const createUser = async (req, res) => {
       stats: {
         recipesCooked: 0,
         favoritesSaved: 0,
-        recipesShared: 0,
+        postsShared: 0,       
         likesReceived: 0,
         aiGenerations: 0,
         errorsFixed: 0,
-        weeklyPlansCompleted: 0,
+        mealsPlanned: 0,      
         followersCount: 0,
         currentStreak: 0,
         longestStreak: 0,
@@ -70,7 +70,7 @@ export const clearNotification = async (req, res) => {
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
+    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites").populate("cookedHistory.recipeId");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -240,16 +240,26 @@ export const searchUsers = async (req, res) => {
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params; // Using firebaseUid for consistency
+    const { recipeId } = req.body; //_id
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
+        $push: {
+          cookedHistory: {
+            recipeId: recipeId,
+            dateCooked: new Date()
+          }
+        }}, 
       { new: true }
-    );
+    ).populate("cookedHistory.recipeId");
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount });
+    // Filter out any nulls in case a recipe was deleted from the DB
+    const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
