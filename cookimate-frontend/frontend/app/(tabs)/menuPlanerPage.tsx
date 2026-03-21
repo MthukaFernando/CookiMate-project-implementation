@@ -20,6 +20,7 @@ import { Calendar } from "react-native-calendars";
 import Constants from "expo-constants";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
+import GlobalChatbot from "../GlobalChatbot";
 
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
@@ -351,6 +352,7 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      <GlobalChatbot />
     </SafeAreaView>
   );
 };
