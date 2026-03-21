@@ -122,9 +122,26 @@ const Page = () => {
         };
 
         try {
+          // 1. Save the meal to the planner
           await axios.post(`${API_URL}/api/users/meal-plan/${uid}`, recipeToAdd);
           
-          // Refresh list from DB to ensure local state matches server
+          // 2. NEW: Notify Gamification system to update progress bar stats
+          try {
+            // Get the user's Mongo ID first
+            const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+            const mongoId = userRes.data._id;
+            
+            // Trigger the stat update
+            await axios.post(`${API_URL}/api/gamification/update-stats`, {
+              userId: mongoId,
+              action: 'PLAN_MEAL' 
+            });
+            console.log("Gamification: Meal Planning progress updated!");
+          } catch (gError) {
+            console.log("Gamification update failed, but meal was saved.");
+          }
+
+          // 3. Refresh the list and UI
           await loadMealPlan(); 
 
           setSelectedDate(openModalWithDate as string);
@@ -154,7 +171,6 @@ const Page = () => {
 
     saveNewRecipe();
   }, [newRecipeId, openModalWithDate]);
-
   useEffect(() => {
     const fetchSeasonalContent = async () => {
       try {

@@ -23,6 +23,11 @@ export const updateUserStats = async (userId, action, increment = 1) => {
     const progress = await UserProgress.findOne({ user: userId });
     if (!progress) throw new Error("User progress not found");
 
+    // 1. Get the requirements for the user's CURRENT level
+    const currentLevel = await GamificationLevel.findOne({
+      levelNumber: progress.gamificationLevel
+    });
+
     // Map action to stat field
     const statMap = {
       'COOK_RECIPE': 'recipesCooked',
@@ -33,23 +38,42 @@ export const updateUserStats = async (userId, action, increment = 1) => {
       'PLAN_MEAL': 'mealsPlanned'
     };
 
-    // Update the stat
-    if (statMap[action]) {
-      progress.stats[statMap[action]] += increment;
+    // Map stat field back to the requirement key in the Level model
+    const reqMap = {
+      'recipesCooked': 'cookRecipes',
+      'favoritesSaved': 'saveFavorites',
+      'postsShared': 'sharePosts',
+      'likesReceived': 'getLikes',
+      'aiGenerations': 'useAIGenerator',
+      'mealsPlanned': 'planMeals'
+    };
+
+    const statField = statMap[action];
+    
+    // 2. THE CAP LOGIC: 
+    if (statField && currentLevel) {
+      const currentVal = progress.stats[statField] || 0;
+      const requiredVal = currentLevel.requirements[reqMap[statField]] || 0;
+
+      // Only increment if they haven't reached the requirement yet
+      if (currentVal < requiredVal) {
+        progress.stats[statField] += increment;
+        
+        // Only award points if they were actually eligible for the increment
+        const pointsEarned = getPointsForAction(action) * increment;
+        progress.simpleLevelPoints += pointsEarned;
+        progress.gamificationPoints += pointsEarned;
+      } else {
+        console.log(`Stat ${statField} is already capped at ${requiredVal} for this level.`);
+      }
     }
 
-    // Add points to BOTH systems
-    const pointsEarned = getPointsForAction(action) * increment;
-    progress.simpleLevelPoints += pointsEarned; // For simple levels (Novice Chef, etc.)
-    progress.gamificationPoints += pointsEarned; // For gamification levels (Rookie Cook, etc.)
     progress.lastActivity = new Date();
 
-    // Update streak if it's a daily login
     if (action === 'DAILY_LOGIN') {
       await updateStreak(progress);
     }
 
-    // Check for level ups in BOTH systems
     await checkSimpleLevelUp(progress);
     await checkGamificationLevelUp(progress);
 
