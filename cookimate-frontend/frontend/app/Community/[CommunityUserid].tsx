@@ -22,6 +22,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import Constants from "expo-constants";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
@@ -45,21 +46,21 @@ const COLORS = {
   overlayBg: "rgba(20, 20, 20, 0.95)",
 };
 
+const getStorageKey = (reporterUid: string) => `reported_users_${reporterUid}`;
+
 interface Post {
   id: string;
   uri: string;
   caption?: string;
   likes: string[];
   comments: {
-    user: {
-      username: string;
-      profilePic: string;
-    };
+    user: { username: string; profilePic: string };
     text: string;
     createdAt: string;
   }[];
 }
 
+// FIX 1: Removed duplicate `stats` key — it was declared twice in the interface
 interface UserProfile {
   _id: string;
   name: string;
@@ -67,6 +68,7 @@ interface UserProfile {
   profilePic?: string;
   bio?: string;
   isFollowing: boolean;
+  blockedByCurrentUser?: boolean;
   stats: {
     recipes: number;
     followers: number;
@@ -77,19 +79,40 @@ interface UserProfile {
 
 export default function CommunityUserProfile() {
   const router = useRouter();
-  const { CommunityUserid } = useLocalSearchParams<{
-    CommunityUserid: string;
-  }>();
+  const { CommunityUserid } = useLocalSearchParams<{ CommunityUserid: string }>();
 
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedPost, setSelectedPost] = useState<Post | null>(null);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
   const [showModalComments, setShowModalComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [showThankYou, setShowThankYou] = useState(false);
+  const [showAlreadyReported, setShowAlreadyReported] = useState(false);
+  const [isUserReported, setIsUserReported] = useState(false);
+
   const currentUser = auth.currentUser;
+
+  // Load persisted report status from AsyncStorage on mount
+  useEffect(() => {
+    if (!currentUser || !CommunityUserid) return;
+    const loadReportedStatus = async () => {
+      try {
+        const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
+        if (raw) {
+          const ids: string[] = JSON.parse(raw);
+          setIsUserReported(ids.includes(CommunityUserid));
+        }
+      } catch (err) {
+        console.log("Could not load reported user status:", err);
+      }
+    };
+    loadReportedStatus();
+  }, [currentUser, CommunityUserid]);
 
   const fetchProfile = async () => {
     try {
@@ -101,6 +124,7 @@ export default function CommunityUserProfile() {
       );
       setProfile(response.data);
       setIsFollowing(response.data.isFollowing);
+      setIsBlocked(response.data.blockedByCurrentUser || false);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -127,7 +151,7 @@ export default function CommunityUserProfile() {
               ...prev,
               stats: {
                 ...prev.stats,
-                followers: prev.stats.followers + (newStatus ? 1 : -1),
+                followers: (prev.stats.followers || 0) + (newStatus ? 1 : -1),
               },
             }
           : prev,
@@ -137,26 +161,92 @@ export default function CommunityUserProfile() {
     }
   };
 
+  // FIX 2: Added the missing closing `};` — handleBlockUser was nested inside
+  // handleLikeToggle because the catch block was never closed, making the
+  // block button completely non-functional
+  const handleLikeToggle = async () => {
+    if (!currentUser || !selectedPost) return;
+    const postId = selectedPost.id || (selectedPost as any)._id;
+    try {
+      await axios.put(`${BASE_URL}/social/${postId}/like`, {
+        userId: currentUser.uid,
+      });
+      const isCurrentlyLiked = (selectedPost.likes || []).includes(currentUser.uid);
+      const newLikes = isCurrentlyLiked
+        ? selectedPost.likes.filter((uid) => uid !== currentUser.uid)
+        : [...(selectedPost.likes || []), currentUser.uid];
+      const updatedPost = { ...selectedPost, likes: newLikes };
+      setSelectedPost(updatedPost);
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              posts: (prev.posts || []).map((p) => {
+                const pId = p.id || (p as any)._id;
+                return pId === postId ? updatedPost : p;
+              }),
+            }
+          : prev,
+      );
+    } catch (error) {
+      console.error("Like error:", error);
+      Alert.alert("Error", "Could not process like.");
+    }
+  }; // ← was missing — everything below was accidentally inside handleLikeToggle
+
+  const handleBlockUser = async () => {
+    if (!currentUser) return;
+    Alert.alert(
+      isBlocked ? "Unblock User" : "Block User",
+      isBlocked
+        ? "Do you want to unblock this user?"
+        : "Are you sure you want to block this user?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: isBlocked ? "Unblock" : "Block",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await axios.put(`${BASE_URL}/users/block`, {
+                currentUserUid: currentUser.uid,
+                targetUserUid: CommunityUserid,
+              });
+              setIsBlocked((prev) => !prev);
+              Alert.alert(
+                isBlocked ? "Unblocked" : "Blocked",
+                `User has been ${isBlocked ? "unblocked" : "blocked"}.`,
+              );
+              if (!isBlocked) router.replace("/Community/CommunityFeedCards");
+            } catch (err) {
+              console.error(err);
+              Alert.alert("Error", "Could not update block status.");
+            }
+          },
+        },
+      ],
+    );
+  };
+
   const handleCommentSubmit = async () => {
     if (!commentText.trim() || !currentUser || !selectedPost) return;
+    const postId = selectedPost.id || (selectedPost as any)._id;
     setIsSubmitting(true);
     try {
-      const res = await axios.post(
-        `${BASE_URL}/social/${selectedPost.id}/comment`,
-        {
-          userId: currentUser.uid,
-          text: commentText,
-        },
-      );
+      const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
+        userId: currentUser.uid,
+        text: commentText,
+      });
       setSelectedPost(res.data);
       setCommentText("");
       setProfile((prev) =>
         prev
           ? {
               ...prev,
-              posts: prev.posts.map((p) =>
-                p.id === selectedPost.id ? res.data : p,
-              ),
+              posts: (prev.posts || []).map((p) => {
+                const pId = p.id || (p as any)._id;
+                return pId === postId ? res.data : p;
+              }),
             }
           : prev,
       );
@@ -167,6 +257,8 @@ export default function CommunityUserProfile() {
     }
   };
 
+  // FIX 3: Removed git merge conflict markers (<<<<<<< HEAD / ======= / >>>>>>>)
+  // Kept the robust version that handles both p.id and p._id
   const handleDeletePost = (postId: string) => {
     Alert.alert(
       "Delete Post",
@@ -179,10 +271,18 @@ export default function CommunityUserProfile() {
           onPress: async () => {
             try {
               await axios.delete(`${BASE_URL}/social/${postId}`, {
-                data: { userId: currentUser?.uid }
+                data: { userId: currentUser?.uid },
               });
               setProfile((prev) =>
-                prev ? { ...prev, posts: prev.posts.filter((p) => p.id !== postId) } : prev
+                prev
+                  ? {
+                      ...prev,
+                      posts: (prev.posts || []).filter((p) => {
+                        const pId = p.id || (p as any)._id;
+                        return pId !== postId;
+                      }),
+                    }
+                  : prev,
               );
               closeModal();
             } catch (error) {
@@ -191,14 +291,65 @@ export default function CommunityUserProfile() {
             }
           },
         },
-      ]
+      ],
     );
+  };
+
+  // FIX 4: handleReportPress now opens the styled modal for already-reported
+  // instead of a plain native Alert, keeping UI consistent
+  const handleReportPress = () => {
+    if (isUserReported) {
+      setShowAlreadyReported(true);
+      setShowThankYou(false);
+      setReportModalVisible(true);
+      return;
+    }
+    setShowAlreadyReported(false);
+    setShowThankYou(false);
+    setReportModalVisible(true);
+  };
+
+  const submitReport = async (reason: string) => {
+    if (!currentUser || !CommunityUserid) return;
+    try {
+      await axios.post(`${BASE_URL}/social/report`, {
+        reporter: currentUser.uid,
+        targetId: CommunityUserid,
+        targetType: "user",
+        reason,
+      });
+      setIsUserReported(true);
+      // Persist so the flag stays red after navigating away and back
+      try {
+        const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
+        const existing: string[] = raw ? JSON.parse(raw) : [];
+        if (!existing.includes(CommunityUserid)) {
+          existing.push(CommunityUserid);
+          await AsyncStorage.setItem(
+            getStorageKey(currentUser.uid),
+            JSON.stringify(existing),
+          );
+        }
+      } catch (storageErr) {
+        console.log("AsyncStorage write failed:", storageErr);
+      }
+      setShowThankYou(true);
+    } catch (err) {
+      console.error(err);
+      Alert.alert("Error", "Could not submit report.");
+    }
   };
 
   const closeModal = () => {
     setSelectedPost(null);
     setShowModalComments(false);
     setCommentText("");
+  };
+
+  const closeReportModal = () => {
+    setReportModalVisible(false);
+    setShowThankYou(false);
+    setShowAlreadyReported(false);
   };
 
   if (loading) {
@@ -211,35 +362,83 @@ export default function CommunityUserProfile() {
 
   if (!profile) return null;
 
+  // FIX 5: Rebuilt ProfileHeader from scratch —
+  //   • Removed erroneous topActionRow wrapper that was never closed
+  //   • Closed the flag TouchableOpacity properly
+  //   • Grouped flag + block into a single right-side View
+  //   • Fixed all mismatched </View> counts
   const ProfileHeader = () => (
     <View style={styles.header}>
-      <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
-      </TouchableOpacity>
+      <View style={styles.topRow}>
+        {/* Back button — left side */}
+        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
+        </TouchableOpacity>
+
+        {/* Flag + Block — right side, only shown for other users */}
+        {currentUser?.uid !== CommunityUserid && (
+          <View style={styles.topRightActions}>
+            {/* Report flag */}
+            <TouchableOpacity onPress={handleReportPress} style={styles.reportBtn}>
+              <Ionicons
+                name={isUserReported ? "flag" : "flag-outline"}
+                size={20}
+                color={isUserReported ? COLORS.accentRed : COLORS.textMuted}
+              />
+            </TouchableOpacity>
+
+            {/* Block / Unblock pill */}
+            <TouchableOpacity
+              style={[styles.blockCornerBtn, isBlocked && styles.blockCornerBtnActive]}
+              onPress={handleBlockUser}
+            >
+              <Ionicons
+                name={isBlocked ? "ban" : "ban-outline"}
+                size={18}
+                color={isBlocked ? COLORS.textMuted : COLORS.accentRed}
+              />
+              <Text
+                style={[
+                  styles.blockCornerText,
+                  isBlocked && { color: COLORS.textMuted },
+                ]}
+              >
+                {isBlocked ? "Unblock" : "Block"}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
+
+      {/* Profile card */}
       <View style={styles.profileCard}>
         <Image
           source={{
-            uri: profile.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+            uri:
+              profile.profilePic ||
+              "https://cdn-icons-png.flaticon.com/512/149/149071.png",
           }}
           style={styles.avatar}
         />
-        <Text style={styles.userName}>{profile.name}</Text>
-        <Text style={styles.handle}>@{profile.username}</Text>
+        <Text style={styles.userName}>{profile.name || "User"}</Text>
+        <Text style={styles.handle}>@{profile.username || "unknown"}</Text>
         {profile.bio && <Text style={styles.bioText}>{profile.bio}</Text>}
+
         <View style={styles.statsRow}>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.recipes}</Text>
+            <Text style={styles.statNum}>{profile.stats?.recipes || 0}</Text>
             <Text style={styles.statLab}>Recipes</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.followers}</Text>
+            <Text style={styles.statNum}>{profile.stats?.followers || 0}</Text>
             <Text style={styles.statLab}>Followers</Text>
           </View>
           <View style={styles.stat}>
-            <Text style={styles.statNum}>{profile.stats.following}</Text>
+            <Text style={styles.statNum}>{profile.stats?.following || 0}</Text>
             <Text style={styles.statLab}>Following</Text>
           </View>
         </View>
+
         {currentUser?.uid !== CommunityUserid && (
           <TouchableOpacity
             style={[styles.followBtn, isFollowing && styles.followingBtn]}
@@ -257,8 +456,8 @@ export default function CommunityUserProfile() {
   return (
     <SafeAreaView style={styles.container}>
       <FlatList
-        data={profile.posts}
-        keyExtractor={(item) => item.id}
+        data={profile.posts || []}
+        keyExtractor={(item) => item.id || (item as any)._id}
         numColumns={COLUMN_COUNT}
         ListHeaderComponent={ProfileHeader}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 40 }}
@@ -267,12 +466,111 @@ export default function CommunityUserProfile() {
           <TouchableOpacity onPress={() => setSelectedPost(item)}>
             <Image
               source={{ uri: item.uri }}
-              style={{ width: IMAGE_SIZE, height: IMAGE_SIZE, borderRadius: 8, backgroundColor: COLORS.surface }}
+              style={{
+                width: IMAGE_SIZE,
+                height: IMAGE_SIZE,
+                borderRadius: 8,
+                backgroundColor: COLORS.surface,
+              }}
             />
           </TouchableOpacity>
         )}
       />
 
+      {/* ── REPORT USER MODAL ── */}
+      <Modal visible={reportModalVisible} transparent animationType="fade">
+        <View style={styles.reportOverlay}>
+          <View style={styles.reportCard}>
+
+            {showAlreadyReported ? (
+              /* Screen 1: user tapped the flag again after already reporting */
+              <View style={styles.thankYouArea}>
+                <Ionicons
+                  name="flag"
+                  size={60}
+                  color={COLORS.accentRed}
+                  style={{ marginBottom: 10 }}
+                />
+                <Text style={[styles.thankYouTitle, { color: COLORS.accentRed }]}>
+                  Already Reported
+                </Text>
+                <Text style={styles.thankYouText}>
+                  You've already reported this user. Our team will review it shortly.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtnAction,
+                    {
+                      backgroundColor: COLORS.accentRed,
+                      width: "100%",
+                      paddingVertical: 14,
+                      borderRadius: 12,
+                    },
+                  ]}
+                  onPress={closeReportModal}
+                >
+                  <Text style={{ color: "#FFF", fontWeight: "bold", textAlign: "center" }}>
+                    Got It
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+            ) : showThankYou ? (
+              /* Screen 2: report just submitted successfully */
+              <View style={styles.thankYouArea}>
+                <Ionicons name="checkmark-circle" size={60} color={COLORS.primaryGold} />
+                <Text style={styles.thankYouTitle}>User Reported</Text>
+                <Text style={styles.thankYouText}>
+                  Thank you for your report. Our team will review this account.
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.modalBtnAction,
+                    { backgroundColor: COLORS.primaryGold, width: "100%" },
+                  ]}
+                  onPress={closeReportModal}
+                >
+                  <Text
+                    style={{
+                      color: COLORS.background,
+                      fontWeight: "bold",
+                      textAlign: "center",
+                    }}
+                  >
+                    Close
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+            ) : (
+              /* Screen 3: reason selection */
+              <View>
+                <View style={styles.modalHeaderReport}>
+                  <Text style={styles.reportModalTitle}>Report User</Text>
+                  <TouchableOpacity onPress={closeReportModal}>
+                    <Ionicons name="close" size={24} color={COLORS.textMuted} />
+                  </TouchableOpacity>
+                </View>
+                {["Harassment", "Spam", "Inappropriate Profile", "Other"].map((reason) => (
+                  <TouchableOpacity
+                    key={reason}
+                    style={styles.optionBtn}
+                    onPress={() => submitReport(reason)}
+                  >
+                    <Text style={styles.optionText}>{reason}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={COLORS.primaryGold} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── POST DETAIL MODAL ── */}
+      {/* FIX 6: Removed the duplicate modal header that was copy-pasted at line ~639
+          (second <Image>, <Text>, <View> block that left tags unclosed) */}
       <Modal visible={!!selectedPost} transparent animationType="fade">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -280,16 +578,32 @@ export default function CommunityUserProfile() {
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View style={styles.modalCard}>
+
+            {/* Single, correct modal header */}
             <View style={styles.modalHeader}>
               <Image
-                source={{ uri: profile.profilePic }}
+                source={{
+                  uri:
+                    profile.profilePic ||
+                    "https://cdn-icons-png.flaticon.com/512/149/149071.png",
+                }}
                 style={styles.modalAvatar}
               />
               <Text style={styles.modalUserTitle}>{profile.username}</Text>
-              
-              <View style={{ flexDirection: 'row', marginLeft: 'auto', alignItems: 'center', gap: 15 }}>
-                {currentUser?.uid === CommunityUserid && (
-                  <TouchableOpacity onPress={() => selectedPost && handleDeletePost(selectedPost.id)}>
+              <View
+                style={{
+                  flexDirection: "row",
+                  marginLeft: "auto",
+                  alignItems: "center",
+                  gap: 15,
+                }}
+              >
+                {currentUser?.uid === CommunityUserid && selectedPost && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      handleDeletePost(selectedPost.id || (selectedPost as any)._id)
+                    }
+                  >
                     <Ionicons name="trash-outline" size={20} color={COLORS.accentRed} />
                   </TouchableOpacity>
                 )}
@@ -301,20 +615,23 @@ export default function CommunityUserProfile() {
 
             {selectedPost && (
               <View>
-                <ScrollView bounces={false} >
+                <ScrollView bounces={false}>
                   <View style={styles.imageWrapper}>
                     <Image source={{ uri: selectedPost.uri }} style={styles.modalImg} />
-
                     {showModalComments && (
                       <View style={styles.commentOverlay}>
                         <View style={styles.overlayHeader}>
-                          <Text style={styles.overlayTitle}>Recent Comments</Text>
+                          <Text style={styles.overlayTitle}>Comments</Text>
                           <TouchableOpacity onPress={() => setShowModalComments(false)}>
-                            <Ionicons name="chevron-down" size={22} color={COLORS.primaryGold} />
+                            <Ionicons
+                              name="chevron-down"
+                              size={22}
+                              color={COLORS.primaryGold}
+                            />
                           </TouchableOpacity>
                         </View>
                         <ScrollView nestedScrollEnabled style={styles.overlayScroll}>
-                          {selectedPost.comments.length > 0 ? (
+                          {(selectedPost.comments || []).length > 0 ? (
                             selectedPost.comments.map((c, index) => (
                               <View key={index} style={styles.commentLine}>
                                 <Text style={styles.cUser}>{c.user?.username} </Text>
@@ -330,13 +647,23 @@ export default function CommunityUserProfile() {
                   </View>
 
                   <View style={styles.modalActionRow}>
-                    <TouchableOpacity style={styles.actionBtn}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={handleLikeToggle}>
                       <Ionicons
-                        name={selectedPost.likes.includes(currentUser?.uid || "") ? "heart" : "heart-outline"}
+                        name={
+                          (selectedPost.likes || []).includes(currentUser?.uid || "")
+                            ? "heart"
+                            : "heart-outline"
+                        }
                         size={24}
-                        color={selectedPost.likes.includes(currentUser?.uid || "") ? COLORS.accentRed : COLORS.textLight}
+                        color={
+                          (selectedPost.likes || []).includes(currentUser?.uid || "")
+                            ? COLORS.accentRed
+                            : COLORS.textLight
+                        }
                       />
-                      <Text style={styles.actionText}>{selectedPost.likes.length}</Text>
+                      <Text style={styles.actionText}>
+                        {(selectedPost.likes || []).length}
+                      </Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -348,7 +675,9 @@ export default function CommunityUserProfile() {
                         size={22}
                         color={COLORS.textLight}
                       />
-                      <Text style={styles.actionText}>{selectedPost.comments.length}</Text>
+                      <Text style={styles.actionText}>
+                        {(selectedPost.comments || []).length}
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
@@ -382,6 +711,7 @@ export default function CommunityUserProfile() {
                 )}
               </View>
             )}
+
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -392,6 +722,21 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
+
+  // Top row: back btn on left, flag + block group on right
+  topRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 10,
+  },
+  // FIX 7: Added topRightActions to group flag + block — removed unused topActionRow
+  topRightActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
   backBtn: {
     width: 40,
     height: 40,
@@ -399,10 +744,35 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: "center",
     alignItems: "center",
-    marginTop: 10,
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  reportBtn: {
+    width: 36,
+    height: 36,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  blockCornerBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: COLORS.accentRed,
+    backgroundColor: "transparent",
+  },
+  blockCornerBtnActive: {
+    borderColor: COLORS.border,
+  },
+  blockCornerText: {
+    color: COLORS.accentRed,
+    fontWeight: "600",
+    fontSize: 13,
+  },
+
   profileCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 30,
@@ -422,7 +792,12 @@ const styles = StyleSheet.create({
   },
   userName: { fontSize: 24, fontWeight: "800", color: COLORS.textLight },
   handle: { color: COLORS.primaryGold, fontWeight: "600" },
-  bioText: { textAlign: "center", marginTop: 8, color: COLORS.textMuted, paddingHorizontal: 20 },
+  bioText: {
+    textAlign: "center",
+    marginTop: 8,
+    color: COLORS.textMuted,
+    paddingHorizontal: 20,
+  },
   statsRow: {
     flexDirection: "row",
     justifyContent: "space-around",
@@ -443,9 +818,14 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     alignItems: "center",
   },
-  followingBtn: { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
+  followingBtn: {
+    backgroundColor: COLORS.surfaceLight,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
   followingBtnText: { color: "green", fontWeight: "bold" },
-  followBtnText: { color: "COLORS.background", fontWeight: "bold" },
+  followBtnText: { color: COLORS.background, fontWeight: "bold" },
+
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
@@ -460,16 +840,28 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
-  modalHeader: { 
-    flexDirection: "row", 
-    alignItems: "center", 
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: COLORS.border 
+    borderBottomColor: COLORS.border,
   },
-  modalAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10, borderWidth: 1, borderColor: COLORS.primaryGold },
+  modalAvatar: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: COLORS.primaryGold,
+  },
   modalUserTitle: { color: COLORS.textLight, fontWeight: "bold" },
-  imageWrapper: { width: "100%", height: width * 0.9, position: "relative", backgroundColor: "#000" },
+  imageWrapper: {
+    width: "100%",
+    height: width * 0.9,
+    position: "relative",
+    backgroundColor: "#000",
+  },
   modalImg: { width: "100%", height: "100%" },
   commentOverlay: {
     position: "absolute",
@@ -500,11 +892,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 40,
   },
-  modalActionRow: {
-    flexDirection: "row",
-    padding: 15,
-    gap: 20,
-  },
+  modalActionRow: { flexDirection: "row", padding: 15, gap: 20 },
   actionBtn: { flexDirection: "row", alignItems: "center", gap: 5 },
   actionText: { fontWeight: "700", color: COLORS.textLight },
   captionArea: { paddingHorizontal: 15, paddingBottom: 15 },
@@ -522,4 +910,55 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
   },
   bottomInput: { flex: 1, color: COLORS.textLight, fontSize: 14 },
+  reportOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  reportCard: {
+    width: "88%",
+    backgroundColor: COLORS.surface,
+    borderRadius: 25,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  modalHeaderReport: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 15,
+  },
+  reportModalTitle: {
+    color: COLORS.primaryGold,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  optionBtn: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: COLORS.surfaceLight,
+    padding: 15,
+    borderRadius: 12,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  optionText: { color: COLORS.textLight, fontWeight: "600" },
+  thankYouArea: { alignItems: "center", padding: 10 },
+  thankYouTitle: {
+    color: COLORS.primaryGold,
+    fontSize: 20,
+    fontWeight: "bold",
+    marginVertical: 10,
+  },
+  thankYouText: {
+    color: COLORS.textMuted,
+    textAlign: "center",
+    marginBottom: 20,
+    lineHeight: 20,
+  },
+  modalBtnAction: { paddingVertical: 12, borderRadius: 10 },
 });

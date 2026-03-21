@@ -32,11 +32,11 @@ export const createUser = async (req, res) => {
       stats: {
         recipesCooked: 0,
         favoritesSaved: 0,
-        recipesShared: 0,
+        postsShared: 0,       
         likesReceived: 0,
         aiGenerations: 0,
         errorsFixed: 0,
-        weeklyPlansCompleted: 0,
+        mealsPlanned: 0,      
         followersCount: 0,
         currentStreak: 0,
         longestStreak: 0,
@@ -70,7 +70,7 @@ export const clearNotification = async (req, res) => {
 // get the logged in user info using the UID from the frontend (UID will be given from the firebase)
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites");
+    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites").populate("cookedHistory.recipeId");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -102,7 +102,7 @@ export const getLevels = async (req, res) => {
 // Edit user with (username, name, profilepic)
 export const updateUser = async (req, res) => {
   try {
-    const { username, name, profilePic } = req.body;
+    const { username, name, profilePic, bio } = req.body;
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: req.params.uid },
@@ -110,6 +110,7 @@ export const updateUser = async (req, res) => {
         username,
         name,
         profilePic,
+        ...(bio !== undefined && { bio }),
       },
       {
         returnDocument: "after", 
@@ -239,16 +240,26 @@ export const searchUsers = async (req, res) => {
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params; // Using firebaseUid for consistency
+    const { recipeId } = req.body; //_id
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 } }, // Directly increments the number by 1
+      { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
+        $push: {
+          cookedHistory: {
+            recipeId: recipeId,
+            dateCooked: new Date()
+          }
+        }}, 
       { new: true }
-    );
+    ).populate("cookedHistory.recipeId");
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount });
+    // Filter out any nulls in case a recipe was deleted from the DB
+    const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
+
+    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -263,23 +274,17 @@ export const getCommunityProfile = async (req, res) => {
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    let isFollowing = false;
+    let viewer = null;
+    let blockedByCurrentUser = false;
     if (viewerId) {
-      const viewer = await User.findOne({ firebaseUid: viewerId });
-      if (viewer) {
-        isFollowing = (user.followers || []).some(fId => fId.equals(viewer._id));
-      }
+      viewer = await User.findOne({ firebaseUid: viewerId });
+      blockedByCurrentUser = viewer?.blockedUsers?.includes(uid) || false;
     }
 
-    // Fetch from Post model and populate comment authors
-    const userPosts = await Post.find({ user: uid }) 
+    // User posts
+    const userPosts = await Post.find({ user: uid })
       .sort({ createdAt: -1 })
-      .populate({
-        path: "comments.user",
-        model: "User",
-        foreignField: "firebaseUid",
-        select: "username profilePic"
-      });
+      .populate({ path: "comments.user", model: "User", foreignField: "firebaseUid", select: "username profilePic" });
 
     res.status(200).json({
       _id: user._id,
@@ -287,7 +292,8 @@ export const getCommunityProfile = async (req, res) => {
       username: user.username,
       profilePic: user.profilePic,
       bio: user.bio,
-      isFollowing,
+      isFollowing: viewer?.following?.includes(user._id) || false,
+      blockedByCurrentUser,
       stats: {
         recipes: user.recipesCookedCount || 0,
         followers: user.followers?.length || 0,
@@ -297,8 +303,8 @@ export const getCommunityProfile = async (req, res) => {
         id: p._id.toString(),
         uri: p.imageUrl,
         caption: p.caption,
-        likes: p.likes || [], 
-        comments: p.comments || [], 
+        likes: p.likes || [],
+        comments: p.comments || [],
       })),
     });
   } catch (error) {
@@ -352,6 +358,64 @@ export const removeFromMealPlan = async (req, res) => {
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ message: "Meal removed from planner" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Delete user account and all associated data
+export const deleteUser = async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    // Remove this user from other users' followers/following lists
+    await User.updateMany(
+      { $or: [{ followers: user._id }, { following: user._id }] },
+      { $pull: { followers: user._id, following: user._id } }
+    );
+
+    // Delete the user document itself
+    await User.findByIdAndDelete(user._id);
+
+    res.status(200).json({ message: "User account deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+export const toggleBlockUser = async (req, res) => {
+  try {
+    const { currentUserUid, targetUserUid } = req.body;
+
+    if (currentUserUid === targetUserUid) {
+      return res.status(400).json({ message: "Cannot block yourself" });
+    }
+
+    const currentUser = await User.findOne({ firebaseUid: currentUserUid });
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const isBlocked = currentUser.blockedUsers.includes(targetUserUid);
+
+    if (!isBlocked) {
+      // BLOCK (one-way only)
+      await currentUser.updateOne({
+        $addToSet: { blockedUsers: targetUserUid }
+      });
+
+      return res.status(200).json({ blocked: true });
+    } else {
+      // UNBLOCK
+      await currentUser.updateOne({
+        $pull: { blockedUsers: targetUserUid }
+      });
+
+      return res.status(200).json({ blocked: false });
+    }
+
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

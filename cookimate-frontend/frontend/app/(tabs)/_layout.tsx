@@ -35,9 +35,14 @@ function MyTabBar({ state, descriptors, navigation }: any) {
     }).start();
   }, [state.index]);
 
+  const bottomInset = Math.max(insets.bottom, 8);
+
   return (
-    <View style={[styles.container, { bottom: 2 }]}>
-      <View style={styles.pill}>
+    <>
+      {/* Solid background strip — fills the gap between pill and screen edge */}
+      <View style={[styles.bottomFill, { height: bottomInset + 10, backgroundColor: "#0A0A0A" }]} />
+      <View style={[styles.container, { bottom: bottomInset }]}>
+        <View style={styles.pill}>
         {/* The Sliding Purple Circle */}
         <Animated.View
           style={[styles.activeIndicator, { transform: [{ translateX }] }]}
@@ -98,8 +103,9 @@ function MyTabBar({ state, descriptors, navigation }: any) {
             </TouchableOpacity>
           );
         })}
+        </View>
       </View>
-    </View>
+    </>
   );
 }
 
@@ -133,6 +139,14 @@ const styles = StyleSheet.create({
     position: "absolute",
     alignSelf: "center",
     width: TAB_BAR_WIDTH,
+    zIndex: 10,
+  },
+  bottomFill: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    zIndex: 9,
   },
   pill: {
     flexDirection: "row",

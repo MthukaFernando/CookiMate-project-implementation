@@ -29,6 +29,11 @@ const AVATAR_OPTIONS = [
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png",
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965627/profile_pic2_lvcgse.png",
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774065156/profile_pics/profile_pic4_004.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103677/profile_pics/dp_3.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103699/profile_pics/dp_4.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103707/profile_pics/dp_2.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103733/profile_pics/dp_1.png",
 ];
 
 const EditProfile = () => {
@@ -38,6 +43,7 @@ const EditProfile = () => {
 
   const [username, setUsername] = useState("");
   const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
   const [selectedPic, setSelectedPic] = useState(AVATAR_OPTIONS[0]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -49,6 +55,7 @@ const EditProfile = () => {
         const user = response.data;
         setUsername(user.username);
         setName(user.name);
+        setBio(user.bio || "");
         setSelectedPic(user.profilePic || AVATAR_OPTIONS[0]);
       } catch (err: any) {
         console.log("Fetch Error:", err.message);
@@ -65,6 +72,7 @@ const EditProfile = () => {
       await axios.put(`${API_URL}/api/users/update/${uid}`, {
         username,
         name,
+        bio,
         profilePic: selectedPic,
       });
       Alert.alert("Success", "Profile updated!", [{ text: "OK", onPress: () => router.back() }]);
@@ -152,6 +160,19 @@ const EditProfile = () => {
               autoCapitalize="none"
               placeholderTextColor="#999"
             />
+
+            <Text style={styles.label}>Bio</Text>
+            <TextInput
+              value={bio}
+              onChangeText={(text) => text.length <= 150 && setBio(text)}
+              style={[styles.input, styles.bioInput]}
+              placeholder="Tell us about yourself..."
+              placeholderTextColor="#999"
+              multiline
+              numberOfLines={3}
+              textAlignVertical="top"
+            />
+            <Text style={styles.bioCounter}>{bio.length}/150</Text>
 
             <TouchableOpacity 
               style={[styles.saveBtn, saving && { opacity: 0.6 }]} 
@@ -254,6 +275,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 10,
     color: "#ffffff"
+  },
+  bioInput: {
+    minHeight: 90,
+    paddingTop: 12,
+  },
+  bioCounter: {
+    fontSize: 12,
+    color: "#888",
+    textAlign: "right",
+    marginTop: -6,
+    marginBottom: 10,
   },
 
   saveBtn: {

@@ -74,10 +74,26 @@ export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
-
+  const { uid } = req.query; // ✅ current logged-in user's firebaseUid
+ 
   try {
-    //added { moderationStatus: { $ne: "rejected" } } so it skips bad images!
-    const posts = await Post.find({ moderationStatus: { $ne: "rejected" } })
+    let blockedUids = [];
+ 
+    if (uid) {
+      const currentUser = await User.findOne({ firebaseUid: uid });
+      if (currentUser && Array.isArray(currentUser.blockedUsers)) {
+        // ✅ blockedUsers is now a flat [String] array of firebaseUids
+        blockedUids = currentUser.blockedUsers;
+      }
+    }
+ 
+    
+ 
+    const posts = await Post.find({
+      moderationStatus: { $ne: "rejected" },
+      // ✅ post.user is a firebaseUid string — $nin correctly excludes blocked ones
+      user: { $nin: blockedUids },
+    })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -93,13 +109,13 @@ export const getFeed = async (req, res) => {
         foreignField: "firebaseUid",
         select: "username profilePic",
       });
-
+ 
     res.status(200).json(posts);
   } catch (err) {
-    res.status(500).json(err);
+    console.error("DETAILED GET FEED ERROR:", err);
+    res.status(500).json({ error: err.message });
   }
 };
-
 // 3. Like Post: Author gets 5 points
 export const likePost = async (req, res) => {
   try {
@@ -177,6 +193,36 @@ export const deletePost = async (req, res) => {
 
     await Post.findByIdAndDelete(postId);
     res.status(200).json("Post deleted successfully");
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const { userId } = req.body; // This is the logged-in user's UID
+
+    const updatedPost = await Post.findOneAndUpdate(
+      { 
+        _id: postId, 
+        "comments._id": commentId, // Target the specific comment ID
+        "comments.user": userId    // Safety: Ensure the UID matches the commenter
+      },
+      { $pull: { comments: { _id: commentId } } }, // Remove that specific comment object
+      { new: true }
+    ).populate({
+      path: "comments.user",
+      model: "User",
+      foreignField: "firebaseUid",
+      select: "username profilePic",
+    });
+
+    if (!updatedPost) {
+      return res.status(403).json({ message: "Not authorized or comment missing" });
+    }
+
+    res.status(200).json(updatedPost);
   } catch (err) {
     res.status(500).json(err);
   }

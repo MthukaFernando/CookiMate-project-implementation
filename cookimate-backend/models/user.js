@@ -80,6 +80,11 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    blockedUsers: [
+      {
+        type: String,
+      },
+    ],
     mealPlan: [
       {
         uniqueId: { type: String, required: true },
