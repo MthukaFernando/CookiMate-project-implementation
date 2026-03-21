@@ -283,7 +283,6 @@ export const incrementCookCount = async (req, res) => {
 
     // Filter out any nulls in case a recipe was deleted from the DB
     const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
-
     res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
   } catch (error) {
     res.status(500).json({ message: error.message });
