@@ -22,6 +22,16 @@ const API_URL = `http://${address}:5000`;
 const DEFAULT_AVATAR =
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
 
+// Added your map here so we can read the user's stats exactly like the Levels Page does
+const statKeysMap: any = {
+  cookRecipes: "recipesCooked",
+  saveFavorites: "favoritesSaved",
+  shareRecipes: "postsShared",
+  getLikes: "likesReceived",
+  useAIGenerator: "aiGenerations",
+  planMeals: "mealsPlanned"
+};
+
 const ProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -80,35 +90,39 @@ const ProfilePage = () => {
     );
   }
 
-  // --- PROGRESS BAR CALCULATION ---
+  // --- PROGRESS BAR CALCULATION (Task-Based) ---
   let progressPercent = 0;
   let currentLevelName = "Rookie Cook";
-  let currentPoints = 0;
-  let nextLevelPoints = 100;
 
   if (gamification) {
-    currentPoints = gamification.points?.gamification || 0;
     const currentLevel = gamification.currentLevels?.gamification;
-    const nextLevel = gamification.nextLevels?.gamification;
+    const userStats = gamification.stats || {};
     
     if (currentLevel) {
       currentLevelName = currentLevel.levelName;
+      const requirements = currentLevel.requirements || {};
       
-      if (nextLevel) {
-        nextLevelPoints = nextLevel.minPoints;
-        const currentLevelMin = currentLevel.minPoints;
-        
-        // Calculate points earned inside the CURRENT level
-        const pointsEarnedThisLevel = currentPoints - currentLevelMin;
-        
-        // Calculate total points needed to pass this specific level
-        const totalPointsNeededThisLevel = nextLevel.minPoints - currentLevelMin;
-        
-        if (totalPointsNeededThisLevel > 0) {
-           progressPercent = (pointsEarnedThisLevel / totalPointsNeededThisLevel) * 100;
+      let totalTasks = 0;
+      let totalTaskProgress = 0;
+
+      // Calculate progress strictly based on the required tasks
+      Object.entries(requirements).forEach(([key, requiredValue]) => {
+        const reqVal = requiredValue as number;
+        if (reqVal > 0) {
+          totalTasks++;
+          const statKey = statKeysMap[key];
+          const currentValue = userStats[statKey] || 0;
+          
+          // Cap each individual task at 100% so overachieving on one doesn't skew the others
+          const taskPercent = Math.min((currentValue / reqVal) * 100, 100);
+          totalTaskProgress += taskPercent;
         }
+      });
+
+      if (totalTasks > 0) {
+        progressPercent = totalTaskProgress / totalTasks;
       } else {
-        // User is at max level!
+        // If there are no requirements (e.g., max level), set to 100%
         progressPercent = 100;
       }
     }
@@ -167,7 +181,7 @@ const ProfilePage = () => {
           <View style={styles.levelContainer}>
             <View style={styles.levelLabelRow}>
               <Text style={styles.levelLabel}>{currentLevelName}</Text>
-              <Text style={styles.pointsLabel}>{Math.round(progressPercent)} / 100%</Text>
+              <Text style={styles.pointsLabel}>{Math.round(progressPercent)}% / 100%</Text>
             </View>
             <View style={styles.progressBar}>
               <View

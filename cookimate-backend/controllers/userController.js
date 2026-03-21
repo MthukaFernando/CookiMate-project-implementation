@@ -157,6 +157,11 @@ export const addToFavorites = async (req, res) => {
 
     user.favorites.push(recipe._id);
     await user.save();
+    try {
+      await updateUserStats(user._id, 'SAVE_FAVORITE');
+    } catch (gError) {
+      console.error("Gamification error:", gError.message);
+    }
     res.status(200).json({ message: "Recipe added to favorites" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -259,6 +264,12 @@ export const incrementCookCount = async (req, res) => {
 
     // Filter out any nulls in case a recipe was deleted from the DB
     const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
+
+    try {
+      await updateUserStats(updatedUser._id, 'COOK_RECIPE');
+    } catch (gError) {
+      console.error("Gamification error:", gError.message);
+    }
 
     res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
   } catch (error) {
