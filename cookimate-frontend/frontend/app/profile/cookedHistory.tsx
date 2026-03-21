@@ -42,37 +42,63 @@ const CookedHistoryPage = () => {
   const insets = useSafeAreaInsets();
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState("");
 
   const fetchCookedHistory = async () => {
-  setLoading(true);
-  try {
-    const uid = auth.currentUser?.uid;
-    if (!uid) return;
+    setLoading(true);
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
 
-    // Fetch the user data
-    const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
+      // Fetch the user data
+      const response = await axios.get<any>(`${API_URL}/api/users/${uid}`);
 
-    if (response.data && response.data.cookedHistory) {
-      const history = response.data.cookedHistory
-        .filter((item: any) => item.recipeId) //Filters out any broken links
-        .map((item: any) => ({
-          // Accessing fields directly from the populated recipeId object
-          id: item.recipeId._id, 
-          name: item.recipeId.name, 
-          image: item.recipeId.image, 
-          dateCooked: item.dateCooked,
-          timesCooked: item.timesCooked || 1,
-        }));
-      setRecipes(history);
+      if (response.data && response.data.cookedHistory) {
+        const history = response.data.cookedHistory
+          .filter((item: any) => item.recipeId) //Filters out any broken links
+          .map((item: any) => ({
+            // Accessing fields directly from the populated recipeId object
+            id: item.recipeId._id,
+            name: item.recipeId.name,
+            image: item.recipeId.image,
+            dateCooked: item.dateCooked,
+            timesCooked: item.timesCooked || 1,
+          }));
+        setRecipes(history);
+      }
+    } catch (error) {
+      console.error("Error fetching cooked history:", error);
+    } finally {
+      setLoading(false);
     }
-  } catch (error) {
-    console.error("Error fetching cooked history:", error);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
+  // DELETE FUNCTION
+  const handleDelete = (recipeId: string) => {
+    Alert.alert(
+      "Remove Recipe",
+      "Are you sure you want to remove this from your cooking history?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            try {
+              const uid = auth.currentUser?.uid;
+              await axios.delete(
+                `${API_URL}/api/users/history/${uid}/${recipeId}`,
+              );
+              // Update local state immediately
+              setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+            } catch (error) {
+              Alert.alert("Error", "Could not delete recipe.");
+            }
+          },
+        },
+      ],
+    );
+  };
   useFocusEffect(
     useCallback(() => {
       fetchCookedHistory();
@@ -80,43 +106,40 @@ const CookedHistoryPage = () => {
   );
 
   const renderRecipeItem = ({ item }: { item: any }) => (
-  <TouchableOpacity
-    activeOpacity={0.9}
-    onPress={() => router.push(`/recipe/${item.id}` as any)} 
-    style={styles.card}
-  >
-      <Image 
-        source={{ uri: item.image }} 
-        style={styles.cardImage} 
-      />
+    <TouchableOpacity
+      activeOpacity={0.9}
+      onPress={() => router.push(`/recipe/${item.id}` as any)}
+      style={styles.card}
+    >
+      <Image source={{ uri: item.image }} style={styles.cardImage} />
 
-    <View style={styles.cardContent}>
-      <Text style={styles.recipeTitle} numberOfLines={1}>
-        {item.name}
-      </Text>
-      
-      <View style={styles.infoRow}>
-        <Ionicons name="calendar-outline" size={12} color="#BBBBBB" />
-        <Text style={styles.cookedDate}>
-          Last: {new Date(item.dateCooked).toLocaleDateString()}
+      <View style={styles.cardContent}>
+        <Text style={styles.recipeTitle} numberOfLines={1}>
+          {item.name}
         </Text>
-      </View>
 
-      <View style={styles.viewButton}>
-        <Text style={styles.viewButtonText}>View Again</Text>
-        <Ionicons name="chevron-forward" size={14} color="black" />
-      </View>
-
-      {/* Badge Overlay for mastery */}
-      {item.timesCooked > 1 && (
-        <View style={styles.masteryBadge}>
-          <Ionicons name="flame" size={12} color="#000" />
-          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+        <View style={styles.infoRow}>
+          <Ionicons name="calendar-outline" size={12} color="#BBBBBB" />
+          <Text style={styles.cookedDate}>
+            Last: {new Date(item.dateCooked).toLocaleDateString()}
+          </Text>
         </View>
-      )}
-    </View>
-  </TouchableOpacity>
-);
+
+        <View style={styles.viewButton}>
+          <Text style={styles.viewButtonText}>View Again</Text>
+          <Ionicons name="chevron-forward" size={14} color="black" />
+        </View>
+
+        {/* Badge Overlay for mastery */}
+        {item.timesCooked > 1 && (
+          <View style={styles.masteryBadge}>
+            <Ionicons name="flame" size={12} color="#000" />
+            <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+          </View>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
@@ -197,26 +220,26 @@ const styles = StyleSheet.create({
     borderColor: "#1A1A1A",
   },
   imageContainer: {
-    position: 'relative',
+    position: "relative",
     marginRight: 15,
   },
   masteryBadge: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(212, 175, 55, 0.15)',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(212, 175, 55, 0.15)",
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 10,
     borderWidth: 1,
-    borderColor: 'rgba(212, 175, 55, 0.3)',
+    borderColor: "rgba(212, 175, 55, 0.3)",
   },
   masteryText: {
-    color: '#D4AF37',
+    color: "#D4AF37",
     fontSize: 12,
-    fontWeight: 'bold',
+    fontWeight: "bold",
   },
   infoRow: {
     flexDirection: "row",
@@ -229,7 +252,7 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     marginRight: 15,
   },
-  cardContent: { flex: 1, justifyContent: "center", position: 'relative' },
+  cardContent: { flex: 1, justifyContent: "center", position: "relative" },
   recipeTitle: {
     fontSize: 18,
     fontWeight: "bold",
