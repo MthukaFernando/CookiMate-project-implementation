@@ -173,7 +173,7 @@ export default function RecipeDetails() {
     }
   };
 
-  const toggleFavorite = async () => {
+const toggleFavorite = async () => {
     if (!uid) {
       Alert.alert("Error", "You must be logged in to favorite recipes");
       return;
@@ -194,10 +194,26 @@ export default function RecipeDetails() {
       );
     } else {
       try {
+        // Add to favorites list
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, {
           recipeId: id,
         });
         setIsFavorite(true);
+
+        // Trigger Gamification Progress
+        try {
+          const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+          const mongoId = userRes.data._id;
+          
+          await axios.post(`${API_URL}/api/gamification/update-stats`, {
+            userId: mongoId,
+            action: 'SAVE_FAVORITE' 
+          });
+          console.log("Gamification: Favorite progress updated!");
+        } catch (gError) {
+          console.log("Gamification update failed, but favorite was saved.");
+        }
+
       } catch (error: any) {
         if (error.response?.status === 400) {
           setIsFavorite(true);
@@ -207,7 +223,6 @@ export default function RecipeDetails() {
       }
     }
   };
-
   useEffect(() => {
   const fetchRecipeDetails = async (recipeId: string) => {
     try {
