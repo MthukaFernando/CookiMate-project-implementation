@@ -247,7 +247,10 @@ export const incrementCookCount = async (req, res) => {
       "cookedHistory.recipeId": recipeId 
     });
 
-    const updatedUser = await User.findOneAndUpdate(
+    let updatedUser;
+
+    if (user){
+      const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
       { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
       "cookedHistory.$.timesCooked":1
@@ -259,6 +262,7 @@ export const incrementCookCount = async (req, res) => {
         }}, 
       { new: true }
     ).populate("cookedHistory.recipeId");
+    }
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
