@@ -4,20 +4,18 @@ import {
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
   Platform, ActivityIndicator, StatusBar, Alert
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
+import { useSafeAreaInsets } from 'react-native-safe-area-context'; 
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import axios from 'axios';
 import { auth } from "../../config/firebase";
-import { globalStyle } from '../globalStyleSheet.style';
 
 const { width } = Dimensions.get('window');
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
 const BASE_URL = `http://${address}:5000/api`;
 
-// Theme matching your home page palette
 const theme = {
   bg: "#0A0A0A",
   card: "#1E1E1E",
@@ -30,7 +28,7 @@ const theme = {
 
 export default function CommunityFeed() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -129,6 +127,35 @@ export default function CommunityFeed() {
     finally { setIsSubmitting(false); }
   };
 
+  // NEW: Handle deleting a comment
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!currentUser) return;
+
+    Alert.alert(
+      "Delete Comment",
+      "Are you sure you want to delete this comment?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive", 
+          onPress: async () => {
+            try {
+              const res = await axios.delete(`${BASE_URL}/social/${postId}/comment/${commentId}`, {
+                data: { userId: currentUser.uid }
+              });
+              // Backend returns the updated post, so we update state
+              setPosts(prev => prev.map(p => p._id === postId ? res.data : p));
+            } catch (err) {
+              console.error("Failed to delete comment", err);
+              Alert.alert("Error", "Could not delete comment.");
+            }
+          } 
+        }
+      ]
+    );
+  };
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
@@ -169,12 +196,29 @@ export default function CommunityFeed() {
                 </View>
                 <ScrollView nestedScrollEnabled style={styles.overlayScroll} showsVerticalScrollIndicator={true}>
                   {item.comments?.length > 0 ? (
-                    item.comments.map((c: any, i: number) => (
-                      <View key={i} style={styles.commentLine}>
-                        <Text style={styles.cUser}>{c.user?.username}  </Text>
-                        <Text style={styles.cText}>{c.text}</Text>
-                      </View>
-                    ))
+                    item.comments.map((c: any, i: number) => {
+                      // Check if this comment belongs to the logged-in user
+                      // We check firebaseUid because c.user is populated with user details
+                      const isMyComment = (c.user?.firebaseUid || c.user) === currentUser?.uid;
+
+                      return (
+                        <View key={c._id || i} style={styles.commentLine}>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.cUser}>{c.user?.username || "User"}  </Text>
+                            <Text style={styles.cText}>{c.text}</Text>
+                          </View>
+                          
+                          {isMyComment && (
+                            <TouchableOpacity 
+                              onPress={() => handleDeleteComment(item._id, c._id)}
+                              style={styles.deleteBtn}
+                            >
+                              <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                      );
+                    })
                   ) : (
                     <Text style={styles.noCommentsText}>Be the first to comment!</Text>
                   )}
@@ -236,7 +280,6 @@ export default function CommunityFeed() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <StatusBar barStyle="light-content" />
-      {/* Container now uses dynamic padding top for all phones */}
       <View style={[styles.searchHeaderContainer, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity 
@@ -295,39 +338,21 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: theme.bg },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.bg },
   loadingText: { marginTop: 10, color: theme.gold, fontWeight: '600' },
-
   searchHeaderContainer: { zIndex: 100, backgroundColor: theme.bg, paddingHorizontal: 10, paddingBottom: 10 },
   headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   backBtnAction: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.card,
-    borderRadius: 22.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: "#D4AF37",
+    width: 40, height: 40, backgroundColor: theme.card, borderRadius: 22.5,
+    justifyContent: 'center', alignItems: 'center', marginRight: 10, borderWidth: 1, borderColor: "#D4AF37",
   },
-
   searchBar: { 
-    flex: 1, 
-    backgroundColor: theme.card, 
-    borderRadius: 15, 
-    paddingHorizontal: 12, 
-    marginRight: 10, 
-    height: 45, 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    borderWidth: 1,
-    borderColor: theme.border
+    flex: 1, backgroundColor: theme.card, borderRadius: 15, paddingHorizontal: 12, 
+    marginRight: 10, height: 45, flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: theme.border
   },
   input: { flex: 1, color: theme.text },
   dropdown: { position: 'absolute', left: 10, right: 10, backgroundColor: theme.card, borderRadius: 15, elevation: 5, padding: 10, zIndex: 1000, borderWidth: 1, borderColor: theme.border },
   resultItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 0.5, borderBottomColor: theme.border },
   resAvatar: { width: 30, height: 30, borderRadius: 15, marginRight: 10 },
   resName: { fontWeight: '600', color: theme.text },
-
   centerContainer: { alignItems: 'center', marginTop: 20 },
   card: { width: width * 0.92, backgroundColor: theme.card, borderRadius: 25, padding: 15, borderWidth: 1, borderColor: theme.border },
   headerArea: { marginBottom: 12 },
@@ -335,49 +360,30 @@ const styles = StyleSheet.create({
   avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 12, borderWidth: 1.5, borderColor: theme.gold },
   username: { fontWeight: 'bold', fontSize: 15, color: theme.text },
   dateText: { fontSize: 10, color: theme.muted },
-
   imageBox: { width: '100%', height: 400, borderRadius: 20, overflow: 'hidden', backgroundColor: '#000' },
   mainImg: { width: '100%', height: '100%' },
-  
   commentOverlay: { 
-    position: 'absolute', 
-    bottom: 0, 
-    left: 0, 
-    right: 0, 
-    height: '75%', 
-    backgroundColor: 'rgba(10, 10, 10, 0.9)', 
-    padding: 15,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    borderTopWidth: 1,
-    borderTopColor: theme.gold
+    position: 'absolute', bottom: 0, left: 0, right: 0, height: '75%', 
+    backgroundColor: 'rgba(10, 10, 10, 0.9)', padding: 15, borderTopLeftRadius: 20,
+    borderTopRightRadius: 20, borderTopWidth: 1, borderTopColor: theme.gold
   },
   overlayHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, borderBottomWidth: 0.5, borderBottomColor: theme.border, paddingBottom: 5 },
   overlayTitle: { color: theme.gold, fontWeight: 'bold', fontSize: 14 },
   overlayScroll: { flex: 1 },
-  commentLine: { flexDirection: 'row', marginBottom: 12, flexWrap: 'wrap' },
+  commentLine: { flexDirection: 'row', marginBottom: 12, alignItems: 'flex-start', justifyContent: 'space-between' },
   cUser: { color: theme.gold, fontWeight: 'bold', fontSize: 13 },
   cText: { color: '#EEE', fontSize: 14, lineHeight: 20 },
+  deleteBtn: { padding: 4, marginLeft: 8 },
   noCommentsText: { color: theme.muted, fontSize: 13, fontStyle: 'italic', textAlign: 'center', marginTop: 40 },
-
   captionRow: { marginTop: 15 },
   captionText: { fontSize: 14, color: '#DDD' },
   boldUser: { fontWeight: 'bold', color: theme.gold },
-
   actionRow: { flexDirection: 'row', marginTop: 15, borderTopWidth: 1, borderTopColor: theme.border, paddingTop: 10 },
   iconBtn: { flexDirection: 'row', alignItems: 'center', marginRight: 25 },
   count: { marginLeft: 6, fontWeight: '700', color: theme.text },
-
   bottomInputContainer: { 
-    flexDirection: 'row', 
-    alignItems: 'center', 
-    backgroundColor: '#000', 
-    borderRadius: 15, 
-    paddingHorizontal: 12, 
-    paddingVertical: 10,
-    marginTop: 15,
-    borderWidth: 1,
-    borderColor: theme.border
+    flexDirection: 'row', alignItems: 'center', backgroundColor: '#000', borderRadius: 15, 
+    paddingHorizontal: 12, paddingVertical: 10, marginTop: 15, borderWidth: 1, borderColor: theme.border
   },
   bottomInput: { flex: 1, fontSize: 14, color: theme.text, height: 40 }
 });
