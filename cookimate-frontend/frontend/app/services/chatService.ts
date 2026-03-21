@@ -3,14 +3,18 @@ import {
   RecipeChatRequest,
   RecipeGenerationRequest,
 } from '../types/chat';
+import Constants from 'expo-constants';
 
-// Replace with your actual backend URL
-const API_BASE_URL = 'http://localhost:5000/api';
+// Extracts the IP address of your development machine
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+
+export const BASE_URL = `http://${address}:5000/api`;
 
 export const chatService = {
   async globalChat(messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }>) {
     try {
-      const response = await fetch(`${API_BASE_URL}/recipes/global-chat`, {
+      const response = await fetch(`${BASE_URL}/recipes/global-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -33,7 +37,7 @@ export const chatService = {
 
   async recipeChat(recipeId: string, message: string) {
     try {
-      const response = await fetch(`${API_BASE_URL}/recipes/chat-recipe`, {
+      const response = await fetch(`${BASE_URL}/recipes/chat-recipe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -56,7 +60,7 @@ export const chatService = {
 
   async generateRecipe(ingredients: string[], cuisine?: string, mealType?: string, prompt?: string) {
     try {
-      const response = await fetch(`${API_BASE_URL}/recipes/generate-text`, {
+      const response = await fetch(`${BASE_URL}/recipes/generate-text`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
