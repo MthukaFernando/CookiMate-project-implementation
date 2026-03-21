@@ -248,7 +248,6 @@ export const incrementCookCount = async (req, res) => {
     const { uid } = req.params;
     const { recipeId } = req.body;
 
-    // update the cookedHistory array
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -256,26 +255,33 @@ export const incrementCookCount = async (req, res) => {
       (item) => item.recipeId.toString() === recipeId
     );
 
-    if (historyIndex > -1) {
-      // Recipe exists: bump the mastery count for this specific dish
-      user.cookedHistory[historyIndex].timesCooked += 1;
-      user.cookedHistory[historyIndex].dateCooked = new Date();
-    } else {
-      // New recipe: add it to the list
+    // Gamification logic starts here
+    if (historyIndex === -1) {
+      try {
+        await updateUserStats(user._id, 'COOK_RECIPE');
+        console.log("Gamification: Unique recipe cook recorded!");
+      } catch (gError) {
+        console.error("Gamification error:", gError.message);
+      }
+      
+      // Add to history for the first time
       user.cookedHistory.push({
         recipeId: recipeId,
         timesCooked: 1,
         dateCooked: new Date(),
       });
+    } else {
+      // User has cooked this before, just bump the inner counter
+      // DO NOT call updateUserStats here
+      user.cookedHistory[historyIndex].timesCooked += 1;
+      user.cookedHistory[historyIndex].dateCooked = new Date();
+      console.log("Recipe cooked again; mastery increased, but no new level progress.");
     }
 
-    // Recalculate recipesCookedCount based on the list size
     user.recipesCookedCount = user.cookedHistory.length;
 
-    // 3. Save the whole document
     const updatedUser = await user.save();
     const populatedUser = await updatedUser.populate("cookedHistory.recipeId");
-
     const validHistory = populatedUser.cookedHistory.filter(item => item.recipeId);
     
     res.status(200).json({ 
