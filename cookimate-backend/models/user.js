@@ -66,15 +66,15 @@ const userSchema = new mongoose.Schema(
     //cooked history
     cookedHistory: [
       {
-        recipeId: { 
-          type: mongoose.Schema.Types.ObjectId, 
-          ref: "Recipe" 
+        recipeId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Recipe",
         },
-        dateCooked: { 
-          type: Date, 
-          default: Date.now 
+        dateCooked: {
+          type: Date,
+          default: Date.now,
         },
-      }
+      },
     ],
     lastMessage: {
       type: String,
@@ -95,6 +95,22 @@ const userSchema = new mongoose.Schema(
         date: { type: String, required: true },
       },
     ],
+
+    dietaryPreferences: {
+      type: [String],
+      default: [],
+      description: "User's dietary preferences (e.g., Vegetarian, Vegan, Keto)",
+    },
+    allergies: {
+      type: [String],
+      default: [],
+      description: "User's allergies (e.g., Peanuts, Dairy, Shellfish)",
+    },
+    customPreferences: {
+      type: [String],
+      default: [],
+      description: "Custom user preferences (e.g., Low sodium, No mushrooms)",
+    },
   },
   {
     timestamps: true,
@@ -106,5 +122,5 @@ userSchema.index({ username: "text" });
 userSchema.index({ followers: 1 });
 userSchema.index({ following: 1 });
 
-const User = mongoose.models.User || mongoose.model("User", userSchema);
+const User = mongoose.models.User || mongoose.model("user", userSchema);
 export default User;
