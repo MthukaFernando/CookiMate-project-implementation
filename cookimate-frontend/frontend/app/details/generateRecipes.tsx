@@ -246,6 +246,7 @@ export default function GenerateRecipesPage() {
           time: prepTime,
           servings,
           prompt: culinaryPrompt,
+          userId: currentUserId,
         }),
       });
 

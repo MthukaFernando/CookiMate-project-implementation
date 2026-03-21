@@ -7,6 +7,7 @@ import {
 } from "../utils/dictionaryService.js";
 import Recipe from "../models/Recipe.js";
 import User from "../models/user.js";
+import { updateUserStats } from "../utils/gamificationHelpers.js";
 
 // Cache for stemmed allowlist
 let STEMMED_ALLOWLIST = null;
@@ -233,6 +234,22 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
 
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
 
+    const { userId } = req.body;
+    if (userId) {
+      try {
+        // Find the user to get their MongoDB _id
+        const user = await User.findOne({ firebaseUid: userId });
+        if (user) {
+          await updateUserStats(user._id, "USE_AI");
+          console.log(
+            `Gamification: AI Generation recorded for ${user.username}`,
+          );
+        }
+      } catch (gError) {
+        console.error("Gamification AI Error:", gError.message);
+      }
+    }
+
     if (
       !responseData.title ||
       !responseData.ingredients ||
@@ -299,7 +316,8 @@ export const saveGeneratedRecipe = async (req, res) => {
 
     if (userGeneratedCount >= 5) {
       return res.status(400).json({
-        error: "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again."
+        error:
+          "You have reached the limit of 5 generated recipes. Please delete one of your saved recipes to free up space and try again.",
       });
     }
 
@@ -410,9 +428,9 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
   try {
     // Check if parameters are present
     if (!recipeId || !userId) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         error: "Missing recipeId or userId",
-        received: { recipeId, userId }
+        received: { recipeId, userId },
       });
     }
 
@@ -424,10 +442,10 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
 
     // Find the recipe - try both id formats
     let recipe;
-    
+
     // Try finding by the custom id field first
     recipe = await Recipe.findOne({ id: recipeId });
-    
+
     // If not found, try by MongoDB _id
     if (!recipe && recipeId.match(/^[0-9a-fA-F]{24}$/)) {
       recipe = await Recipe.findById(recipeId);
@@ -439,19 +457,19 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
 
     // Check if it's a user-generated recipe
     if (!recipe.isGenerated) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "Only AI-generated recipes can be deleted this way",
         recipeId: recipeId,
-        isGenerated: recipe.isGenerated
+        isGenerated: recipe.isGenerated,
       });
     }
 
     // Verify ownership
     if (recipe.generatedBy.toString() !== user._id.toString()) {
-      return res.status(403).json({ 
+      return res.status(403).json({
         error: "You can only delete your own generated recipes",
         recipeOwner: recipe.generatedBy.toString(),
-        currentUser: user._id.toString()
+        currentUser: user._id.toString(),
       });
     }
 
@@ -469,7 +487,9 @@ export const deleteUserGeneratedRecipe = async (req, res) => {
     });
   } catch (error) {
     console.error("Delete Recipe Error:", error);
-    res.status(500).json({ error: "Failed to delete recipe: " + error.message });
+    res
+      .status(500)
+      .json({ error: "Failed to delete recipe: " + error.message });
   }
 };
 
