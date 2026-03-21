@@ -245,33 +245,72 @@ export const searchUsers = async (req, res) => {
 // Call this when the "Complete Recipe" confetti happens
 export const incrementCookCount = async (req, res) => {
   try {
-    const { uid } = req.params; // Using firebaseUid for consistency
-    const { recipeId } = req.body; //_id
+    const { uid } = req.params;
+    const { recipeId } = req.body;
+
+    // update the cookedHistory array
+    const user = await User.findOne({ firebaseUid: uid });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    const historyIndex = user.cookedHistory.findIndex(
+      (item) => item.recipeId.toString() === recipeId
+    );
+
+    if (historyIndex > -1) {
+      // Recipe exists: bump the mastery count for this specific dish
+      user.cookedHistory[historyIndex].timesCooked += 1;
+      user.cookedHistory[historyIndex].dateCooked = new Date();
+    } else {
+      // New recipe: add it to the list
+      user.cookedHistory.push({
+        recipeId: recipeId,
+        timesCooked: 1,
+        dateCooked: new Date(),
+      });
+    }
+
+    // Recalculate recipesCookedCount based on the list size
+    user.recipesCookedCount = user.cookedHistory.length;
+
+    // 3. Save the whole document
+    const updatedUser = await user.save();
+    const populatedUser = await updatedUser.populate("cookedHistory.recipeId");
+
+    const validHistory = populatedUser.cookedHistory.filter(item => item.recipeId);
+    
+    res.status(200).json({ 
+      count: populatedUser.recipesCookedCount, 
+      cookedHistory: validHistory 
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Remove a recipe entirely from the user's cooked history
+export const deleteFromHistory = async (req, res) => {
+  try {
+    const { uid, recipeId } = req.params;
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $inc: { recipesCookedCount: 1 },// Directly increments the number by 1
-        $push: {
-          cookedHistory: {
-            recipeId: recipeId,
-            dateCooked: new Date()
-          }
-        }}, 
+      { $pull: { cookedHistory: { recipeId: recipeId } } },
       { new: true }
-    ).populate("cookedHistory.recipeId");
+    );
 
-    if (!updatedUser) return res.status(404).json({ message: "User not found" });
-
-    // Filter out any nulls in case a recipe was deleted from the DB
-    const validHistory = updatedUser.cookedHistory.filter(item => item.recipeId);
-
-    try {
-      await updateUserStats(updatedUser._id, 'COOK_RECIPE');
-    } catch (gError) {
-      console.error("Gamification error:", gError.message);
+    // After pulling, update the count to match the new array length
+    if (updatedUser) {
+      updatedUser.recipesCookedCount = updatedUser.cookedHistory.length;
+      await updatedUser.save();
     }
 
-    res.status(200).json({ count: updatedUser.recipesCookedCount, cookedHistory: validHistory });
+    const populatedUser = await updatedUser.populate("cookedHistory.recipeId");
+    const validHistory = populatedUser.cookedHistory.filter(item => item.recipeId);
+    
+    res.status(200).json({ 
+      count: populatedUser.recipesCookedCount, 
+      cookedHistory: validHistory 
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

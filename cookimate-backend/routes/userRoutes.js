@@ -13,7 +13,8 @@ import {
   getCommunityProfile,
   addToMealPlan,
   clearNotification,
-  removeFromMealPlan
+  removeFromMealPlan,
+  deleteFromHistory
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -32,4 +33,5 @@ router.post("/meal-plan/:uid", addToMealPlan);
 router.put("/meal-plan/remove/:uid", removeFromMealPlan);
 router.put("/:uid/clear-notification", clearNotification);
 router.delete("/:uid", deleteUser);
+router.delete("/history/:uid/:recipeId", deleteFromHistory);
 export default router;
