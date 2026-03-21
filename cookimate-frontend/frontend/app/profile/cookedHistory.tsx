@@ -212,6 +212,11 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#121212',
   },
+  masteryText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
   cardImage: {
     width: IMAGE_SIZE,
     height: IMAGE_SIZE,
