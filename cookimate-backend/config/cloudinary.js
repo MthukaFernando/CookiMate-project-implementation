@@ -19,7 +19,6 @@ const storage = new CloudinaryStorage({
   params: {
     folder: "cookimate_posts", 
     allowed_formats: ["jpg", "png", "jpeg"],
-    moderation: "aws_rek", //Image filtering for safety
     transformation: [{ width: 1000, crop: "limit", quality: "auto" }],
   },
 });
