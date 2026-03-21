@@ -59,6 +59,7 @@ const CookedHistoryPage = () => {
           name: item.recipeId.name, 
           image: item.recipeId.image, 
           dateCooked: item.dateCooked,
+          timesCooked: item.timesCooked || 1,
         }));
       setRecipes(history);
     }
