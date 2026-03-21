@@ -1,11 +1,12 @@
 import express from "express";
 import {
   createUser,
+  deleteUser,
   getUserByUid,
   getLevels,
   updateUser,
-  addToFavorites,      // Matches Controller
-  removeFromFavorites, // Matches Controller
+  addToFavorites,     
+  removeFromFavorites, 
   toggleFollow,
   searchUsers,
   incrementCookCount,
@@ -30,4 +31,5 @@ router.put("/update/:uid", updateUser);
 router.post("/meal-plan/:uid", addToMealPlan);
 router.put("/meal-plan/remove/:uid", removeFromMealPlan);
 router.put("/:uid/clear-notification", clearNotification);
+router.delete("/:uid", deleteUser);
 export default router;
