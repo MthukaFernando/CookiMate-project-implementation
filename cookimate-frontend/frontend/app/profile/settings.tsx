@@ -21,6 +21,11 @@ import {
   AntDesign,
 } from "@expo/vector-icons";
 import { auth } from "../../config/firebase";
+import {
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  updatePassword,
+} from "firebase/auth";
 import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -419,6 +424,166 @@ const CustomPrefModal = ({
 );
 
 // ── Main component ─────────────────────────────────────────────────────────────
+
+// ── Change Password Modal ──────────────────────────────────────────────────────
+const ChangePasswordModal = ({
+  visible, onClose,
+}: { visible: boolean; onClose: () => void }) => {
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword]         = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrent, setShowCurrent]         = useState(false);
+  const [showNew, setShowNew]                 = useState(false);
+  const [showConfirm, setShowConfirm]         = useState(false);
+  const [saving, setSaving]                   = useState(false);
+
+  const reset = () => {
+    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
+    setShowCurrent(false); setShowNew(false); setShowConfirm(false);
+  };
+  const handleClose = () => { reset(); onClose(); };
+
+  const handleChangePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      Alert.alert("Missing Fields", "Please fill in all fields."); return;
+    }
+    if (newPassword.length < 6) {
+      Alert.alert("Too Short", "New password must be at least 6 characters."); return;
+    }
+    if (newPassword !== confirmPassword) {
+      Alert.alert("Mismatch", "New passwords do not match."); return;
+    }
+    if (newPassword === currentPassword) {
+      Alert.alert("Same Password", "New password must be different from your current one."); return;
+    }
+    const user = auth.currentUser;
+    if (!user?.email) { Alert.alert("Error", "No user session found."); return; }
+    setSaving(true);
+    try {
+      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      await reauthenticateWithCredential(user, credential);
+      await updatePassword(user, newPassword);
+      Alert.alert("Success", "Password updated successfully!", [{ text: "OK", onPress: handleClose }]);
+    } catch (err: any) {
+      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        Alert.alert("Wrong Password", "Your current password is incorrect.");
+      } else if (err.code === "auth/too-many-requests") {
+        Alert.alert("Too Many Attempts", "Too many failed attempts. Try again later.");
+      } else {
+        Alert.alert("Error", err.message || "Failed to change password.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={handleClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Change Password</Text>
+            <TouchableOpacity onPress={handleClose}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.modalSubtitle}>Enter your current password and choose a new one.</Text>
+
+          <Text style={styles.pwLabel}>Current Password</Text>
+          <View style={styles.pwInputRow}>
+            <TextInput style={styles.pwInput} placeholder="Current password" placeholderTextColor="#555"
+              secureTextEntry={!showCurrent} value={currentPassword} onChangeText={setCurrentPassword} autoCapitalize="none" />
+            <TouchableOpacity onPress={() => setShowCurrent(v => !v)} style={styles.eyeBtn}>
+              <Feather name={showCurrent ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.pwLabel}>New Password</Text>
+          <View style={styles.pwInputRow}>
+            <TextInput style={styles.pwInput} placeholder="New password (min. 6 characters)" placeholderTextColor="#555"
+              secureTextEntry={!showNew} value={newPassword} onChangeText={setNewPassword} autoCapitalize="none" />
+            <TouchableOpacity onPress={() => setShowNew(v => !v)} style={styles.eyeBtn}>
+              <Feather name={showNew ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.pwLabel}>Confirm New Password</Text>
+          <View style={styles.pwInputRow}>
+            <TextInput style={styles.pwInput} placeholder="Confirm new password" placeholderTextColor="#555"
+              secureTextEntry={!showConfirm} value={confirmPassword} onChangeText={setConfirmPassword} autoCapitalize="none" />
+            <TouchableOpacity onPress={() => setShowConfirm(v => !v)} style={styles.eyeBtn}>
+              <Feather name={showConfirm ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity style={[styles.saveButton, saving && { opacity: 0.6 }]}
+            onPress={handleChangePassword} disabled={saving}>
+            {saving ? <ActivityIndicator color="#0A0A0A" /> : <Text style={styles.saveButtonText}>Update Password</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
+// ── Delete Account Modal (cross-platform — no Alert.prompt) ───────────────────
+const DeleteAccountModal = ({
+  visible, onClose, onConfirm, deleting,
+}: {
+  visible: boolean; onClose: () => void;
+  onConfirm: (password: string) => void; deleting: boolean;
+}) => {
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  const handleClose = () => { setPassword(""); setShowPassword(false); onClose(); };
+  const handleConfirm = () => {
+    if (!password.trim()) { Alert.alert("Required", "Please enter your password."); return; }
+    onConfirm(password);
+  };
+
+  return (
+    <Modal animationType="slide" transparent visible={visible} onRequestClose={handleClose}>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={[styles.modalTitle, { color: "#FF4444" }]}>Delete Account</Text>
+            <TouchableOpacity onPress={handleClose}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalSubtitle}>
+            This action is permanent and cannot be undone. All your data, recipes, and posts will be deleted.
+          </Text>
+
+          <Text style={styles.pwLabel}>Enter your password to confirm</Text>
+          <View style={styles.pwInputRow}>
+            <TextInput style={styles.pwInput} placeholder="Your password" placeholderTextColor="#555"
+              secureTextEntry={!showPassword} value={password} onChangeText={setPassword} autoCapitalize="none" />
+            <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
+              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: "#FF4444", marginTop: 20 }, deleting && { opacity: 0.6 }]}
+            onPress={handleConfirm} disabled={deleting}>
+            {deleting
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={[styles.saveButtonText, { color: "#fff" }]}>Delete My Account</Text>}
+          </TouchableOpacity>
+
+          <TouchableOpacity style={[styles.saveButton, { backgroundColor: "#2A2A2A", marginTop: 10 }]}
+            onPress={handleClose} disabled={deleting}>
+            <Text style={[styles.saveButtonText, { color: "#A6A6A6" }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </Modal>
+  );
+};
+
 const Settings = () => {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -426,6 +591,9 @@ const Settings = () => {
   const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
   const [allergyModalVisible, setAllergyModalVisible] = useState(false);
   const [customPreferenceModal, setCustomPreferenceModal] = useState(false);
+  const [changePasswordModal, setChangePasswordModal] = useState(false);
+  const [deleteAccountModal, setDeleteAccountModal] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
@@ -544,33 +712,35 @@ const Settings = () => {
 
   // ── Delete account ─────────────────────────────────────────────────────────
   const handleDeleteAccount = () => {
-    Alert.alert(
-      "Delete Account",
-      "This action cannot be undone. All your data will be permanently deleted.",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setLoading(true);
-              if (uid) await axios.delete(`${API_URL}/api/users/${uid}`);
-              await auth.currentUser?.delete();
-              await AsyncStorage.removeItem("userToken");
-              router.replace("/(auth)/signup" as any);
-            } catch (error) {
-              Alert.alert(
-                "Error",
-                "Failed to delete account. You may need to re-login and try again.",
-              );
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ],
-    );
+    setDeleteAccountModal(true);
+  };
+
+  const confirmDeleteAccount = async (password: string) => {
+    const user = auth.currentUser;
+    if (!user?.email) { Alert.alert("Error", "No user session found."); return; }
+    setDeleting(true);
+    try {
+      // Re-authenticate — Firebase requires this before deleting an account
+      const credential = EmailAuthProvider.credential(user.email, password);
+      await reauthenticateWithCredential(user, credential);
+      // Delete MongoDB document first
+      if (uid) await axios.delete(`${API_URL}/api/users/${uid}`);
+      // Then delete Firebase account
+      await user.delete();
+      await AsyncStorage.removeItem("userToken");
+      setDeleteAccountModal(false);
+      router.replace("/(auth)/loginPage" as any);
+    } catch (err: any) {
+      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
+        Alert.alert("Wrong Password", "Incorrect password. Account not deleted.");
+      } else if (err.code === "auth/too-many-requests") {
+        Alert.alert("Too Many Attempts", "Too many failed attempts. Try again later.");
+      } else {
+        Alert.alert("Error", "Failed to delete account. Please try again.");
+      }
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -707,7 +877,7 @@ const Settings = () => {
         {/* Change Password */}
         <TouchableOpacity
           style={styles.settingCard}
-          onPress={() => router.push("/profile/change-password" as any)}
+          onPress={() => setChangePasswordModal(true)}
         >
           <View style={styles.cardContent}>
             <View
@@ -778,6 +948,16 @@ const Settings = () => {
       </ScrollView>
 
       {/* Modals receive state as props — no remounting */}
+      <ChangePasswordModal
+        visible={changePasswordModal}
+        onClose={() => setChangePasswordModal(false)}
+      />
+      <DeleteAccountModal
+        visible={deleteAccountModal}
+        onClose={() => setDeleteAccountModal(false)}
+        onConfirm={confirmDeleteAccount}
+        deleting={deleting}
+      />
       <DietaryModal
         visible={dietaryModalVisible}
         onClose={() => setDietaryModalVisible(false)}
@@ -936,6 +1116,14 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveButtonText: { color: "#0A0A0A", fontSize: 16, fontWeight: "600" },
+  pwLabel: { fontSize: 13, fontWeight: "600", color: "#A6A6A6", marginBottom: 6, marginTop: 12 },
+  pwInputRow: {
+    flexDirection: "row", alignItems: "center", backgroundColor: "#1E1E1E",
+    borderRadius: 12, borderWidth: 1, borderColor: "#2A2A2A",
+    paddingHorizontal: 12, marginBottom: 4,
+  },
+  pwInput: { flex: 1, color: "#FFFFFF", fontSize: 14, paddingVertical: 12 },
+  eyeBtn: { padding: 6 },
   loadingOverlay: {
     position: "absolute",
     top: 0,
