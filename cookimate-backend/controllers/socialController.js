@@ -181,3 +181,5 @@ export const deletePost = async (req, res) => {
     res.status(500).json(err);
   }
 };
+
+export const handleDeleteComment  = async (req, res) => {}
