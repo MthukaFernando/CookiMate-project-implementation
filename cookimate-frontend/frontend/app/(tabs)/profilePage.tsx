@@ -73,7 +73,12 @@ const ProfilePage = () => {
             <View style={styles.headerTextContainer}>
               <Text style={styles.nameText}>{user?.name}</Text>
               <Text style={styles.usernameText}>@{user?.username}</Text>
-              
+              {user?.bio ? (
+                <Text style={styles.bioText}>{user.bio}</Text>
+              ) : (
+                <Text style={styles.bioPlaceholder}>No bio yet — tap Edit Profile to add one!</Text>
+              )}
+
               <View style={styles.actionRow}>
                 <TouchableOpacity 
                   style={styles.editBtn} 
@@ -260,7 +265,19 @@ const styles = StyleSheet.create({
   usernameText: { 
     fontSize: 14, 
     color: '#A6A6A6', 
-    marginBottom: 10 
+    marginBottom: 6 
+  },
+  bioText: {
+    fontSize: 13,
+    color: '#d1cebe',
+    marginBottom: 10,
+    lineHeight: 18,
+  },
+  bioPlaceholder: {
+    fontSize: 12,
+    color: '#555555',
+    marginBottom: 10,
+    fontStyle: 'italic',
   },
   
   actionRow: { 
