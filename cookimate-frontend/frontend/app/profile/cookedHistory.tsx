@@ -82,19 +82,10 @@ const CookedHistoryPage = () => {
     onPress={() => router.push(`/recipe/${item.id}` as any)} 
     style={styles.card}
   >
-    <View style={styles.imageContainer}>
       <Image 
         source={{ uri: item.image }} 
         style={styles.cardImage} 
       />
-      {/* Badge Overlay for mastery */}
-      {item.timesCooked > 1 && (
-        <View style={styles.masteryBadge}>
-          <Ionicons name="flame" size={12} color="#000" />
-          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
-        </View>
-      )}
-    </View>
 
     <View style={styles.cardContent}>
       <Text style={styles.recipeTitle} numberOfLines={1}>
@@ -112,6 +103,14 @@ const CookedHistoryPage = () => {
         <Text style={styles.viewButtonText}>View Again</Text>
         <Ionicons name="chevron-forward" size={14} color="black" />
       </View>
+
+      {/* Badge Overlay for mastery */}
+      {item.timesCooked > 1 && (
+        <View style={styles.masteryBadge}>
+          <Ionicons name="flame" size={12} color="#000" />
+          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+        </View>
+      )}
     </View>
   </TouchableOpacity>
 );
