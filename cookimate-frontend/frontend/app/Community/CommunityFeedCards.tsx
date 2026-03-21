@@ -4,13 +4,14 @@ import {
   RefreshControl, TextInput, ScrollView, Dimensions, KeyboardAvoidingView, 
   Platform, ActivityIndicator, StatusBar
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context'; // Added for cross-platform safe areas
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import axios from 'axios';
 import { auth } from "../../config/firebase";
 import { globalStyle } from '../globalStyleSheet.style';
+import GlobalChatbot from "../GlobalChatbot"; // 1. Added Import
 
 const { width } = Dimensions.get('window');
 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -30,7 +31,7 @@ const theme = {
 
 export default function CommunityFeed() {
   const router = useRouter();
-  const insets = useSafeAreaInsets(); // Hook to get status bar/notch height
+  const insets = useSafeAreaInsets();
   const [posts, setPosts] = useState<any[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -214,7 +215,6 @@ export default function CommunityFeed() {
       keyboardVerticalOffset={Platform.OS === 'ios' ? 100 : 0}
     >
       <StatusBar barStyle="light-content" />
-      {/* Container now uses dynamic padding top for all phones */}
       <View style={[styles.searchHeaderContainer, { paddingTop: insets.top + 10 }]}>
         <View style={styles.headerRow}>
           <TouchableOpacity 
@@ -265,6 +265,10 @@ export default function CommunityFeed() {
         onScrollBeginDrag={() => setIsSearching(false)}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
+      
+      {/* 2. Added GlobalChatbot here */}
+      <GlobalChatbot />
+      
     </KeyboardAvoidingView>
   );
 }
