@@ -8,7 +8,7 @@ on:
 
 jobs:
   check-backend:
-    name: ✅ Backend Checks
+    name: Backend Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -21,14 +21,13 @@ jobs:
 
       - name: Install backend dependencies
         working-directory: cookimate-backend
-        run: npm install
+        run: npm install --legacy-peer-deps
 
       - name: Verify backend dependencies installed
-        working-directory: cookimate-backend
-        run: echo "✅ Backend dependencies installed successfully"
+        run: echo "Backend dependencies installed successfully"
 
   check-frontend:
-    name: ✅ Frontend (React Native) Checks
+    name: Frontend (React Native) Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -40,16 +39,15 @@ jobs:
           node-version: 18
 
       - name: Install frontend dependencies
-        working-directory: cookimate-frontend
-        run: npm install
+        working-directory: cookimate-frontend/frontend
+        run: npm install --legacy-peer-deps
 
       - name: Install Expo CLI
         run: npm install -g @expo/cli
 
       - name: Check Expo configuration
-        working-directory: cookimate-frontend
+        working-directory: cookimate-frontend/frontend
         run: npx expo config --type public
 
       - name: Verify frontend build readiness
-        working-directory: cookimate-frontend
-        run: echo "✅ Frontend checks completed successfully"
+        run: echo "Frontend checks completed successfully"
