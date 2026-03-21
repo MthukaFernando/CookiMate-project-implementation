@@ -3,6 +3,7 @@ import Level from "../models/levels.js";
 import Recipe from "../models/Recipe.js";
 import Post from "../models/Post.js"; 
 import UserProgress from "../models/UserProgress.js";  
+import { updateUserStats } from "../utils/gamificationHelpers.js";
 
 // create a user
 export const createUser = async (req, res) => {
@@ -341,6 +342,14 @@ export const addToMealPlan = async (req, res) => {
     );
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
+    // Gamification part starts here
+    try {
+      await updateUserStats(updatedUser._id, 'PLAN_MEAL');
+      console.log(`Gamification points awarded to user ${updatedUser.username} for PLAN_MEAL`);
+    } catch (gamificationError) {
+      console.error("Gamification error:", gamificationError.message);
+    }
 
     res.status(200).json(updatedUser.mealPlan);
   } catch (error) {
