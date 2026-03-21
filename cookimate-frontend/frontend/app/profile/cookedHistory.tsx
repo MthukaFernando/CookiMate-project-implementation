@@ -82,17 +82,32 @@ const CookedHistoryPage = () => {
     onPress={() => router.push(`/recipe/${item.id}` as any)} 
     style={styles.card}
   >
-    <Image 
-      source={{ uri: item.image }} 
-      style={styles.cardImage} 
-    />
+    <View style={styles.imageContainer}>
+      <Image 
+        source={{ uri: item.image }} 
+        style={styles.cardImage} 
+      />
+      {/* Badge Overlay for mastery */}
+      {item.timesCooked > 1 && (
+        <View style={styles.masteryBadge}>
+          <Ionicons name="flame" size={12} color="#000" />
+          <Text style={styles.masteryText}>x{item.timesCooked}</Text>
+        </View>
+      )}
+    </View>
+
     <View style={styles.cardContent}>
       <Text style={styles.recipeTitle} numberOfLines={1}>
         {item.name}
       </Text>
-      <Text style={styles.cookedDate}>
-        Cooked on {new Date(item.dateCooked).toLocaleDateString()}
-      </Text>
+      
+      <View style={styles.infoRow}>
+        <Ionicons name="calendar-outline" size={12} color="#BBBBBB" />
+        <Text style={styles.cookedDate}>
+          Last: {new Date(item.dateCooked).toLocaleDateString()}
+        </Text>
+      </View>
+
       <View style={styles.viewButton}>
         <Text style={styles.viewButtonText}>View Again</Text>
         <Ionicons name="chevron-forward" size={14} color="black" />
@@ -178,6 +193,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 1,
     borderColor: "#1A1A1A",
+  },
+  imageContainer: {
+    position: 'relative',
+    marginRight: 15,
   },
   cardImage: {
     width: IMAGE_SIZE,
