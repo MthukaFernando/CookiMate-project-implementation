@@ -31,11 +31,11 @@ const userProgressSchema = new mongoose.Schema({
   stats: {
     recipesCooked: { type: Number, default: 0 },
     favoritesSaved: { type: Number, default: 0 },
-    recipesShared: { type: Number, default: 0 },
+    postsShared: { type: Number, default: 0 }, // Changed from recipesShared
     likesReceived: { type: Number, default: 0 },
     aiGenerations: { type: Number, default: 0 },
     errorsFixed: { type: Number, default: 0 },
-    weeklyPlansCompleted: { type: Number, default: 0 },
+    mealsPlanned: { type: Number, default: 0 }, // Changed from weeklyPlansCompleted
     followersCount: { type: Number, default: 0 },
     currentStreak: { type: Number, default: 0 },
     longestStreak: { type: Number, default: 0 },

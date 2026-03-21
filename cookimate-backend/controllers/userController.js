@@ -32,11 +32,11 @@ export const createUser = async (req, res) => {
       stats: {
         recipesCooked: 0,
         favoritesSaved: 0,
-        recipesShared: 0,
+        postsShared: 0,       
         likesReceived: 0,
         aiGenerations: 0,
         errorsFixed: 0,
-        weeklyPlansCompleted: 0,
+        mealsPlanned: 0,      
         followersCount: 0,
         currentStreak: 0,
         longestStreak: 0,
