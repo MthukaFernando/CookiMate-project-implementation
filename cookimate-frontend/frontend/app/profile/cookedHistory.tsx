@@ -120,13 +120,18 @@ const CookedHistoryPage = () => {
       <Image source={{ uri: item.image }} style={styles.cardImage} />
 
       <View style={styles.cardContent}>
-        {/* TOP ROW: Title and Delete Button */}
-        <View style={styles.cardHeaderRow}>
-          <Text style={styles.recipeTitle} numberOfLines={1}>{item.name}</Text>
-          <TouchableOpacity onPress={() => handleDelete(item.id)} style={styles.deleteButton}>
-            <Ionicons name="trash-outline" size={18} color="#FF4444" />
-          </TouchableOpacity>
-        </View>
+      {/* Container for Title and Delete Button */}
+      <View style={styles.titleRow}>
+        <Text style={styles.recipeTitle} numberOfLines={1}>
+          {item.name}
+        </Text>
+        <TouchableOpacity 
+          onPress={() => handleDelete(item.id)} // Assuming you have a delete function
+          style={styles.deleteButton}
+        >
+          <Ionicons name="trash-outline" size={18} color="#FF4444" />
+        </TouchableOpacity>
+      </View>
 
         <View style={styles.infoRow}>
           <Ionicons name="calendar-outline" size={12} color="#BBBBBB" />
