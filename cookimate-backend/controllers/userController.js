@@ -102,7 +102,7 @@ export const getLevels = async (req, res) => {
 // Edit user with (username, name, profilepic)
 export const updateUser = async (req, res) => {
   try {
-    const { username, name, profilePic } = req.body;
+    const { username, name, profilePic, bio } = req.body;
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: req.params.uid },
@@ -110,6 +110,7 @@ export const updateUser = async (req, res) => {
         username,
         name,
         profilePic,
+        ...(bio !== undefined && { bio }),
       },
       {
         returnDocument: "after", 
