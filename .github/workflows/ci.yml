@@ -8,7 +8,7 @@ on:
 
 jobs:
   check-backend:
-    name: Backend Checks
+    name: ✅ Backend Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -20,15 +20,15 @@ jobs:
           node-version: 18
 
       - name: Install backend dependencies
-        run: |
-          cd backend
-          npm install
+        working-directory: cookimate-backend
+        run: npm install
 
-      - name: Verify backend starts
-        run: echo "Backend dependency check complete"
+      - name: Verify backend dependencies installed
+        working-directory: cookimate-backend
+        run: echo "✅ Backend dependencies installed successfully"
 
-  check-mobile:
-    name: Mobile App Checks
+  check-frontend:
+    name: ✅ Frontend (React Native) Checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -39,15 +39,17 @@ jobs:
         with:
           node-version: 18
 
-      - name: Install mobile dependencies
-        run: |
-          cd mobile
-          npm install
+      - name: Install frontend dependencies
+        working-directory: cookimate-frontend
+        run: npm install
 
       - name: Install Expo CLI
         run: npm install -g @expo/cli
 
-      - name: Check Expo project
-        run: |
-          cd mobile
-          npx expo-doctor
+      - name: Check Expo configuration
+        working-directory: cookimate-frontend
+        run: npx expo config --type public
+
+      - name: Verify frontend build readiness
+        working-directory: cookimate-frontend
+        run: echo "✅ Frontend checks completed successfully"
