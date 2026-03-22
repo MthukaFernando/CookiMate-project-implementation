@@ -218,28 +218,42 @@ export const incrementCookCount = async (req, res) => {
       (item) => item.recipeId.toString() === recipeId
     );
 
+    let isNewRecipe = false;
+    let shouldTriggerGamification = false;
+
     if (historyIndex === -1) {
-      // Add to history for the first time
+      // This is a NEW recipe being cooked for the first time
       user.cookedHistory.push({
         recipeId: recipeId,
         timesCooked: 1,
         dateCooked: new Date(),
       });
+      
+      // Update the unique recipe count
       user.recipesCookedCount = user.cookedHistory.length;
+      isNewRecipe = true;
+      shouldTriggerGamification = true;
+      
       await user.save();
+      console.log(`New recipe cooked! Total unique recipes: ${user.recipesCookedCount}`);
+    } else {
+      // This is a REPEAT recipe
+      user.cookedHistory[historyIndex].timesCooked += 1;
+      user.cookedHistory[historyIndex].dateCooked = new Date();
+      // DO NOT update recipesCookedCount for repeat recipes
+      await user.save();
+      console.log(`Repeat recipe cooked! Times cooked: ${user.cookedHistory[historyIndex].timesCooked}`);
+    }
 
-      // Trigger Gamification only for unique recipes
+    // Trigger Gamification ONLY for truly new recipes
+    if (shouldTriggerGamification) {
       try {
+        // Pass the user object directly to avoid another DB read
         await updateUserStats(user._id, 'COOK_RECIPE');
-        console.log("Gamification: Unique recipe cook recorded!");
+        console.log("Gamification: New recipe recorded!");
       } catch (gError) {
         console.error("Gamification error:", gError.message);
       }
-    } else {
-      user.cookedHistory[historyIndex].timesCooked += 1;
-      user.cookedHistory[historyIndex].dateCooked = new Date();
-      await user.save();
-      console.log("Recipe cooked again; mastery increased.");
     }
 
     const populatedUser = await user.populate("cookedHistory.recipeId");
@@ -250,6 +264,7 @@ export const incrementCookCount = async (req, res) => {
       cookedHistory: validHistory 
     });
   } catch (error) {
+    console.error("Error in incrementCookCount:", error);
     res.status(500).json({ message: error.message });
   }
 };
