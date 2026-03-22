@@ -27,9 +27,7 @@ import GlobalChatbot from "../GlobalChatbot";
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const mealCategories = [
   { label: "Breakfast     🍳🥞", color: "#ceb604" },
