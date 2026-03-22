@@ -14,6 +14,7 @@ import {
   addToMealPlan,
   clearNotification,
   removeFromMealPlan,
+  deleteFromHistory,
   toggleBlockUser
 } from "../controllers/userController.js";
 
@@ -34,4 +35,5 @@ router.post("/meal-plan/:uid", addToMealPlan);
 router.put("/meal-plan/remove/:uid", removeFromMealPlan);
 router.put("/:uid/clear-notification", clearNotification);
 router.delete("/:uid", deleteUser);
+router.delete("/history/:uid/:recipeId", deleteFromHistory);
 export default router;

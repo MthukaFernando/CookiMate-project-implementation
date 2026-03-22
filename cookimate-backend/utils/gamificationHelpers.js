@@ -1,8 +1,7 @@
+import User from "../models/user.js";
 import GamificationLevel from "../models/GamificationLevel.js";
-import Level from "../models/levels.js"; // Simple levels
-import UserProgress from "../models/UserProgress.js";
 
-// Points for different actions
+// Points for different actions (If you want to store these on the User model)
 export const getPointsForAction = (action) => {
   const pointsMap = {
     'COOK_RECIPE': 10,
@@ -13,131 +12,99 @@ export const getPointsForAction = (action) => {
     'PLAN_MEAL': 30,
     'DAILY_LOGIN': 5
   };
-  
   return pointsMap[action] || 0;
 };
 
-// Update both level types
 export const updateUserStats = async (userId, action, increment = 1) => {
   try {
-    const progress = await UserProgress.findOne({ user: userId });
-    if (!progress) throw new Error("User progress not found");
+    // 1. Find the USER directly
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
 
-    // Map action to stat field
+    // 2. Get requirements for the user's CURRENT level
+    const currentLevelData = await GamificationLevel.findOne({
+      levelNumber: user.level 
+    });
+
+    // Map actions to the fields in your User.js
     const statMap = {
-      'COOK_RECIPE': 'recipesCooked',
-      'SAVE_FAVORITE': 'favoritesSaved',
-      'SHARE_POST': 'postsShared',
-      'RECEIVE_LIKE': 'likesReceived',
+      'COOK_RECIPE': 'recipesCookedCount', 
+      'SAVE_FAVORITE': 'favorites',       
+      'SHARE_POST': 'postsShared',        
+      'RECEIVE_LIKE': 'likesReceived',    
       'USE_AI': 'aiGenerations',
-      'PLAN_MEAL': 'mealsPlanned'
+      'PLAN_MEAL': 'mealPlan'             
     };
 
-    // Update the stat
-    if (statMap[action]) {
-      progress.stats[statMap[action]] += increment;
+    const statField = statMap[action];
+    
+    // 3. Increment logic
+    if (statField) {
+      // If it's a number field (like recipesCookedCount), increment it
+      if (typeof user[statField] === 'number') {
+        user[statField] += increment;
+      }
+      // Note: Arrays like 'favorites' and 'mealPlan' update their length automatically 
+      // when you add items elsewhere in your app, so we don't 'increment' them here.
     }
 
-    // Add points to BOTH systems
-    const pointsEarned = getPointsForAction(action) * increment;
-    progress.simpleLevelPoints += pointsEarned; // For simple levels (Novice Chef, etc.)
-    progress.gamificationPoints += pointsEarned; // For gamification levels (Rookie Cook, etc.)
-    progress.lastActivity = new Date();
+    // 4. Update points (optional, since you have a 'points' field in User.js)
+    user.points += getPointsForAction(action) * increment;
 
-    // Update streak if it's a daily login
-    if (action === 'DAILY_LOGIN') {
-      await updateStreak(progress);
-    }
+    // 5. Run the Level Up check
+    await checkGamificationLevelUp(user);
 
-    // Check for level ups in BOTH systems
-    await checkSimpleLevelUp(progress);
-    await checkGamificationLevelUp(progress);
-
-    await progress.save();
-    return progress;
+    await user.save();
+    return user;
   } catch (error) {
+    console.error("Gamification Error:", error);
     throw error;
   }
 };
 
-// Update streak
-const updateStreak = async (progress) => {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  
-  const lastActivity = new Date(progress.lastActivity);
-  lastActivity.setHours(0, 0, 0, 0);
+const checkGamificationLevelUp = async (user) => {
+  const nextLevelNumber = user.level + 1;
+  const nextLevel = await GamificationLevel.findOne({ levelNumber: nextLevelNumber });
 
-  const diffDays = Math.ceil((today - lastActivity) / (1000 * 60 * 60 * 24));
+  if (!nextLevel) return; // Already at Max Level
 
-  if (diffDays === 1) {
-    // Consecutive day
-    progress.stats.currentStreak += 1;
-    // Update longest streak if needed
-    if (progress.stats.currentStreak > progress.stats.longestStreak) {
-      progress.stats.longestStreak = progress.stats.currentStreak;
-    }
-  } else if (diffDays > 1) {
-    // Streak broken
-    progress.stats.currentStreak = 1;
-  }
-};
+  const previousLevels = await GamificationLevel.find({ 
+    levelNumber: { $lte: user.level } 
+  }).sort({ levelNumber: 1 });
 
-// Check if simple level (Novice Chef, etc.) should increase
-const checkSimpleLevelUp = async (progress) => {
-  const currentSimpleLevel = await Level.findById(progress.simpleLevel);
-  
-  // Find next simple level
-  const nextSimpleLevel = await Level.findOne({ 
-    level: currentSimpleLevel.level + 1 
+  const offset = {
+    cookRecipes: 0, saveFavorites: 0, sharePosts: 0,
+    getLikes: 0, useAIGenerator: 0, planMeals: 0
+  };
+
+  previousLevels.forEach(lvl => {
+    offset.cookRecipes += lvl.requirements.cookRecipes || 0;
+    offset.saveFavorites += lvl.requirements.saveFavorites || 0;
+    offset.sharePosts += lvl.requirements.sharePosts || 0;
+    offset.getLikes += lvl.requirements.getLikes || 0;
+    offset.useAIGenerator += lvl.requirements.useAIGenerator || 0;
+    offset.planMeals += lvl.requirements.planMeals || 0;
   });
 
-  if (nextSimpleLevel && progress.simpleLevelPoints >= nextSimpleLevel.pointsRequired) {
-    progress.simpleLevel = nextSimpleLevel._id;
-    
-    // Add achievement
-    progress.achievements.push({
-      name: `Reached ${nextSimpleLevel.title}`,
-      earnedAt: new Date(),
-      description: nextSimpleLevel.description
-    });
-  }
-};
-
-// Check if gamification level (Rookie Cook, etc.) should increase
-const checkGamificationLevelUp = async (progress) => {
-  const currentGamificationLevel = await GamificationLevel.findOne({
-    levelNumber: progress.gamificationLevel
-  });
+  const currentLevelData = previousLevels.find(l => l.levelNumber === user.level);
+  if (!currentLevelData) return;
   
-  const nextGamificationLevel = await GamificationLevel.findOne({
-    levelNumber: progress.gamificationLevel + 1
-  });
+  const reqs = currentLevelData.requirements;
 
-  if (!nextGamificationLevel) return;
-
-  // Check points requirement
-  if (progress.gamificationPoints >= nextGamificationLevel.minPoints) {
-    // Check all other requirements
-    const stats = progress.stats;
-    const reqs = nextGamificationLevel.requirements;
-    
-    const meetsRequirements = 
-      stats.recipesCooked >= reqs.cookRecipes &&
-      stats.favoritesSaved >= reqs.saveFavorites &&
-      stats.postsShared >= reqs.sharePosts &&
-      stats.likesReceived >= reqs.getLikes &&
-      stats.aiGenerations >= reqs.useAIGenerator &&
-      stats.mealsPlanned >= (reqs.planMeals || 0);
+  // Check if current stage requirements are met
+  const isLevelComplete = 
+    ((user.recipesCookedCount || 0) - (offset.cookRecipes - reqs.cookRecipes)) >= reqs.cookRecipes &&
+    ((user.favorites?.length || 0) - (offset.saveFavorites - reqs.saveFavorites)) >= reqs.saveFavorites &&
+    ((user.postsShared || 0) - (offset.sharePosts - reqs.sharePosts)) >= reqs.sharePosts &&
+    ((user.likesReceived || 0) - (offset.getLikes - reqs.getLikes)) >= reqs.getLikes &&
+    ((user.aiGenerations || 0) - (offset.useAIGenerator - reqs.useAIGenerator)) >= reqs.useAIGenerator &&
+    ((user.mealPlan?.length || 0) - (offset.planMeals - (reqs.planMeals || 0))) >= (reqs.planMeals || 0);
       
-    if (meetsRequirements) {
-      progress.gamificationLevel = nextGamificationLevel.levelNumber;
-      
-      progress.achievements.push({
-        name: `Became a ${nextGamificationLevel.levelName}`,
-        earnedAt: new Date(),
-        description: nextGamificationLevel.badge.description
-      });
-    }
+  if (isLevelComplete) {
+    user.level += 1;
+    console.log(`🏆 Level Up! User is now Level ${user.level}`);
+    
+    // Recursive call to check if they meet the NEXT level's requirements too
+    await checkGamificationLevelUp(user); 
   }
 };

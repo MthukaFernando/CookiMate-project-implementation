@@ -7,6 +7,7 @@ import {
 } from "../utils/dictionaryService.js";
 import Recipe from "../models/Recipe.js";
 import User from "../models/user.js";
+import { updateUserStats } from "../utils/gamificationHelpers.js";
 
 // Cache for stemmed allowlist
 let STEMMED_ALLOWLIST = null;
@@ -259,6 +260,22 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`
     });
 
     const responseData = JSON.parse(chatCompletion.choices[0].message.content);
+
+    const { userId } = req.body;
+    if (userId) {
+      try {
+        // Find the user to get their MongoDB _id
+        const user = await User.findOne({ firebaseUid: userId });
+        if (user) {
+          await updateUserStats(user._id, "USE_AI");
+          console.log(
+            `Gamification: AI Generation recorded for ${user.username}`,
+          );
+        }
+      } catch (gError) {
+        console.error("Gamification AI Error:", gError.message);
+      }
+    }
 
     if (
       !responseData.title ||

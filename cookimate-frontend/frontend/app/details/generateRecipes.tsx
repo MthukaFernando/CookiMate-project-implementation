@@ -282,6 +282,7 @@ export default function GenerateRecipesPage() {
           time: prepTime,
           servings,
           prompt: culinaryPrompt,
+          userId: currentUserId,
           // Add user preferences to the request
           preferences: {
             dietary: userPreferences.dietaryPreferences,

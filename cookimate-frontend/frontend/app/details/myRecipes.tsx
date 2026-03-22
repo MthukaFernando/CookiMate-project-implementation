@@ -182,6 +182,20 @@ const MyRecipesPage = () => {
       try {
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, { recipeId });
         setFavorites((prev) => [...prev, recipeId]);
+
+        //Trigger Gamification Progress
+        try {
+          const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+          const mongoId = userRes.data._id;
+          
+          await axios.post(`${API_URL}/api/gamification/update-stats`, {
+            userId: mongoId,
+            action: 'SAVE_FAVORITE' 
+          });
+        } catch (gError) {
+          console.log("Gamification update failed.");
+        }
+
       } catch (error) {
         Alert.alert("Error", "Could not add to favorites :<");
       }

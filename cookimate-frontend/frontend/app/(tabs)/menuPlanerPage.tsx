@@ -57,6 +57,10 @@ const Page = () => {
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
+  
+  // FIXED: Added missing ref to prevent double processing
+  const processingRecipeRef = useRef(false);
+  
   const router = useRouter();
   
   const {
@@ -67,13 +71,6 @@ const Page = () => {
     newRecipeCategory,
   } = useLocalSearchParams();
 
-  // Load the meal plan whenever the screen comes into focus
-  useFocusEffect(
-    useCallback(() => {
-      loadMealPlan();
-    }, [])
-  );
-
   const loadMealPlan = async () => {
     try {
       const uid = auth.currentUser?.uid;
@@ -81,7 +78,6 @@ const Page = () => {
       
       const response = await axios.get(`${API_URL}/api/users/${uid}`);
       if (response.data.mealPlan) {
-        // Map database recipeId to frontend id for consistency
         const formattedPlan = response.data.mealPlan.map((m: any) => ({
           ...m,
           id: m.recipeId,
@@ -93,6 +89,12 @@ const Page = () => {
     }
   };
 
+  useFocusEffect(
+    useCallback(() => {
+      loadMealPlan();
+    }, [])
+  );
+
   const markedDates = useMemo(() => {
     const marks: any = {};
     plannedRecipes.forEach((recipe) => {
@@ -101,11 +103,15 @@ const Page = () => {
     return marks;
   }, [plannedRecipes]);
 
-  // Handle adding a new recipe passed from MyRecipesPage
+  // FIXED: Corrected syntax and logic to prevent duplicate entries
   useEffect(() => {
     const saveNewRecipe = async () => {
+      if (!newRecipeId || processingRecipeRef.current) return;
+
       const uid = auth.currentUser?.uid;
-      if (newRecipeId && uid) {
+      if (uid) {
+        processingRecipeRef.current = true;
+
         const recipeToAdd = {
           uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
           id: newRecipeId,
@@ -116,13 +122,32 @@ const Page = () => {
         };
 
         try {
+          // 1. Save the meal to the planner
           await axios.post(`${API_URL}/api/users/meal-plan/${uid}`, recipeToAdd);
-          setPlannedRecipes((prev) => [...prev, recipeToAdd]);
+          
+          // 2. NEW: Notify Gamification system to update progress bar stats
+          try {
+            // Get the user's Mongo ID first
+            const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+            const mongoId = userRes.data._id;
+            
+            // Trigger the stat update
+            await axios.post(`${API_URL}/api/gamification/update-stats`, {
+              userId: mongoId,
+              action: 'PLAN_MEAL' 
+            });
+            console.log("Gamification: Meal Planning progress updated!");
+          } catch (gError) {
+            console.log("Gamification update failed, but meal was saved.");
+          }
+
+          // 3. Refresh the list and UI
+          await loadMealPlan(); 
+
           setSelectedDate(openModalWithDate as string);
           setIsAddingMeal(false);
           setIsModalVisible(true);
 
-          // Clear params
           router.setParams({
             newRecipeId: undefined,
             newRecipeName: undefined,
@@ -133,6 +158,8 @@ const Page = () => {
         } catch (error) {
           console.error("Error saving meal:", error);
           Alert.alert("Error", "Could not save to your planner.");
+        } finally {
+          processingRecipeRef.current = false;
         }
       } else if (openModalWithDate) {
         setSelectedDate(openModalWithDate as string);
@@ -144,7 +171,6 @@ const Page = () => {
 
     saveNewRecipe();
   }, [newRecipeId, openModalWithDate]);
-
   useEffect(() => {
     const fetchSeasonalContent = async () => {
       try {
@@ -395,7 +421,6 @@ const Page = () => {
   );
 };
 
-// Styles remain the same
 export const calendarStyles: any = {
   calendarBackground: "#1A1A1A",
   dayTextColor: "white",

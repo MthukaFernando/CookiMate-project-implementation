@@ -118,17 +118,19 @@ export default function RecipeDetails() {
   };
 
   // New function to handle recipe completion
-  const handleCompleteRecipe = async () => {
+const handleCompleteRecipe = async () => {
     try {
-      const auth = getAuth();
       const currentUserUid = auth.currentUser?.uid;
 
       if (currentUserUid && recipe?._id) {
+        // MATCHING YOUR ROUTE: /api/users/complete-recipe/:uid
         await axios.put(
           `${API_URL}/api/users/complete-recipe/${currentUserUid}`,
-          { recipeId: recipe._id } // Sending the MongoDB ID in the body
+          { recipeId: recipe._id } 
         );
-        console.log("Recipe completed! Cook count incremented.");
+        
+        console.log("Recipe completed! History updated and gamification checked.");
+        Alert.alert("Chef Status!", `You've mastered ${recipe.name}!`);
       } else {
         console.error("Missing UID or Recipe ID");
       }
@@ -138,6 +140,7 @@ export default function RecipeDetails() {
     } catch (err) {
       console.error("Failed to update cook count", err);
       setCookingMode(false);
+      Alert.alert("Done!", "Recipe finished, but we couldn't save to history.");
     }
   };
 
@@ -194,10 +197,25 @@ export default function RecipeDetails() {
       );
     } else {
       try {
+        // Add to favorites list
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, {
           recipeId: id,
         });
         setIsFavorite(true);
+
+        // Trigger Gamification Progress
+        try {
+          const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+          const mongoId = userRes.data._id;
+
+          await axios.post(`${API_URL}/api/gamification/update-stats`, {
+            userId: mongoId,
+            action: "SAVE_FAVORITE",
+          });
+          console.log("Gamification: Favorite progress updated!");
+        } catch (gError) {
+          console.log("Gamification update failed, but favorite was saved.");
+        }
       } catch (error: any) {
         if (error.response?.status === 400) {
           setIsFavorite(true);
@@ -207,30 +225,33 @@ export default function RecipeDetails() {
       }
     }
   };
-
   useEffect(() => {
-  const fetchRecipeDetails = async (recipeId: string) => {
-    try {
-      setLoading(true);
-      // Double check: Is your backend route /api/recipes/ or /api/recipe/?
-      const response = await axios.get(`${API_URL}/api/recipes/${recipeId}`);
-      
-      if (response.data) {
-        setRecipe(response.data);
-        setError(""); // Clear any previous errors
-      }
-    } catch (err: any) {
-      console.error("Axios Error Fetching Details:", err.response?.status, err.message);
-      setError("Failed to load recipe details. Please try again.");
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchRecipeDetails = async (recipeId: string) => {
+      try {
+        setLoading(true);
+        // Double check: Is your backend route /api/recipes/ or /api/recipe/?
+        const response = await axios.get(`${API_URL}/api/recipes/${recipeId}`);
 
-  if (id) {
-    fetchRecipeDetails(id as string);
-  }
-}, [id]);
+        if (response.data) {
+          setRecipe(response.data);
+          setError(""); // Clear any previous errors
+        }
+      } catch (err: any) {
+        console.error(
+          "Axios Error Fetching Details:",
+          err.response?.status,
+          err.message,
+        );
+        setError("Failed to load recipe details. Please try again.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (id) {
+      fetchRecipeDetails(id as string);
+    }
+  }, [id]);
 
   if (loading) {
     return (
