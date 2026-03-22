@@ -43,51 +43,50 @@ const LevelsPage = () => {
 
   useEffect(() => {
     const fetchData = async () => {
-      try {
-        const uid = auth.currentUser?.uid;
-        if (!uid) return;
+  try {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
 
-        // 1. Get the level directly from the User model (This is the most up-to-date)
-        const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
-        const mongoId = userRes.data._id;
-        const actualLevelFromUser = userRes.data.level || 1;
+    // 1. Get the latest User data (including the updated level)
+    const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
+    const userData = userRes.data;
+    const mongoId = userData._id;
+    const actualLevelFromUser = userData.level || 1;
 
-        let myStats = {};
-
-        try {
-          // 2. Fetch Dashboard ONLY for the statistical progress bars
-          const dashRes = await axios.get(
-            `${API_URL}/api/gamification/user/${mongoId}/dashboard`,
-          );
-          if (dashRes.data && dashRes.data.stats) {
-            myStats = dashRes.data.stats;
-          }
-        } catch (e) {
-          console.log("No dashboard stats found yet");
-        }
-
-        // 3. SET THE STATE
-        setUserStats(myStats);
-        setCurrentLevelNum(actualLevelFromUser); // USE THE USER LEVEL HERE
-
-        // 4. Fetch All Levels
-        const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
-        const allLevels = levelsRes.data;
-
-        // 5. FILTER: Show the current level and everything above it
-        // We change this to >= so the level you are currently working on is visible
-        const upcomingLevels = allLevels.filter(
-          (lvl: any) => lvl.levelNumber >= actualLevelFromUser,
-        );
-
-        setLevels(upcomingLevels);
-      } catch (err) {
-        console.error("Error fetching levels data:", err);
-      } finally {
-        setLoading(false);
+    // 2. Fetch Dashboard for progress bar stats
+    let myStats = {};
+    try {
+      const dashRes = await axios.get(`${API_URL}/api/gamification/user/${mongoId}/dashboard`);
+      if (dashRes.data && dashRes.data.stats) {
+        myStats = dashRes.data.stats;
       }
-    };
+    } catch (e) {
+      console.log("No dashboard stats found yet");
+    }
 
+    // 3. Update State
+    setUserStats(myStats);
+    setCurrentLevelNum(actualLevelFromUser);
+
+    // 4. Fetch All Levels from the master list
+    const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
+    const allLevels = levelsRes.data;
+
+    // 5. FILTER LOGIC:
+    // This is the "Magic": We only show levels >= the user's current level.
+    // If the user finishes Level 1, actualLevelFromUser becomes 2. 
+    // Level 1 disappears from the list automatically.
+    const upcomingLevels = allLevels.filter(
+      (lvl: any) => lvl.levelNumber >= actualLevelFromUser
+    );
+
+    setLevels(upcomingLevels);
+  } catch (err) {
+    console.error("Error fetching levels data:", err);
+  } finally {
+    setLoading(false);
+  }
+};
     fetchData();
   }, []);
 
@@ -242,23 +241,30 @@ const LevelsPage = () => {
 
 const LevelCard = ({ level, onOpenReqs, isCurrent }: any) => {
   return (
-    <View style={[styles.cardContainer, !isCurrent && { opacity: 0.8 }]}>
+    <View style={[
+      styles.cardContainer, 
+      // If not current, make it look "dimmed" or "locked"
+      !isCurrent && { opacity: 0.5, backgroundColor: "#121212", borderColor: "#333" }
+    ]}>
       <View style={styles.cardLeft}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Text style={styles.cardLevelName}>{level.levelName}</Text>
+          <Text style={[styles.cardLevelName, !isCurrent && { color: "#666" }]}>
+            {level.levelName}
+          </Text>
+          {!isCurrent && <Feather name="lock" size={16} color="#666" />}
         </View>
-        <Text style={styles.cardDescription} numberOfLines={2}>
-          {level.badge?.description ||
-            `Unlock this rank at ${level.minPoints} XP`}
+        
+        <Text style={[styles.cardDescription, !isCurrent && { color: "#444" }]} numberOfLines={2}>
+          {isCurrent ? level.badge?.description : "Locked: Complete previous levels to reveal"}
         </Text>
 
         <TouchableOpacity
-          style={[styles.actionBtn, !isCurrent && { backgroundColor: "#444" }]}
-          activeOpacity={0.8}
-          onPress={onOpenReqs}
+          style={[styles.actionBtn, !isCurrent && { backgroundColor: "#222" }]}
+          activeOpacity={isCurrent ? 0.8 : 1}
+          onPress={isCurrent ? onOpenReqs : undefined} // Disable button if locked
         >
-          <Text style={styles.actionBtnText} numberOfLines={1}>
-            {isCurrent ? "View Progress" : "View Requirements"}
+          <Text style={[styles.actionBtnText, !isCurrent && { color: "#555" }]}>
+            {isCurrent ? "View Progress" : "Locked"}
           </Text>
         </TouchableOpacity>
       </View>
@@ -268,7 +274,8 @@ const LevelCard = ({ level, onOpenReqs, isCurrent }: any) => {
           source={{ uri: level.badge?.imageUrl }}
           style={[
             styles.characterImg,
-            !isCurrent && { tintColor: "black", opacity: 0.3 },
+            // Grayscale/Dimmed effect for locked levels
+            !isCurrent && { tintColor: "black", opacity: 0.2 },
           ]}
           resizeMode="contain"
         />

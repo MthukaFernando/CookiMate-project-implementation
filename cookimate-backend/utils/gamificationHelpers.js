@@ -63,26 +63,18 @@ export const updateUserStats = async (userId, action, increment = 1) => {
 };
 
 const checkGamificationLevelUp = async (user) => {
-  // 1. Get the NEXT level's data
   const nextLevelNumber = user.level + 1;
   const nextLevel = await GamificationLevel.findOne({ levelNumber: nextLevelNumber });
 
-  // If there is no next level, they are at MAX level. Stop here.
-  if (!nextLevel) return;
+  if (!nextLevel) return; // Already at Max Level
 
-  // 2. Get ALL levels up to the current one to calculate the offset
-  // We need this because progress is still "Stage-Based"
   const previousLevels = await GamificationLevel.find({ 
     levelNumber: { $lte: user.level } 
   }).sort({ levelNumber: 1 });
 
   const offset = {
-    cookRecipes: 0,
-    saveFavorites: 0,
-    sharePosts: 0,
-    getLikes: 0,
-    useAIGenerator: 0,
-    planMeals: 0
+    cookRecipes: 0, saveFavorites: 0, sharePosts: 0,
+    getLikes: 0, useAIGenerator: 0, planMeals: 0
   };
 
   previousLevels.forEach(lvl => {
@@ -94,26 +86,25 @@ const checkGamificationLevelUp = async (user) => {
     offset.planMeals += lvl.requirements.planMeals || 0;
   });
 
-  // 3. We use the requirements of the CURRENT level to see if it's finished
-  // so we can move to the NEXT level.
   const currentLevelData = previousLevels.find(l => l.levelNumber === user.level);
   if (!currentLevelData) return;
   
   const reqs = currentLevelData.requirements;
 
+  // Check if current stage requirements are met
   const isLevelComplete = 
-    ((user.recipesCookedCount || 0) - offset.cookRecipes) >= reqs.cookRecipes &&
-    ((user.favorites?.length || 0) - offset.saveFavorites) >= reqs.saveFavorites &&
-    ((user.postsShared || 0) - offset.sharePosts) >= reqs.sharePosts &&
-    ((user.likesReceived || 0) - offset.getLikes) >= reqs.getLikes &&
-    ((user.aiGenerations || 0) - offset.useAIGenerator) >= reqs.useAIGenerator &&
-    ((user.mealPlan?.length || 0) - offset.planMeals) >= (reqs.planMeals || 0);
+    ((user.recipesCookedCount || 0) - (offset.cookRecipes - reqs.cookRecipes)) >= reqs.cookRecipes &&
+    ((user.favorites?.length || 0) - (offset.saveFavorites - reqs.saveFavorites)) >= reqs.saveFavorites &&
+    ((user.postsShared || 0) - (offset.sharePosts - reqs.sharePosts)) >= reqs.sharePosts &&
+    ((user.likesReceived || 0) - (offset.getLikes - reqs.getLikes)) >= reqs.getLikes &&
+    ((user.aiGenerations || 0) - (offset.useAIGenerator - reqs.useAIGenerator)) >= reqs.useAIGenerator &&
+    ((user.mealPlan?.length || 0) - (offset.planMeals - (reqs.planMeals || 0))) >= (reqs.planMeals || 0);
       
   if (isLevelComplete) {
     user.level += 1;
-    console.log(`🏆 SUCCESS: User promoted to Level ${user.level}`);
+    console.log(`🏆 Level Up! User is now Level ${user.level}`);
     
-    // Check again immediately in case they qualify for the one after that too
+    // Recursive call to check if they meet the NEXT level's requirements too
     await checkGamificationLevelUp(user); 
   }
 };

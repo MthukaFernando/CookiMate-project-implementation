@@ -1,8 +1,8 @@
 import User from "../models/user.js";
 import Level from "../models/levels.js";
 import Recipe from "../models/Recipe.js";
-import Post from "../models/Post.js"; 
-import UserProgress from "../models/UserProgress.js";  
+import Post from "../models/Post.js";
+import UserProgress from "../models/UserProgress.js";
 import { updateUserStats } from "../utils/gamificationHelpers.js";
 
 // create a user
@@ -18,13 +18,10 @@ export const createUser = async (req, res) => {
       username: username,
       firebaseUid: firebaseUid,
     });
-    
-    // START: ONLY THIS BLOCK ADDED (8 lines)
-    // Find the first simple level (Novice Chef - level 1)
+
     const firstSimpleLevel = await Level.findOne({ level: 1 });
-    
-    // Create progress tracking for the user
-    const userProgress = await UserProgress.create({
+
+    await UserProgress.create({
       user: newUser._id,
       simpleLevel: firstSimpleLevel._id,
       simpleLevelPoints: 0,
@@ -33,11 +30,11 @@ export const createUser = async (req, res) => {
       stats: {
         recipesCooked: 0,
         favoritesSaved: 0,
-        postsShared: 0,       
+        postsShared: 0,
         likesReceived: 0,
         aiGenerations: 0,
         errorsFixed: 0,
-        mealsPlanned: 0,      
+        mealsPlanned: 0,
         followersCount: 0,
         currentStreak: 0,
         longestStreak: 0,
@@ -46,7 +43,6 @@ export const createUser = async (req, res) => {
         usersHelped: 0
       }
     });
-    // END: ONLY THIS BLOCK ADDED
 
     res.status(201).json(newUser);
   } catch (error) {
@@ -68,10 +64,12 @@ export const clearNotification = async (req, res) => {
   }
 };
 
-// get the logged in user info using the UID from the frontend (UID will be given from the firebase)
+// Get user by UID
 export const getUserByUid = async (req, res) => {
   try {
-    const user = await User.findOne({ firebaseUid: req.params.uid }).populate("favorites").populate("cookedHistory.recipeId");
+    const user = await User.findOne({ firebaseUid: req.params.uid })
+      .populate("favorites")
+      .populate("cookedHistory.recipeId");
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -81,30 +79,22 @@ export const getUserByUid = async (req, res) => {
   }
 };
 
-
-
 export const getLevels = async (req, res) => {
   try {
-    // Fetch all levels from the database and sort by 'level' ascending
     const levels = await Level.find().sort({ level: 1 });
-
     if (!levels || levels.length === 0) {
       return res.status(404).json({ message: "No levels found" });
     }
-
-    // Return the levels as JSON
     res.status(200).json(levels);
   } catch (error) {
-    console.error("Error fetching levels:", error);
     res.status(500).json({ message: error.message });
   }
 };
 
-// Edit user with (username, name, profilepic)
+// Update user
 export const updateUser = async (req, res) => {
   try {
     const { username, name, profilePic, bio } = req.body;
-
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: req.params.uid },
       {
@@ -113,93 +103,72 @@ export const updateUser = async (req, res) => {
         profilePic,
         ...(bio !== undefined && { bio }),
       },
-      {
-        returnDocument: "after", 
-        runValidators: true,
-      },
+      { returnDocument: "after", runValidators: true }
     );
-
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
+    if (!updatedUser) return res.status(404).json({ message: "User not found" });
     res.status(200).json(updatedUser);
   } catch (error) {
-    if (error.code === 11000) {
-      return res.status(400).json({ message: "Username already taken" });
-    }
-
+    if (error.code === 11000) return res.status(400).json({ message: "Username already taken" });
     res.status(500).json({ message: error.message });
   }
 };
 
-// Add recipe to favorites
+// Add to favorites
 export const addToFavorites = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
 
-    // Check if the recipe exists in the recipes collection
     const recipe = await Recipe.findOne({ id: recipeId });
-    if (!recipe) {
-      return res.status(404).json({ message: "Recipe not found" });
-    }
+    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
 
     const user = await User.findOne({ firebaseUid: uid });
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Check if already favorited using the MongoDB _id
     if (user.favorites.includes(recipe._id)) {
       return res.status(400).json({ message: "Recipe already in favorites" });
     }
 
     user.favorites.push(recipe._id);
     await user.save();
+
+    // Trigger Gamification
     try {
       await updateUserStats(user._id, 'SAVE_FAVORITE');
     } catch (gError) {
       console.error("Gamification error:", gError.message);
     }
+
     res.status(200).json({ message: "Recipe added to favorites" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Remove recipe from favorites
+// Remove from favorites
 export const removeFromFavorites = async (req, res) => {
   try {
     const { recipeId } = req.body;
     const { uid } = req.params;
-
     const recipe = await Recipe.findOne({ id: recipeId });
-    if (!recipe) {
-      return res.status(404).json({ message: "Recipe not found" });
-    }
+    if (!recipe) return res.status(404).json({ message: "Recipe not found" });
 
     const user = await User.findOneAndUpdate(
       { firebaseUid: uid },
-      { $pull: { favorites: recipe._id } }, 
+      { $pull: { favorites: recipe._id } },
       { new: true }
     );
-
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
-    }
-
+    if (!user) return res.status(404).json({ message: "User not found" });
     res.status(200).json({ message: "Recipe removed from favorites" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// FOLLOW / UNFOLLOW USER (Updated to use Firebase UIDs)
+// Toggle follow
 export const toggleFollow = async (req, res) => {
   try {
-    const { targetUserId, currentUserId } = req.body; // Firebase UIDs
-
+    const { targetUserId, currentUserId } = req.body;
     const targetUser = await User.findOne({ firebaseUid: targetUserId });
     const currentUser = await User.findOne({ firebaseUid: currentUserId });
 
@@ -218,31 +187,25 @@ export const toggleFollow = async (req, res) => {
       res.status(200).json({ isFollowing: false });
     }
   } catch (err) {
-    console.error("TOGGLE_FOLLOW_ERROR:", err);
     res.status(500).json({ message: err.message });
   }
 };
 
-// SEARCH USERS
+// Search users
 export const searchUsers = async (req, res) => {
   const query = req.query.username;
-  
-  if (!query) {
-    return res.status(400).json({ message: "Username query parameter is required" });
-  }
-  
+  if (!query) return res.status(400).json({ message: "Username required" });
   try {
     const users = await User.find({
-      username: { $regex: query, $options: "i" }, // Case-insensitive search
-    }).select("username profilePic name firebaseUid"); 
-    
+      username: { $regex: query, $options: "i" },
+    }).select("username profilePic name firebaseUid");
     res.status(200).json(users);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
 };
 
-// Call this when the "Complete Recipe" confetti happens
+// Increment Cook Count
 export const incrementCookCount = async (req, res) => {
   try {
     const { uid } = req.params;
@@ -255,33 +218,31 @@ export const incrementCookCount = async (req, res) => {
       (item) => item.recipeId.toString() === recipeId
     );
 
-    // Gamification logic starts here
     if (historyIndex === -1) {
-      try {
-        await updateUserStats(user._id, 'COOK_RECIPE');
-        console.log("Gamification: Unique recipe cook recorded!");
-      } catch (gError) {
-        console.error("Gamification error:", gError.message);
-      }
-      
       // Add to history for the first time
       user.cookedHistory.push({
         recipeId: recipeId,
         timesCooked: 1,
         dateCooked: new Date(),
       });
+      user.recipesCookedCount = user.cookedHistory.length;
+      await user.save();
+
+      // Trigger Gamification only for unique recipes
+      try {
+        await updateUserStats(user._id, 'COOK_RECIPE');
+        console.log("Gamification: Unique recipe cook recorded!");
+      } catch (gError) {
+        console.error("Gamification error:", gError.message);
+      }
     } else {
-      // User has cooked this before, just bump the inner counter
-      // DO NOT call updateUserStats here
       user.cookedHistory[historyIndex].timesCooked += 1;
       user.cookedHistory[historyIndex].dateCooked = new Date();
-      console.log("Recipe cooked again; mastery increased, but no new level progress.");
+      await user.save();
+      console.log("Recipe cooked again; mastery increased.");
     }
 
-    user.recipesCookedCount = user.cookedHistory.length;
-
-    const updatedUser = await user.save();
-    const populatedUser = await updatedUser.populate("cookedHistory.recipeId");
+    const populatedUser = await user.populate("cookedHistory.recipeId");
     const validHistory = populatedUser.cookedHistory.filter(item => item.recipeId);
     
     res.status(200).json({ 
@@ -293,41 +254,34 @@ export const incrementCookCount = async (req, res) => {
   }
 };
 
-// Remove a recipe entirely from the user's cooked history
+// Delete from history
 export const deleteFromHistory = async (req, res) => {
   try {
     const { uid, recipeId } = req.params;
-
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
       { $pull: { cookedHistory: { recipeId: recipeId } } },
       { new: true }
     );
-
-    // After pulling, update the count to match the new array length
     if (updatedUser) {
       updatedUser.recipesCookedCount = updatedUser.cookedHistory.length;
       await updatedUser.save();
     }
-
     const populatedUser = await updatedUser.populate("cookedHistory.recipeId");
-    const validHistory = populatedUser.cookedHistory.filter(item => item.recipeId);
-    
     res.status(200).json({ 
       count: populatedUser.recipesCookedCount, 
-      cookedHistory: validHistory 
+      cookedHistory: populatedUser.cookedHistory.filter(item => item.recipeId) 
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Viewing another user's profile
+// Get Community Profile
 export const getCommunityProfile = async (req, res) => {
   try {
     const { uid } = req.params; 
     const { viewerId } = req.query;
-
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
 
@@ -338,7 +292,6 @@ export const getCommunityProfile = async (req, res) => {
       blockedByCurrentUser = viewer?.blockedUsers?.includes(uid) || false;
     }
 
-    // User posts
     const userPosts = await Post.find({ user: uid })
       .sort({ createdAt: -1 })
       .populate({ path: "comments.user", model: "User", foreignField: "firebaseUid", select: "username profilePic" });
@@ -369,24 +322,17 @@ export const getCommunityProfile = async (req, res) => {
   }
 };
 
-// Save the meals the user has planner
+// Add to meal plan
 export const addToMealPlan = async (req, res) => {
   try {
-    const { uid } = req.params; // Firebase UID
+    const { uid } = req.params;
     const { uniqueId, id, name, image, category, date } = req.body;
 
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
       { 
         $push: { 
-          mealPlan: { 
-            uniqueId, 
-            recipeId: id, 
-            name, 
-            image, 
-            category, 
-            date 
-          } 
+          mealPlan: { uniqueId, recipeId: id, name, image, category, date } 
         } 
       },
       { new: true }
@@ -394,10 +340,9 @@ export const addToMealPlan = async (req, res) => {
 
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
 
-    // Gamification part starts here
+    // Trigger Gamification
     try {
       await updateUserStats(updatedUser._id, 'PLAN_MEAL');
-      console.log(`Gamification points awarded to user ${updatedUser.username} for PLAN_MEAL`);
     } catch (gamificationError) {
       console.error("Gamification error:", gamificationError.message);
     }
@@ -408,79 +353,58 @@ export const addToMealPlan = async (req, res) => {
   }
 };
 
-// Remove a meal from the user's planner
+// Remove from meal plan
 export const removeFromMealPlan = async (req, res) => {
   try {
     const { uid } = req.params;
     const { uniqueId } = req.body; 
-
     const updatedUser = await User.findOneAndUpdate(
       { firebaseUid: uid },
       { $pull: { mealPlan: { uniqueId: uniqueId } } },
       { new: true }
     );
-
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
-
     res.status(200).json({ message: "Meal removed from planner" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
 
-// Delete user account and all associated data
+// Delete User
 export const deleteUser = async (req, res) => {
   try {
     const { uid } = req.params;
-
     const user = await User.findOne({ firebaseUid: uid });
     if (!user) return res.status(404).json({ message: "User not found" });
 
-    // Remove this user from other users' followers/following lists
     await User.updateMany(
       { $or: [{ followers: user._id }, { following: user._id }] },
       { $pull: { followers: user._id, following: user._id } }
     );
-
-    // Delete the user document itself
     await User.findByIdAndDelete(user._id);
-
     res.status(200).json({ message: "User account deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+// Toggle Block
 export const toggleBlockUser = async (req, res) => {
   try {
     const { currentUserUid, targetUserUid } = req.body;
-
-    if (currentUserUid === targetUserUid) {
-      return res.status(400).json({ message: "Cannot block yourself" });
-    }
+    if (currentUserUid === targetUserUid) return res.status(400).json({ message: "Cannot block yourself" });
 
     const currentUser = await User.findOne({ firebaseUid: currentUserUid });
-    if (!currentUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
+    if (!currentUser) return res.status(404).json({ message: "User not found" });
 
     const isBlocked = currentUser.blockedUsers.includes(targetUserUid);
-
     if (!isBlocked) {
-      // BLOCK (one-way only)
-      await currentUser.updateOne({
-        $addToSet: { blockedUsers: targetUserUid }
-      });
-
+      await currentUser.updateOne({ $addToSet: { blockedUsers: targetUserUid } });
       return res.status(200).json({ blocked: true });
     } else {
-      // UNBLOCK
-      await currentUser.updateOne({
-        $pull: { blockedUsers: targetUserUid }
-      });
-
+      await currentUser.updateOne({ $pull: { blockedUsers: targetUserUid } });
       return res.status(200).json({ blocked: false });
     }
-
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

@@ -41,44 +41,49 @@ const ProfilePage = () => {
   const uid = currentUser?.uid;
 
   const fetchData = async () => {
-    try {
-      setLoading(true);
-      const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
-      const userData = userResponse.data;
-      setUser(userData);
+  try {
+    setLoading(true);
+    // 1. Get the latest User data
+    const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
+    const userData = userResponse.data;
+    setUser(userData);
 
-      const userCurrentLevel = userData.level || 1;
+    const userCurrentLevel = userData.level || 1;
 
-      if (userData && userData._id) {
-        try {
-          const gamificationResponse = await axios.get(
-            `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
-          );
-          setGamification(gamificationResponse.data);
-        } catch (gamificationErr) {
-          console.log("No gamification data found for this user yet.");
-        }
-
-        try {
-          const levelsRes = await axios.get(
-            `${API_URL}/api/gamification/levels`,
-          );
-          const allLevels = levelsRes.data;
-          const finished = allLevels.filter(
-            (lvl: any) => lvl.levelNumber < userCurrentLevel,
-          );
-          setCompletedLevels(finished);
-        } catch (levelErr) {
-          console.error("Error fetching levels for achievements", levelErr);
-        }
+    if (userData && userData._id) {
+      // 2. Fetch Dashboard for the progress bar calculation
+      try {
+        const gamificationResponse = await axios.get(
+          `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
+        );
+        setGamification(gamificationResponse.data);
+      } catch (gamificationErr) {
+        console.log("No gamification data found for this user yet.");
       }
-    } catch (err: any) {
-      console.error("Fetch error", err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
 
+      // 3. FETCH ALL LEVELS & CALCULATE ACHIEVEMENTS
+      try {
+        const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
+        const allLevels = levelsRes.data;
+        
+        // ACHIEVEMENTS LOGIC: 
+        // If user is Level 2, they finished Level 1.
+        // If user is Level 3, they finished Level 1 and 2.
+        const finished = allLevels.filter(
+          (lvl: any) => lvl.levelNumber < userCurrentLevel
+        );
+        
+        setCompletedLevels(finished);
+      } catch (levelErr) {
+        console.error("Error fetching levels for achievements", levelErr);
+      }
+    }
+  } catch (err: any) {
+    console.error("Fetch error", err.message);
+  } finally {
+    setLoading(false);
+  }
+};
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -223,27 +228,29 @@ const ProfilePage = () => {
         </View>
         {/* 3. ACHIEVEMENTS */}
         <View style={styles.bottomSubContainer}>
-          <Text style={styles.sectionTitle}>Achievements</Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.badgeScroll}
-          >
-            {completedLevels.length === 0 ? (
-              <Text style={{ color: "#A6A6A6", fontStyle: "italic" }}>
-                Complete levels and earn badges!
-              </Text>
-            ) : (
-              completedLevels.map((lvl, index) => (
-                <BadgeItem
-                  key={index}
-                  imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR}
-                  title={lvl.levelName}
-                />
-              ))
-            )}
-          </ScrollView>
-        </View>
+  <Text style={styles.sectionTitle}>Achievements</Text>
+  <ScrollView
+    horizontal
+    showsHorizontalScrollIndicator={false}
+    contentContainerStyle={styles.badgeScroll}
+  >
+    {completedLevels.length === 0 ? (
+      <View style={{ paddingVertical: 10 }}>
+        <Text style={{ color: "#555", fontStyle: "italic" }}>
+          No badges earned yet. Complete your first level to unlock!
+        </Text>
+      </View>
+    ) : (
+      completedLevels.map((lvl, index) => (
+        <BadgeItem
+          key={lvl.levelNumber || index}
+          imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR}
+          title={lvl.levelName}
+        />
+      ))
+    )}
+  </ScrollView>
+</View>
       </ScrollView>
     </SafeAreaView>
   );
