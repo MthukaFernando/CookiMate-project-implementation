@@ -55,7 +55,7 @@ export default function RootLayout() {
   if (initializing) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-      <StatusBar style="dark" /> {/* Add this: 'dark' if bg is white, 'light' if bg is dark */}
+      <StatusBar style="dark" /> 
       <ActivityIndicator size="large" color="#5f4436" />
     </View>
     );
