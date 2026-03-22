@@ -196,13 +196,15 @@ const ProfilePage = () => {
             <StatItem
               icon="coffee"
               label="Cooked"
-              value={gamification?.stats?.recipesCooked || 0}
+              // CHANGED: Use lifetime total from user model, not the capped dashboard stats
+              value={user?.recipesCookedCount || 0}
               onPress={() => router.push("/profile/cookedHistory" as any)}
             />
             <StatItem
               icon="heart"
               label="Favs"
-              value={gamification?.stats?.favoritesSaved || 0}
+              // CHANGED: Use lifetime total array length from user model
+              value={user?.favorites?.length || 0}
               onPress={() => router.push("/profile/favoritesPage")}
             />
             <StatItem
@@ -219,7 +221,6 @@ const ProfilePage = () => {
             />
           </View>
         </View>
-
         {/* 3. ACHIEVEMENTS */}
         <View style={styles.bottomSubContainer}>
           <Text style={styles.sectionTitle}>Achievements</Text>
@@ -300,7 +301,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 25,
-    paddingTop: 5,
+    paddingTop: 35,
     paddingBottom: 60,
     backgroundColor: "#0A0A0A",
   },

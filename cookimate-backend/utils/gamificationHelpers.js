@@ -63,15 +63,19 @@ export const updateUserStats = async (userId, action, increment = 1) => {
 };
 
 const checkGamificationLevelUp = async (user) => {
-  // 1. Get ALL levels up to the current one to calculate what was required previously
-  const allLevels = await GamificationLevel.find({ 
+  // 1. Get the NEXT level's data
+  const nextLevelNumber = user.level + 1;
+  const nextLevel = await GamificationLevel.findOne({ levelNumber: nextLevelNumber });
+
+  // If there is no next level, they are at MAX level. Stop here.
+  if (!nextLevel) return;
+
+  // 2. Get ALL levels up to the current one to calculate the offset
+  // We need this because progress is still "Stage-Based"
+  const previousLevels = await GamificationLevel.find({ 
     levelNumber: { $lte: user.level } 
   }).sort({ levelNumber: 1 });
 
-  const currentLevel = allLevels.find(l => l.levelNumber === user.level);
-  if (!currentLevel) return;
-
-  // 2. Calculate the Offset (Total requirements of all levels BEFORE the current one)
   const offset = {
     cookRecipes: 0,
     saveFavorites: 0,
@@ -81,21 +85,22 @@ const checkGamificationLevelUp = async (user) => {
     planMeals: 0
   };
 
-  allLevels.forEach(lvl => {
-    if (lvl.levelNumber < user.level) {
-      offset.cookRecipes += lvl.requirements.cookRecipes || 0;
-      offset.saveFavorites += lvl.requirements.saveFavorites || 0;
-      offset.sharePosts += lvl.requirements.sharePosts || 0;
-      offset.getLikes += lvl.requirements.getLikes || 0;
-      offset.useAIGenerator += lvl.requirements.useAIGenerator || 0;
-      offset.planMeals += lvl.requirements.planMeals || 0;
-    }
+  previousLevels.forEach(lvl => {
+    offset.cookRecipes += lvl.requirements.cookRecipes || 0;
+    offset.saveFavorites += lvl.requirements.saveFavorites || 0;
+    offset.sharePosts += lvl.requirements.sharePosts || 0;
+    offset.getLikes += lvl.requirements.getLikes || 0;
+    offset.useAIGenerator += lvl.requirements.useAIGenerator || 0;
+    offset.planMeals += lvl.requirements.planMeals || 0;
   });
 
-  const reqs = currentLevel.requirements;
+  // 3. We use the requirements of the CURRENT level to see if it's finished
+  // so we can move to the NEXT level.
+  const currentLevelData = previousLevels.find(l => l.levelNumber === user.level);
+  if (!currentLevelData) return;
+  
+  const reqs = currentLevelData.requirements;
 
-  // 3. Check if CURRENT stage progress meets the requirements
-  // Logic: (Lifetime Total) - (Past Requirements) >= (Current Level Requirement)
   const isLevelComplete = 
     ((user.recipesCookedCount || 0) - offset.cookRecipes) >= reqs.cookRecipes &&
     ((user.favorites?.length || 0) - offset.saveFavorites) >= reqs.saveFavorites &&
@@ -108,7 +113,7 @@ const checkGamificationLevelUp = async (user) => {
     user.level += 1;
     console.log(`🏆 SUCCESS: User promoted to Level ${user.level}`);
     
-    // Recursive check: In case the user did enough to skip two levels at once
+    // Check again immediately in case they qualify for the one after that too
     await checkGamificationLevelUp(user); 
   }
 };
