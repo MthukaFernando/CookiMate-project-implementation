@@ -39,15 +39,11 @@ export default function GlobalChatbot() {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
 
-  // FAB pulse animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  // Chat slide-up animation
   const slideAnim = useRef(new Animated.Value(300)).current;
-
   const scrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
-    // Gentle pulse on FAB to draw attention
     const pulse = Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -83,7 +79,6 @@ export default function GlobalChatbot() {
     }
   }, [isOpen]);
 
-  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages, isThinking]);
@@ -328,12 +323,13 @@ function TypingDot({ delay }: { delay: number }) {
 }
 
 const styles = StyleSheet.create({
-  // FAB
+  // FAB — higher bottom to clear nav bar, higher zIndex to stay on top
   fabWrapper: {
     position: "absolute",
-    bottom: 80,
+    bottom: 100,   // bumped up from 80 to clear the nav bar
     right: 22,
-    zIndex: 999,
+    zIndex: 9999,  // was 999, now above comments and other page elements
+    elevation: 20, // Android needs elevation too
   },
   fab: {
     width: 62,
@@ -410,9 +406,6 @@ const styles = StyleSheet.create({
   avatarImage: {
     width: 34,
     height: 34,
-  },
-  avatarEmoji: {
-    fontSize: 22,
   },
   headerTitle: {
     color: "#FFFFFF",
