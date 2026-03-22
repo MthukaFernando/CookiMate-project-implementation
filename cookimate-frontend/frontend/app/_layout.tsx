@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { onAuthStateChanged, User, signOut } from 'firebase/auth'; 
 import { auth } from '../config/firebase'; // Ensure this path correctly points to your firebase config
 import { ActivityIndicator, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 
 export default function RootLayout() {
   // State to track the Firebase user and the initial loading phase
@@ -54,8 +55,9 @@ export default function RootLayout() {
   if (initializing) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-        <ActivityIndicator size="large" color="#5f4436" />
-      </View>
+      <StatusBar style="dark" /> {/* Add this: 'dark' if bg is white, 'light' if bg is dark */}
+      <ActivityIndicator size="large" color="#5f4436" />
+    </View>
     );
   }
 
