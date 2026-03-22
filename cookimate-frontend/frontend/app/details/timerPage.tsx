@@ -8,7 +8,7 @@ import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { Ionicons } from "@expo/vector-icons";
 
 type Duration = { hours?: number; minutes?: number; seconds?: number };
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const UI_COLORS = {
   background: "#0A0A0A",
@@ -118,73 +118,76 @@ export default function Timer({
         </TouchableOpacity>
       )}
 
-      <View style={styles.progressWrapper}>
-        <AnimatedCircularProgress
-          size={width * 0.65}
-          width={10}
-          fill={totalSeconds > 0 ? (secondsLeft / totalSeconds) * 100 : 0}
-          tintColor={UI_COLORS.primaryGold}
-          backgroundColor={UI_COLORS.border}
-          rotation={0}
-          lineCap="round"
-        >
-          {() => (
-            <TouchableOpacity
-              activeOpacity={0.8}
-              onPress={() => secondsLeft > 0 && setRunning(!running)}
-              style={styles.innerCircle}
-            >
-              <Text style={styles.timerText}>{formatDisplay(secondsLeft)}</Text>
-              <View style={[styles.badge, { backgroundColor: running ? "#332B14" : "#222" }]}>
-                <Text style={[styles.statusText, { color: running ? UI_COLORS.primaryGold : "#31db2e" }]}>
-                  {running ? "PAUSE" : "START"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          )}
-        </AnimatedCircularProgress>
-      </View>
+      {/* Absolute Centered Wrapper */}
+      <View style={styles.centeringWrapper}>
+        <View style={styles.progressWrapper}>
+          <AnimatedCircularProgress
+            size={width * 0.65}
+            width={10}
+            fill={totalSeconds > 0 ? (secondsLeft / totalSeconds) * 100 : 0}
+            tintColor={UI_COLORS.primaryGold}
+            backgroundColor={UI_COLORS.border}
+            rotation={0}
+            lineCap="round"
+          >
+            {() => (
+              <TouchableOpacity
+                activeOpacity={0.8}
+                onPress={() => secondsLeft > 0 && setRunning(!running)}
+                style={styles.innerCircle}
+              >
+                <Text style={styles.timerText}>{formatDisplay(secondsLeft)}</Text>
+                <View style={[styles.badge, { backgroundColor: running ? "#332B14" : "#222" }]}>
+                  <Text style={[styles.statusText, { color: running ? UI_COLORS.primaryGold : "#31db2e" }]}>
+                    {running ? "PAUSE" : "START"}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            )}
+          </AnimatedCircularProgress>
+        </View>
 
-      <View style={styles.controlsRow}>
-        <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.mainButton}>
-          <Text style={styles.buttonText}>Edit Timer</Text>
-        </TouchableOpacity>
+        <View style={styles.controlsRow}>
+          <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.mainButton}>
+            <Text style={styles.buttonText}>Edit Timer</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity onPress={resetTimer} style={styles.secondaryButton}>
-          <Text style={styles.secondaryButtonText}>Reset</Text>
-        </TouchableOpacity>
-      </View>
+          <TouchableOpacity onPress={resetTimer} style={styles.secondaryButton}>
+            <Text style={styles.secondaryButtonText}>Reset</Text>
+          </TouchableOpacity>
+        </View>
 
-      <View style={styles.dropdownContainerWrapper}>
-        <Text style={styles.label}>TIMER TONE</Text>
-        <DropDownPicker
-          open={open}
-          value={selectedAlarmValue}
-          items={items}
-          setOpen={setOpen}
-          setValue={(callback) => {
-            const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
-            setSelectedAlarmValue(value);
-          }}
-          setItems={setItems}
-          placeholder="Select Tone"
-          placeholderStyle={{ color: UI_COLORS.textMuted }}
-          style={styles.dropdown}
-          dropDownContainerStyle={styles.dropdownList}
-          textStyle={styles.dropdownText}
-          listMode="SCROLLVIEW"
-          maxHeight={300}
-          disabled={running}
-          ArrowUpIconComponent={() => (
-            <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
-          )}
-          ArrowDownIconComponent={() => (
-            <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />
-          )}
-          TickIconComponent={() => (
-            <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />
-          )}
-        />
+        <View style={styles.dropdownContainerWrapper}>
+          <Text style={styles.label}>TIMER TONE</Text>
+          <DropDownPicker
+            open={open}
+            value={selectedAlarmValue}
+            items={items}
+            setOpen={setOpen}
+            setValue={(callback) => {
+              const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
+              setSelectedAlarmValue(value);
+            }}
+            setItems={setItems}
+            placeholder="Select Tone"
+            placeholderStyle={{ color: UI_COLORS.textMuted }}
+            style={styles.dropdown}
+            dropDownContainerStyle={styles.dropdownList}
+            textStyle={styles.dropdownText}
+            listMode="SCROLLVIEW"
+            maxHeight={200}
+            disabled={running}
+            ArrowUpIconComponent={() => (
+              <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
+            )}
+            ArrowDownIconComponent={() => (
+              <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />
+            )}
+            TickIconComponent={() => (
+              <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />
+            )}
+          />
+        </View>
       </View>
 
       <TimerPickerModal
@@ -209,11 +212,16 @@ export default function Timer({
 const styles = StyleSheet.create({
   timerContainer: {
     flex: 1,
-    alignItems: "center",
-    justifyContent: 'center', // Added to center the content vertically
     backgroundColor: UI_COLORS.background,
-    paddingHorizontal: 24,
-    paddingBottom: 20, // Small padding at the bottom for breathing room
+  },
+  centeringWrapper: {
+    position: 'absolute',
+    top: 0,
+    bottom: 120, // Adjust this value to account for your bottom tab bar height
+    left: 24,
+    right: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   closeIcon: {
     position: "absolute",
@@ -260,7 +268,7 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: "row",
     gap: 20,
-    marginTop: 15, // Reduced from 20
+    marginTop: 30,
   },
   mainButton: {
     flex: 1,
@@ -291,7 +299,7 @@ const styles = StyleSheet.create({
     color: UI_COLORS.accentRed,
   },
   dropdownContainerWrapper: {
-    marginTop: 15, // Reduced from 30
+    marginTop: 30,
     width: "100%",
     zIndex: 1000,
   },
