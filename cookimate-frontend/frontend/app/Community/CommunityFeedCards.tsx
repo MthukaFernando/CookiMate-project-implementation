@@ -275,7 +275,7 @@ export default function CommunityFeed() {
                   source={
                     item.user?.profilePic
                       ? { uri: item.user.profilePic }
-                      : require("../../assets/images/default-avatar.png")
+                      : require("../../assets/images/defaultAvatar.png")
                   }
                   style={[styles.avatar, !item.user && { opacity: 0.4 }]}
                 />
