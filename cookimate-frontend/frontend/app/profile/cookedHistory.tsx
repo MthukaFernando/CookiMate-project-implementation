@@ -22,10 +22,7 @@ import { auth } from "../../config/firebase";
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.25;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
-
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 // Interface to fix the "unknown" type error
 interface CookedItem {
   dateCooked: string;
