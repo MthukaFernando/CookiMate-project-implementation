@@ -117,7 +117,7 @@ This project was developed collaboratively by a student team.
 
 ## 📄 License
 
-This project is developed for academic purposes.
+This project is developed for academic and educational purposes.
 
 
 
