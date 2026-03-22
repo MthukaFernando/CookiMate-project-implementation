@@ -15,6 +15,7 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
+import GlobalChatbot from "../GlobalChatbot"; // 1. Added Import
 
 const debuggerHost = Constants.expoConfig?.hostUri;
 const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
@@ -252,6 +253,8 @@ const ProfilePage = () => {
   </ScrollView>
 </View>
       </ScrollView>
+      {/* 2. Added GlobalChatbot here at the root level */}
+      <GlobalChatbot />
     </SafeAreaView>
   );
 };
@@ -305,19 +308,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#0A0A0A",
   },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 25,
-    paddingTop: 35,
-    paddingBottom: 60,
-    backgroundColor: "#0A0A0A",
+  scrollContent: { 
+    flexGrow: 1,          
+    justifyContent: "center", 
+    paddingHorizontal: 25, 
+    paddingTop: 5,       
+    paddingBottom: 100, // Slightly increased to ensure bottom items aren't behind the FAB
+    backgroundColor: "#0A0A0A"
   },
+  
   topSubContainer: {
     backgroundColor: "#000000",
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: "#ffffff",
+    borderColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
     elevation: 8,
   },
   profileHeader: { flexDirection: "row", alignItems: "center", gap: 20 },

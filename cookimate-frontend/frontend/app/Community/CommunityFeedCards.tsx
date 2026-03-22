@@ -24,6 +24,8 @@ import Constants from "expo-constants";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { auth } from "../../config/firebase";
+import { globalStyle } from '../globalStyleSheet.style';
+import GlobalChatbot from "../GlobalChatbot"; 
 
 const { width } = Dimensions.get("window");
 const debuggerHost = Constants.expoConfig?.hostUri;
@@ -548,6 +550,7 @@ export default function CommunityFeed() {
           </View>
         </View>
       </Modal>
+      <GlobalChatbot />   
     </KeyboardAvoidingView>
   );
 }

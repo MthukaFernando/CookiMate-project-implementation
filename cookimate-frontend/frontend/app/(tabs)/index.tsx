@@ -19,6 +19,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"; // Required 
 import { Video, ResizeMode } from "expo-av";
 import axios from "axios";
 import Constants from "expo-constants";
+import GlobalChatbot from "../GlobalChatbot";
 
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
@@ -252,6 +253,7 @@ function HomePage() {
         {/* Dynamic bottom spacing to avoid home indicator overlap */}
         <View style={{ height: 120 + insets.bottom }} />
       </ScrollView>
+      <GlobalChatbot />
     </View>
   );
 }

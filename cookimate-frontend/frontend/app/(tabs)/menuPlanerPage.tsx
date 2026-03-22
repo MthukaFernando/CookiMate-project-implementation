@@ -22,6 +22,7 @@ import { useRouter, useLocalSearchParams, useFocusEffect } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { auth } from "../../config/firebase";
+import GlobalChatbot from "../GlobalChatbot";
 
 const { width, height } = Dimensions.get("window");
 const CAROUSEL_WIDTH = width * 0.9;
@@ -417,6 +418,7 @@ const Page = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+      <GlobalChatbot />
     </SafeAreaView>
   );
 };
