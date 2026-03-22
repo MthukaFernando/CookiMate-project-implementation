@@ -47,40 +47,42 @@ const LevelsPage = () => {
         const uid = auth.currentUser?.uid;
         if (!uid) return;
 
+        // 1. Get the level directly from the User model (This is the most up-to-date)
         const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
         const mongoId = userRes.data._id;
+        const actualLevelFromUser = userRes.data.level || 1;
 
-        let myLevelNum = 1;
         let myStats = {};
+
         try {
+          // 2. Fetch Dashboard ONLY for the statistical progress bars
           const dashRes = await axios.get(
             `${API_URL}/api/gamification/user/${mongoId}/dashboard`,
           );
-          if (
-            dashRes.data &&
-            dashRes.data.currentLevels &&
-            dashRes.data.currentLevels.gamification
-          ) {
-            myLevelNum = dashRes.data.currentLevels.gamification.levelNumber;
+          if (dashRes.data && dashRes.data.stats) {
             myStats = dashRes.data.stats;
           }
         } catch (e) {
-          console.log("No dashboard found, using defaults");
+          console.log("No dashboard stats found yet");
         }
 
+        // 3. SET THE STATE
         setUserStats(myStats);
-        setCurrentLevelNum(myLevelNum);
+        setCurrentLevelNum(actualLevelFromUser); // USE THE USER LEVEL HERE
 
+        // 4. Fetch All Levels
         const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
         const allLevels = levelsRes.data;
 
-        // Changed to >= so current level is visible for progress tracking
+        // 5. FILTER: Show the current level and everything above it
+        // We change this to >= so the level you are currently working on is visible
         const upcomingLevels = allLevels.filter(
-          (lvl: any) => lvl.levelNumber >= myLevelNum,
+          (lvl: any) => lvl.levelNumber >= actualLevelFromUser,
         );
+
         setLevels(upcomingLevels);
       } catch (err) {
-        console.error(err);
+        console.error("Error fetching levels data:", err);
       } finally {
         setLoading(false);
       }
@@ -156,20 +158,24 @@ const LevelsPage = () => {
                     if (value === 0) return null;
 
                     const statKey = statKeysMap[key];
-
-                    // FIX: If this is NOT the user's current level, show 0 progress
                     const isCurrentLevel =
                       selectedLevel.levelNumber === currentLevelNum;
-                    const currentValue = isCurrentLevel
+
+                    // 1. Get the raw value from the backend
+                    const rawValue = isCurrentLevel
                       ? userStats[statKey] || 0
                       : 0;
-
                     const requiredValue = value as number;
+
+                    // 2. NEW: Create a "Display Value" that never goes above the requirement (Fixes 3/1)
+                    const displayValue = Math.min(rawValue, requiredValue);
+
+                    // 3. Calculate percentage based on the raw value
                     const progressPercent = Math.min(
-                      (currentValue / requiredValue) * 100,
+                      (rawValue / requiredValue) * 100,
                       100,
                     );
-                    const isCompleted = currentValue >= requiredValue;
+                    const isCompleted = rawValue >= requiredValue;
 
                     return (
                       <View key={key} style={styles.requirementBlock}>
@@ -200,14 +206,15 @@ const LevelsPage = () => {
                                   styles.completedText,
                                 !isCurrentLevel && { color: "#444" },
                               ]}
-                              numberOfLines={1}
                             >
                               {key.replace(/([A-Z])/g, " $1").toLowerCase()}
                             </Text>
                           </View>
+
+                          {/* 4. FIX: Show displayValue (1) instead of rawValue (3) */}
                           <Text style={styles.progressText}>
                             {isCurrentLevel
-                              ? `${currentValue} / ${requiredValue}`
+                              ? `${displayValue} / ${requiredValue}`
                               : "Locked"}
                           </Text>
                         </View>
@@ -239,7 +246,6 @@ const LevelCard = ({ level, onOpenReqs, isCurrent }: any) => {
       <View style={styles.cardLeft}>
         <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
           <Text style={styles.cardLevelName}>{level.levelName}</Text>
-          
         </View>
         <Text style={styles.cardDescription} numberOfLines={2}>
           {level.badge?.description ||

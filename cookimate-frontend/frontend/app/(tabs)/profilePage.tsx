@@ -8,7 +8,7 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  SafeAreaView, 
+  SafeAreaView,
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -22,51 +22,54 @@ const API_URL = `http://${address}:5000`;
 const DEFAULT_AVATAR =
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
 
-// Added your map here so we can read the user's stats exactly like the Levels Page does
 const statKeysMap: any = {
   cookRecipes: "recipesCooked",
   saveFavorites: "favoritesSaved",
   sharePosts: "postsShared",
   getLikes: "likesReceived",
   useAIGenerator: "aiGenerations",
-  planMeals: "mealsPlanned"
+  planMeals: "mealsPlanned",
 };
 
 const ProfilePage = () => {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
   const [gamification, setGamification] = useState<any>(null);
-  const [completedLevels, setCompletedLevels] = useState<any[]>([]); 
+  const [completedLevels, setCompletedLevels] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
 
   const fetchData = async () => {
     try {
-      // 1. Fetch basic user data using Firebase UID
+      setLoading(true);
       const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
       const userData = userResponse.data;
       setUser(userData);
 
+      const userCurrentLevel = userData.level || 1;
+
       if (userData && userData._id) {
-        // 2. Fetch gamification data using MongoDB _id
         try {
           const gamificationResponse = await axios.get(
-            `${API_URL}/api/gamification/user/${userData._id}/dashboard`
+            `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
           );
           setGamification(gamificationResponse.data);
-
-          // 3. Fetch all levels to figure out which ones are completed
-          const currentLevelNum = gamificationResponse.data.currentLevels?.gamification?.levelNumber || 1;
-          const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
-          const allLevels = levelsRes.data;
-          
-          // Filter to only include levels the user has finished
-          const finished = allLevels.filter((lvl: any) => lvl.levelNumber < currentLevelNum);
-          setCompletedLevels(finished);
-
         } catch (gamificationErr) {
           console.log("No gamification data found for this user yet.");
+        }
+
+        try {
+          const levelsRes = await axios.get(
+            `${API_URL}/api/gamification/levels`,
+          );
+          const allLevels = levelsRes.data;
+          const finished = allLevels.filter(
+            (lvl: any) => lvl.levelNumber < userCurrentLevel,
+          );
+          setCompletedLevels(finished);
+        } catch (levelErr) {
+          console.error("Error fetching levels for achievements", levelErr);
         }
       }
     } catch (err: any) {
@@ -79,7 +82,7 @@ const ProfilePage = () => {
   useFocusEffect(
     useCallback(() => {
       fetchData();
-    }, [])
+    }, []),
   );
 
   if (loading) {
@@ -90,30 +93,26 @@ const ProfilePage = () => {
     );
   }
 
-  // --- PROGRESS BAR CALCULATION (Task-Based) ---
   let progressPercent = 0;
   let currentLevelName = "Rookie Cook";
 
   if (gamification) {
     const currentLevel = gamification.currentLevels?.gamification;
     const userStats = gamification.stats || {};
-    
+
     if (currentLevel) {
       currentLevelName = currentLevel.levelName;
       const requirements = currentLevel.requirements || {};
-      
+
       let totalTasks = 0;
       let totalTaskProgress = 0;
 
-      // Calculate progress strictly based on the required tasks
       Object.entries(requirements).forEach(([key, requiredValue]) => {
         const reqVal = requiredValue as number;
         if (reqVal > 0) {
           totalTasks++;
           const statKey = statKeysMap[key];
           const currentValue = userStats[statKey] || 0;
-          
-          // Cap each individual task at 100% so overachieving on one doesn't skew the others
           const taskPercent = Math.min((currentValue / reqVal) * 100, 100);
           totalTaskProgress += taskPercent;
         }
@@ -122,20 +121,18 @@ const ProfilePage = () => {
       if (totalTasks > 0) {
         progressPercent = totalTaskProgress / totalTasks;
       } else {
-        // If there are no requirements (e.g., max level), set to 100%
         progressPercent = 100;
       }
     }
   }
 
-  // Ensure it stays between 0 and 100
   progressPercent = Math.max(0, Math.min(progressPercent, 100));
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView
         style={globalStyle.container}
-        contentContainerStyle={styles.scrollContent} 
+        contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
         {/* 1. TOP PROFILE CARD */}
@@ -177,24 +174,22 @@ const ProfilePage = () => {
             </View>
           </View>
 
-          {/* Dynamic Level Progress */}
           <View style={styles.levelContainer}>
             <View style={styles.levelLabelRow}>
               <Text style={styles.levelLabel}>{currentLevelName}</Text>
-              <Text style={styles.pointsLabel}>{Math.round(progressPercent)}% / 100%</Text>
+              <Text style={styles.pointsLabel}>
+                {Math.round(progressPercent)}% / 100%
+              </Text>
             </View>
             <View style={styles.progressBar}>
               <View
-                style={[
-                  styles.progressFill,
-                  { width: `${progressPercent}%` }, 
-                ]}
+                style={[styles.progressFill, { width: `${progressPercent}%` }]}
               />
             </View>
           </View>
         </View>
 
-        {/* 2. STATS SECTION */}
+        {/* 2. STATS SECTION (Cleaned up Nesting) */}
         <View style={styles.bottomSubContainer}>
           <Text style={styles.sectionTitle}>Cooking Journey</Text>
           <View style={styles.statsGrid}>
@@ -212,8 +207,8 @@ const ProfilePage = () => {
             />
             <StatItem
               icon="award"
-              label="Levels"
-              value={gamification?.currentLevels?.gamification?.levelNumber || 1}
+              label="Level"
+              value={user?.level || 1}
               onPress={() => router.push("/profile/levelsPage")}
             />
             <StatItem
@@ -234,14 +229,14 @@ const ProfilePage = () => {
             contentContainerStyle={styles.badgeScroll}
           >
             {completedLevels.length === 0 ? (
-              <Text style={{ color: '#A6A6A6', fontStyle: 'italic' }}>
+              <Text style={{ color: "#A6A6A6", fontStyle: "italic" }}>
                 Complete levels and earn badges!
               </Text>
             ) : (
               completedLevels.map((lvl, index) => (
                 <BadgeItem
                   key={index}
-                  imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR} 
+                  imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR}
                   title={lvl.levelName}
                 />
               ))
@@ -253,7 +248,6 @@ const ProfilePage = () => {
   );
 };
 
-/* --- SUB-COMPONENTS --- */
 const StatItem = ({ icon, label, value, onPress }: any) => (
   <TouchableOpacity
     activeOpacity={0.7}
@@ -295,12 +289,8 @@ const BadgeItem = ({
   </TouchableOpacity>
 );
 
-/* --- STYLES --- */
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: "#0A0A0A",
-  },
+  safeArea: { flex: 1, backgroundColor: "#0A0A0A" },
   center: {
     flex: 1,
     justifyContent: "center",
@@ -309,31 +299,20 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
     paddingHorizontal: 25,
-    paddingTop: 5, 
-    paddingBottom: 60, 
+    paddingTop: 5,
+    paddingBottom: 60,
     backgroundColor: "#0A0A0A",
   },
-
-  // Top Profile Card
   topSubContainer: {
     backgroundColor: "#000000",
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
     borderColor: "#ffffff",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
     elevation: 8,
   },
-  profileHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 20,
-  },
+  profileHeader: { flexDirection: "row", alignItems: "center", gap: 20 },
   mascotCircle: {
     width: 90,
     height: 90,
@@ -342,64 +321,21 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: "#D4AF37",
     overflow: "hidden",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
   },
-  mascotImg: {
-    width: "100%",
-    height: "100%",
-  },
-  headerTextContainer: {
-    flex: 1,
-  },
-  nameText: {
-    fontSize: 22,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  usernameText: {
-    fontSize: 14,
-    color: "#A6A6A6",
-    marginBottom: 6,
-  },
-  bioText: {
-    fontSize: 13,
-    color: "#d1cebe",
-    marginBottom: 10,
-    lineHeight: 18,
-  },
-  bioPlaceholder: {
-    fontSize: 12,
-    color: "#555555",
-    marginBottom: 10,
-    fontStyle: "italic",
-  },
-
-  actionRow: {
-    flexDirection: "row",
-    gap: 10,
-  },
+  mascotImg: { width: "100%", height: "100%" },
+  headerTextContainer: { flex: 1 },
+  nameText: { fontSize: 22, fontWeight: "bold", color: "#FFFFFF" },
+  usernameText: { fontSize: 14, color: "#A6A6A6", marginBottom: 6 },
+  bioText: { fontSize: 13, color: "#d1cebe", marginBottom: 10, lineHeight: 18 },
+  bioPlaceholder: { fontSize: 12, color: "#555555", marginBottom: 10, fontStyle: "italic" },
+  actionRow: { flexDirection: "row", gap: 10 },
   editBtn: {
     backgroundColor: "#D4AF37",
     paddingHorizontal: 15,
     paddingVertical: 8,
     borderRadius: 12,
-    borderWidth: 1,
-    borderColor: "#D4AF37",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  editBtnText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#000000",
-  },
+  editBtnText: { fontSize: 12, fontWeight: "bold", color: "#000000" },
   settingsBtn: {
     backgroundColor: "#D4AF37",
     width: 35,
@@ -407,32 +343,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#D4AF37",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
-
-  // Level Bar
-  levelContainer: {
-    marginTop: 20,
-  },
-  levelLabelRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 5,
-  },
-  levelLabel: {
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  pointsLabel: {
-    fontSize: 12,
-    color: "#A6A6A6",
-  },
+  levelContainer: { marginTop: 20 },
+  levelLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
+  levelLabel: { fontWeight: "bold", color: "#FFFFFF" },
+  pointsLabel: { fontSize: 12, color: "#A6A6A6" },
   progressBar: {
     height: 10,
     backgroundColor: "#1E1E1E",
@@ -441,12 +356,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2A2A2A",
   },
-  progressFill: {
-    height: "100%",
-    backgroundColor: "#D4AF37",
-  },
-
-  // Bottom Cards
+  progressFill: { height: "100%", backgroundColor: "#D4AF37" },
   bottomSubContainer: {
     backgroundColor: "#1A1A1A",
     borderRadius: 25,
@@ -454,25 +364,9 @@ const styles = StyleSheet.create({
     marginTop: 20,
     borderWidth: 1,
     borderColor: "#D4AF37",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 8,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-    marginBottom: 15,
-  },
-
-  statsGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    justifyContent: "space-between",
-    gap: 12,
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 15 },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
   statCard: {
     width: "48%",
     flexDirection: "row",
@@ -483,11 +377,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#2A2A2A",
     gap: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 4,
   },
   statIconCircle: {
     width: 35,
@@ -499,28 +388,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D4AF37",
   },
-  statTextColumn: {
-    flex: 1,
-  },
-  statValue: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#FFFFFF",
-  },
-  statLabel: {
-    fontSize: 14,
-    color: "#A6A6A6",
-  },
-
-  // Achievements
-  badgeScroll: {
-    gap: 15,
-    paddingRight: 10,
-  },
-  badgeCard: {
-    alignItems: "center",
-    width: 80,
-  },
+  statTextColumn: { flex: 1 },
+  statValue: { fontSize: 16, fontWeight: "bold", color: "#FFFFFF" },
+  statLabel: { fontSize: 14, color: "#A6A6A6" },
+  badgeScroll: { gap: 15, paddingRight: 10 },
+  badgeCard: { alignItems: "center", width: 80 },
   badgeIconCircle: {
     width: 60,
     height: 60,
@@ -532,22 +404,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D4AF37",
     overflow: "hidden",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
   },
-  badgeImage: {
-    width: "75%",
-    height: "75%",
-  },
-  badgeTitle: {
-    fontSize: 11,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    textAlign: "center",
-  },
+  badgeImage: { width: "75%", height: "75%" },
+  badgeTitle: { fontSize: 11, fontWeight: "600", color: "#FFFFFF", textAlign: "center" },
 });
 
 export default ProfilePage;

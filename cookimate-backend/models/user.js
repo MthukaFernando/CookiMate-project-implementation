@@ -59,6 +59,18 @@ const userSchema = new mongoose.Schema(
         ref: "Recipe",
       },
     ],
+    postsShared: {
+      type: Number,
+      default: 0,
+    },
+    likesReceived: {
+      type: Number,
+      default: 0,
+    },
+    aiGenerations: {
+      type: Number,
+      default: 0,
+    },
     recipesCookedCount: {
       type: Number,
       default: 0,
