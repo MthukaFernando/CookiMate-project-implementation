@@ -24,9 +24,7 @@ import {
   signOut,
 } from "firebase/auth";
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 export default function SignupPage() {
   const router = useRouter();
