@@ -96,7 +96,7 @@ const CreatePostScreen: React.FC = () => {
       if (response.status === 201) {
         Alert.alert(
           "Success!", 
-          "Post shared! +10 Points added to your profile.",
+          "Post shared! Check your level card to see your progress",
           [
             { 
               text: "Great", 

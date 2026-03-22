@@ -25,7 +25,7 @@ const API_URL = `http://${address}:5000`;
 const statKeysMap: any = {
   cookRecipes: "recipesCooked",
   saveFavorites: "favoritesSaved",
-  shareRecipes: "postsShared",
+  sharePosts: "postsShared",
   getLikes: "likesReceived",
   useAIGenerator: "aiGenerations",
   planMeals: "mealsPlanned",

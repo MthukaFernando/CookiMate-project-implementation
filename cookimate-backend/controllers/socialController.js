@@ -3,6 +3,7 @@ import User from "../models/user.js";
 import { cloudinary } from "../config/cloudinary.js";
 import dotenv from "dotenv";
 import axios from "axios";
+import { updateUserStats } from "../utils/gamificationHelpers.js";
 
 dotenv.config();
 
@@ -24,11 +25,12 @@ export const createPost = async (req, res) => {
     });
     const savedPost = await newPost.save();
 
-    // Reward immediately (provisional)
-    await User.findOneAndUpdate(
-      { firebaseUid: user },
-      { $inc: { points: 10 } }
-    );
+    // Progress bar incremenet
+    const userDoc = await User.findOne({ firebaseUid: user });
+    if (userDoc) {
+      await updateUserStats(userDoc._id, 'SHARE_POST', 1);
+      console.log(`Gamification: Post progress added for ${userDoc.username}`);
+    }
 
     // Respond to mobile app immediately
     res.status(201).json(savedPost);
@@ -73,13 +75,14 @@ export const createPost = async (req, res) => {
         await cloudinary.uploader.destroy(publicId);
         
         // Revoke points and set warning message
-        await User.findOneAndUpdate(
-          { firebaseUid: user },
-          { 
-            $inc: { points: -10 },
-            $set: { lastMessage: "Your post violated safety guidelines and was removed." }
-          }
-        );
+        if (userDoc) {
+          // Decrement the progress bar because the content was invalid
+          await updateUserStats(userDoc._id, 'SHARE_POST', -1);
+          
+          await User.findByIdAndUpdate(userDoc._id, { 
+            $set: { lastMessage: "Your post violated safety guidelines. Progress has been revoked." }
+          });
+        }
       } else {
         console.log("✅ AI Vision: Content Approved.");
         await Post.findByIdAndUpdate(savedPost._id, { moderationStatus: "approved" });
@@ -133,15 +136,30 @@ export const getFeed = async (req, res) => {
 export const likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    const { userId } = req.body;
+    const { userId } = req.body; // The person clicking the button
+
     if (!post) return res.status(404).json("Post not found");
+
+    // 1. Find the AUTHOR of the post (the person who gets the progress)
+    const authorDoc = await User.findOne({ firebaseUid: post.user });
 
     if (!post.likes.includes(userId)) {
       await post.updateOne({ $push: { likes: userId } });
-      await User.findOneAndUpdate({ firebaseUid: post.user }, { $inc: { points: 5 } });
+
+      if (authorDoc) {
+        // Increment the author's get likes progress bar
+        await updateUserStats(authorDoc._id, 'RECEIVE_LIKE', 1);
+        console.log(`Gamification: ${authorDoc.username} received a like.`);
+      }
       res.status(200).json("Post liked!");
     } else {
+      // UNLIKE ACTION
       await post.updateOne({ $pull: { likes: userId } });
+
+      if (authorDoc) {
+        // Decrement the progress
+        await updateUserStats(authorDoc._id, 'RECEIVE_LIKE', -1);
+      }
       res.status(200).json("Post unliked.");
     }
   } catch (err) {
@@ -194,6 +212,36 @@ export const deletePost = async (req, res) => {
 
     await Post.findByIdAndDelete(postId);
     res.status(200).json("Post deleted successfully");
+  } catch (err) {
+    res.status(500).json(err);
+  }
+};
+
+export const deleteComment = async (req, res) => {
+  try {
+    const { postId, commentId } = req.params;
+    const { userId } = req.body; // This is the logged-in user's UID
+
+    const updatedPost = await Post.findOneAndUpdate(
+      { 
+        _id: postId, 
+        "comments._id": commentId, // Target the specific comment ID
+        "comments.user": userId    // Safety: Ensure the UID matches the commenter
+      },
+      { $pull: { comments: { _id: commentId } } }, // Remove that specific comment object
+      { new: true }
+    ).populate({
+      path: "comments.user",
+      model: "User",
+      foreignField: "firebaseUid",
+      select: "username profilePic",
+    });
+
+    if (!updatedPost) {
+      return res.status(403).json({ message: "Not authorized or comment missing" });
+    }
+
+    res.status(200).json(updatedPost);
   } catch (err) {
     res.status(500).json(err);
   }

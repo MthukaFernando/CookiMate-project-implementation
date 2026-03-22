@@ -26,7 +26,7 @@ const DEFAULT_AVATAR =
 const statKeysMap: any = {
   cookRecipes: "recipesCooked",
   saveFavorites: "favoritesSaved",
-  shareRecipes: "postsShared",
+  sharePosts: "postsShared",
   getLikes: "likesReceived",
   useAIGenerator: "aiGenerations",
   planMeals: "mealsPlanned"
