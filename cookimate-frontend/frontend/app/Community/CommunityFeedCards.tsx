@@ -59,6 +59,9 @@ export default function CommunityFeed() {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- DELETED ACCOUNT MODAL ---
+  const [deletedAccountModalVisible, setDeletedAccountModalVisible] = useState(false);
+
   // --- REPORT STATES ---
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showOtherInput, setShowOtherInput] = useState(false);
@@ -262,11 +265,26 @@ export default function CommunityFeed() {
             <View style={styles.postHeaderRow}>
               <TouchableOpacity
                 style={styles.userRow}
-                onPress={() => router.push(`/Community/${item.user?.firebaseUid}`)}
+                onPress={() => {
+                  if (!item.user) {
+                    setDeletedAccountModalVisible(true);
+                  } else {
+                    router.push(`/Community/${item.user?.firebaseUid}`);
+                  }
+                }}
               >
-                <Image source={{ uri: item.user?.profilePic }} style={styles.avatar} />
+                <Image
+                  source={
+                    item.user?.profilePic
+                      ? { uri: item.user.profilePic }
+                      : require("../../assets/images/default-avatar.png")
+                  }
+                  style={[styles.avatar, !item.user && { opacity: 0.4 }]}
+                />
                 <View>
-                  <Text style={styles.username}>{item.user?.username}</Text>
+                  <Text style={[styles.username, !item.user && { color: theme.muted, fontStyle: "italic" }]}>
+                    {item.user?.username ?? "Deleted Account"}
+                  </Text>
                   <Text style={styles.dateText}>
                     {new Date(item.createdAt).toLocaleDateString(undefined, {
                       month: "short",
@@ -342,7 +360,9 @@ export default function CommunityFeed() {
 
           <View style={styles.captionRow}>
             <Text style={styles.captionText}>
-              <Text style={styles.boldUser}>{item.user?.username} </Text>
+              <Text style={[styles.boldUser, !item.user && { color: theme.muted, fontStyle: "italic" }]}>
+                {item.user?.username ?? "Deleted Account"}{" "}
+              </Text>
               {item.caption}
             </Text>
           </View>
@@ -452,6 +472,27 @@ export default function CommunityFeed() {
         onScrollBeginDrag={() => setIsSearching(false)}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
+
+      {/* --- DELETED ACCOUNT MODAL --- */}
+      <Modal visible={deletedAccountModalVisible} transparent animationType="fade" onRequestClose={() => setDeletedAccountModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.reportCard}>
+            <View style={styles.thankYouArea}>
+              <Ionicons name="person-remove-outline" size={60} color={theme.muted} style={{ marginBottom: 15 }} />
+              <Text style={[styles.thankYouTitle, { color: theme.muted }]}>Account Deleted</Text>
+              <Text style={styles.thankYouText}>
+                This account no longer exists. The user may have deleted their account.
+              </Text>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: theme.card, borderWidth: 1, borderColor: theme.border, marginTop: 10, width: "100%" }]}
+                onPress={() => setDeletedAccountModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnText, { color: theme.text, textAlign: "center" }]}>Got It</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* --- REPORT MODAL --- */}
       <Modal visible={reportModalVisible} transparent animationType="fade" onRequestClose={closeReportModal}>
