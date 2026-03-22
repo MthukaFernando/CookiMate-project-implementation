@@ -381,6 +381,10 @@ export const deleteUser = async (req, res) => {
       { $or: [{ followers: user._id }, { following: user._id }] },
       { $pull: { followers: user._id, following: user._id } }
     );
+
+    // Delete all posts created by this user
+    await Post.deleteMany({ user: uid });
+
     await User.findByIdAndDelete(user._id);
     res.status(200).json({ message: "User account deleted successfully" });
   } catch (error) {
