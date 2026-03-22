@@ -21,7 +21,7 @@ export const updateUserStats = async (userId, action, increment = 1) => {
     const user = await User.findById(userId);
     if (!user) throw new Error("User not found");
 
-    // 2. Get requirements for the user's CURRENT level
+    // Get requirements for the user's CURRENT level
     const currentLevelData = await GamificationLevel.findOne({
       levelNumber: user.level 
     });
@@ -38,11 +38,14 @@ export const updateUserStats = async (userId, action, increment = 1) => {
 
     const statField = statMap[action];
     
-    // 3. Increment logic
+    // 3. Increment logic - ONLY for fields that aren't manually managed
     if (statField) {
-      // If it's a number field (like recipesCookedCount), increment it
-      if (typeof user[statField] === 'number') {
-        user[statField] += increment;
+      // For COOK_RECIPE, we DON'T increment here because it's managed by the controller
+      // to ensure unique counting. We only increment other stats.
+      if (action !== 'COOK_RECIPE') {
+        if (typeof user[statField] === 'number') {
+          user[statField] += increment;
+        }
       }
       // Note: Arrays like 'favorites' and 'mealPlan' update their length automatically 
       // when you add items elsewhere in your app, so we don't 'increment' them here.
