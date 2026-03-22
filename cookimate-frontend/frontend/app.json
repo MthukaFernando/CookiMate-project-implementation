@@ -13,6 +13,7 @@
     },
     "android": {
       "package": "com.cookimateLabs.cookimate",
+      "googleServicesFile": "./google-services.json",
       "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
