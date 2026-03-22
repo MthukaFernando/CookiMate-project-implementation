@@ -326,7 +326,7 @@ const styles = StyleSheet.create({
   // FAB — higher bottom to clear nav bar, higher zIndex to stay on top
   fabWrapper: {
     position: "absolute",
-    bottom: 100,   // bumped up from 80 to clear the nav bar
+    bottom: 150,   // bumped up from 80 to clear the nav bar
     right: 22,
     zIndex: 9999,  // was 999, now above comments and other page elements
     elevation: 20, // Android needs elevation too
