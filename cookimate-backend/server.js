@@ -14,8 +14,6 @@ import { initDictionaryForController } from "./controllers/aiController.js";
 // Initialize Express
 const app = express();
 
-console.log("Current Directory:", process.cwd());
-console.log("Mongo URI is:", process.env.MONGO_URI);
 
 // --- MIDDLEWARE ---
 app.use(cors());
