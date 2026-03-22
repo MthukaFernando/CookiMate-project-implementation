@@ -1,10 +1,7 @@
-import express from "express";
 import User from "../models/user.js";
 
-const router = express.Router();
-
 // Get user preferences
-router.get("/preferences/:userId", async (req, res) => {
+export const getUserPreferences = async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -22,13 +19,14 @@ router.get("/preferences/:userId", async (req, res) => {
     console.error("Failed to get user preferences:", error);
     res.status(500).json({ error: "Failed to get preferences" });
   }
-});
+};
 
 // Update user preferences
-router.put("/preferences/:userId", async (req, res) => {
+export const updateUserPreferences = async (req, res) => {
   const { userId } = req.params;
   const { dietaryPreferences, allergies, customPreferences } = req.body;
 
+  // Validate input
   if (
     !Array.isArray(dietaryPreferences) ||
     !Array.isArray(allergies) ||
@@ -65,10 +63,10 @@ router.put("/preferences/:userId", async (req, res) => {
       .status(500)
       .json({ error: "Failed to update preferences: " + error.message });
   }
-});
+};
 
 // Get preferences summary
-router.get("/preferences/:userId/summary", async (req, res) => {
+export const getPreferencesSummary = async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -96,10 +94,10 @@ router.get("/preferences/:userId/summary", async (req, res) => {
     console.error("Failed to get preferences summary:", error);
     res.status(500).json({ error: "Failed to get preferences summary" });
   }
-});
+};
 
 // Clear all preferences
-router.delete("/preferences/:userId", async (req, res) => {
+export const clearUserPreferences = async (req, res) => {
   const { userId } = req.params;
 
   try {
@@ -130,6 +128,4 @@ router.delete("/preferences/:userId", async (req, res) => {
     console.error("Failed to clear user preferences:", error);
     res.status(500).json({ error: "Failed to clear preferences" });
   }
-});
-
-export default router;
+};
