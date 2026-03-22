@@ -13,7 +13,7 @@ import {
   StatusBar,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 // --- DARK MODE BRANDING ---
 const BRAND = {
@@ -106,7 +106,9 @@ export default function ConverterPage() {
     <View style={styles.outerContainer}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <View style={styles.content}>
+        
+        {/* Main Content Wrapper using Absolute Centering */}
+        <View style={styles.centeringWrapper}>
           {!conversionType ? (
             <View style={styles.gridContainer}>
               <Text style={styles.sectionLabel}>CHOOSE CATEGORY</Text>
@@ -242,7 +244,14 @@ export default function ConverterPage() {
 const styles = StyleSheet.create({
   outerContainer: { flex: 1, backgroundColor: BRAND.bg },
   container: { flex: 1, backgroundColor: BRAND.bg },
-  content: { flex: 1, padding: 25, justifyContent: "center" },
+  centeringWrapper: {
+    position: 'absolute',
+    top: 0,
+    bottom: 90, 
+    left: 25,
+    right: 25,
+    justifyContent: 'center',
+  },
   gridContainer: { width: "100%" },
   sectionLabel: {
     fontSize: 12,
