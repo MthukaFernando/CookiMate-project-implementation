@@ -66,13 +66,13 @@ const userSchema = new mongoose.Schema(
     //cooked history
     cookedHistory: [
       {
-        recipeId: { 
-          type: mongoose.Schema.Types.ObjectId, 
-          ref: "Recipe" 
+        recipeId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Recipe",
         },
-        dateCooked: { 
-          type: Date, 
-          default: Date.now 
+        dateCooked: {
+          type: Date,
+          default: Date.now,
         },
         timesCooked: { 
           type: Number, 
@@ -84,16 +84,37 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    blockedUsers: [
+      {
+        type: String,
+      },
+    ],
     mealPlan: [
       {
-        uniqueId: { type: String, required: true }, 
-        recipeId: { type: String, required: true }, 
+        uniqueId: { type: String, required: true },
+        recipeId: { type: String, required: true },
         name: { type: String, required: true },
         image: { type: String },
         category: { type: String },
         date: { type: String, required: true },
-      }
+      },
     ],
+
+    dietaryPreferences: {
+      type: [String],
+      default: [],
+      description: "User's dietary preferences (e.g., Vegetarian, Vegan, Keto)",
+    },
+    allergies: {
+      type: [String],
+      default: [],
+      description: "User's allergies (e.g., Peanuts, Dairy, Shellfish)",
+    },
+    customPreferences: {
+      type: [String],
+      default: [],
+      description: "Custom user preferences (e.g., Low sodium, No mushrooms)",
+    },
   },
   {
     timestamps: true,
@@ -101,7 +122,7 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-userSchema.index({ username: 'text' });
+userSchema.index({ username: "text" });
 userSchema.index({ followers: 1 });
 userSchema.index({ following: 1 });
 

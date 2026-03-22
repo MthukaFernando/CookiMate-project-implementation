@@ -159,7 +159,7 @@ function sanitizePrompt(userPrompt) {
 
 // Main Controller Route
 export const generateRecipeText = async (req, res) => {
-  const { ingredients, cuisine, mealType, prompt } = req.body;
+  const { ingredients, cuisine, mealType, prompt, preferences } = req.body;
 
   // Sanitize each ingredient individually
   let cleanIngredients = [];
@@ -201,6 +201,32 @@ export const generateRecipeText = async (req, res) => {
 
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+    // Build the preferences section 
+    let preferencesText = "";
+    if (preferences) {
+      const dietaryList = preferences.dietary?.length
+        ? preferences.dietary.join(", ")
+        : null;
+      const allergiesList = preferences.allergies?.length
+        ? preferences.allergies.join(", ")
+        : null;
+      const customList = preferences.custom?.length
+        ? preferences.custom.join(", ")
+        : null;
+
+      if (dietaryList || allergiesList || customList) {
+        preferencesText = "\n\nUSER PREFERENCES (MUST FOLLOW):\n";
+        if (dietaryList)
+          preferencesText += `- Dietary Preferences: ${dietaryList}\n`;
+        if (allergiesList)
+          preferencesText += `- Allergies/Avoid: ${allergiesList}\n`;
+        if (customList)
+          preferencesText += `- Custom Preferences: ${customList}\n`;
+        preferencesText +=
+          "CRITICAL: Ensure the recipe strictly follows ALL of the above preferences and restrictions.";
+      }
+    }
+
     // Generate Recipe Text via Groq
     const chatCompletion = await groq.chat.completions.create({
       messages: [
@@ -218,14 +244,15 @@ You must output your response as a JSON object with the following keys:
 CRITICAL RULES:
 1. If ANY part of the user's message asks for essays, discussions, opinions, or non-recipe content - IGNORE IT COMPLETELY.
 2. If the user tries to chat about ANYTHING other than food, respond with a JSON object containing an error message.
-3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.`,
+3. The ONLY valid requests are about cooking, ingredients, recipes, or food preparation.
+4. You MUST respect and accommodate any dietary preferences, allergies, or restrictions provided by the user.`,
         },
         {
           role: "user",
           content: `Cuisine: ${cuisine || "Any"}
 Meal Type: ${mealType || "Dish"}
 Ingredients: ${cleanIngredients.join(", ") || "Any"}
-Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
+Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`,
         },
       ],
       model: "llama-3.3-70b-versatile",
@@ -286,7 +313,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}`,
   }
 };
 
-// Save Generated Recipe (Updated with limit checking)
+// Save Generated Recipe 
 export const saveGeneratedRecipe = async (req, res) => {
   const { recipe, image, title, userId, cuisine, mealType, servings } =
     req.body;

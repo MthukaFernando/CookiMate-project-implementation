@@ -30,6 +30,10 @@ const AVATAR_OPTIONS = [
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965627/profile_pic2_lvcgse.png",
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
   "https://res.cloudinary.com/cookimate-images/image/upload/v1774065156/profile_pics/profile_pic4_004.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103677/profile_pics/dp_3.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103699/profile_pics/dp_4.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103707/profile_pics/dp_2.png",
+  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103733/profile_pics/dp_1.png",
 ];
 
 const EditProfile = () => {

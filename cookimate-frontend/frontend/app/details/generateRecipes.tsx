@@ -143,7 +143,18 @@ export default function GenerateRecipesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showInputForm, setShowInputForm] = useState(true); // New state to toggle between input form and recipe card
+  const [showInputForm, setShowInputForm] = useState(true); 
+
+  // User preferences state
+  const [userPreferences, setUserPreferences] = useState<{
+    dietaryPreferences: string[];
+    allergies: string[];
+    customPreferences: string[];
+  }>({
+    dietaryPreferences: [],
+    allergies: [],
+    customPreferences: [],
+  });
 
   // Cooking Mode State
   const [cookingMode, setCookingMode] = useState(false);
@@ -165,6 +176,31 @@ export default function GenerateRecipesPage() {
       return unsubscribe;
     }
   }, []);
+
+  // Fetch user preferences when user is logged in
+  useEffect(() => {
+    const fetchUserPreferences = async () => {
+      if (currentUserId) {
+        try {
+          const response = await axios.get(
+            `${API_URL}/api/users/preferences/${currentUserId}`,
+          );
+          if (response.data) {
+            setUserPreferences({
+              dietaryPreferences: response.data.dietaryPreferences || [],
+              allergies: response.data.allergies || [],
+              customPreferences: response.data.customPreferences || [],
+            });
+            console.log("User preferences loaded:", response.data);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user preferences:", error);
+        }
+      }
+    };
+
+    fetchUserPreferences();
+  }, [currentUserId]);
 
   // --- ANIMATIONS ---
   const panelBgColor = slideAnim.interpolate({
@@ -247,6 +283,12 @@ export default function GenerateRecipesPage() {
           servings,
           prompt: culinaryPrompt,
           userId: currentUserId,
+          // Add user preferences to the request
+          preferences: {
+            dietary: userPreferences.dietaryPreferences,
+            allergies: userPreferences.allergies,
+            custom: userPreferences.customPreferences,
+          },
         }),
       });
 
@@ -324,8 +366,6 @@ export default function GenerateRecipesPage() {
   const handleBackToInput = () => {
     setShowInputForm(true);
     setError(null);
-    // Scroll to top when going back
-    // The scroll position will be handled by the ScrollView ref if needed
   };
 
   const handleSaveRecipe = async () => {
@@ -390,7 +430,6 @@ export default function GenerateRecipesPage() {
     ) {
       setCurrentStepIndex(currentStepIndex + 1);
     } else {
-      // Finished all steps
       setCookingMode(false);
       setCurrentStepIndex(0);
     }
@@ -465,7 +504,6 @@ export default function GenerateRecipesPage() {
         ]}
       />
 
-      {/* BACK BUTTON (Visible only when panel is collapsed) */}
       {!isExpanded && (
         <TouchableOpacity
           style={styles.backButton}
@@ -594,6 +632,66 @@ export default function GenerateRecipesPage() {
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
+
+                  {userPreferences.dietaryPreferences.length > 0 ||
+                  userPreferences.allergies.length > 0 ||
+                  userPreferences.customPreferences.length > 0 ? (
+                    <View style={styles.activePreferencesContainer}>
+                      <Text style={styles.activePreferencesTitle}>
+                        <Ionicons
+                          name="leaf-outline"
+                          size={14}
+                          color={BRAND.accent}
+                        />{" "}
+                        Active Preferences:
+                      </Text>
+                      <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.preferencesScroll}
+                      >
+                        {userPreferences.dietaryPreferences.map((pref) => (
+                          <View
+                            key={pref}
+                            style={[
+                              styles.preferenceChip,
+                              { backgroundColor: "rgba(212,175,55,0.2)" },
+                            ]}
+                          >
+                            <Text style={styles.preferenceChipText}>
+                              {pref}
+                            </Text>
+                          </View>
+                        ))}
+                        {userPreferences.allergies.map((allergy) => (
+                          <View
+                            key={allergy}
+                            style={[
+                              styles.preferenceChip,
+                              { backgroundColor: "rgba(255,68,68,0.2)" },
+                            ]}
+                          >
+                            <Text style={styles.preferenceChipText}>
+                              🚫 {allergy}
+                            </Text>
+                          </View>
+                        ))}
+                        {userPreferences.customPreferences.map((custom) => (
+                          <View
+                            key={custom}
+                            style={[
+                              styles.preferenceChip,
+                              { backgroundColor: "rgba(212,175,55,0.2)" },
+                            ]}
+                          >
+                            <Text style={styles.preferenceChipText}>
+                              {custom}
+                            </Text>
+                          </View>
+                        ))}
+                      </ScrollView>
+                    </View>
+                  ) : null}
 
                   <Text style={styles.label}>
                     Are you making something specific? (Optional)
@@ -1129,7 +1227,7 @@ const styles = StyleSheet.create({
   },
   resetText: { color: BRAND.accent, fontWeight: "900", fontSize: 12 },
   scrollBody: {
-    paddingHorizontal: 20, // Changed from 10 to 20 for consistent horizontal padding
+    paddingHorizontal: 20,
     paddingBottom: 100,
   },
   ingredientDisplayArea: {
@@ -1165,7 +1263,7 @@ const styles = StyleSheet.create({
     color: BRAND.textMain,
     marginLeft: 10,
     marginRight: 15,
-  }, // Added right margin
+  },
   descriptionWrapper: {
     backgroundColor: BRAND.inputBg,
     borderRadius: 18,
@@ -1184,9 +1282,8 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 12,
     letterSpacing: 1.5,
-    // paddingHorizontal removed - now handled by scrollBody
   },
-  quickAddScroll: { marginBottom: 25 /* paddingHorizontal removed */ },
+  quickAddScroll: { marginBottom: 25 },
   quickAddBtn: {
     backgroundColor: BRAND.surface,
     flexDirection: "row",
@@ -1200,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   quickAddText: { fontWeight: "700", color: BRAND.textMain, marginLeft: 5 },
   divider: { height: 1, backgroundColor: BRAND.border, marginVertical: 20 },
-  filterRowContainer: { marginBottom: 30 /* paddingHorizontal removed */ },
+  filterRowContainer: { marginBottom: 30 },
   filterHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -1227,8 +1324,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     borderRadius: 25,
     marginTop: 10,
-    marginBottom: 20, // Added bottom margin
-    // marginHorizontal removed - now handled by scrollBody
+    marginBottom: 20,
   },
   generateBtnText: {
     color: BRAND.bg,
@@ -1403,7 +1499,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 20,
     marginTop: 20,
-    // marginHorizontal removed - now handled by scrollBody
     borderWidth: 1,
     borderColor: "#FF5252",
   },
@@ -1527,4 +1622,32 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   doneButtonText: { color: "#fff", fontSize: 20, fontWeight: "bold" },
+  activePreferencesContainer: {
+    marginBottom: 20,
+    paddingHorizontal: 20,
+  },
+  activePreferencesTitle: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: BRAND.accent,
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+  },
+  preferencesScroll: {
+    flexDirection: "row",
+  },
+  preferenceChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginRight: 8,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+  },
+  preferenceChipText: {
+    color: BRAND.textMain,
+    fontSize: 12,
+    fontWeight: "500",
+  },
 });

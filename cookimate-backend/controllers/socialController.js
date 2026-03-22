@@ -6,15 +6,16 @@ import axios from "axios";
 
 dotenv.config();
 
-// 1. Create Post: Author gets 10 points
+// 1. Create Post: Author gets 10 points + AI Vision Moderation
 export const createPost = async (req, res) => {
   try {
     const { user, caption } = req.body;
     if (!req.file) return res.status(400).json({ message: "No image file provided" });
 
     const imageUrl = req.file.path;
+    const publicId = req.file.filename;
 
-    // 1. Save the Post immediately as 'pending'
+    // A. Save the Post immediately as 'pending'
     const newPost = new Post({
       user: user,
       caption: caption,
@@ -23,44 +24,71 @@ export const createPost = async (req, res) => {
     });
     const savedPost = await newPost.save();
 
-    // Reward immediately
+    // Reward immediately (provisional)
     await User.findOneAndUpdate(
       { firebaseUid: user },
       { $inc: { points: 10 } }
     );
 
-    // Respond to the mobile app immediately so the user isn't stuck loading
+    // Respond to mobile app immediately
     res.status(201).json(savedPost);
 
-    // 2. THE GHOST CHECK (Wait 8 seconds)
-    setTimeout(async () => {
-      try {
-        console.log(`🔍 Checking if image still exists: ${imageUrl}`);
-        
-        // We use axios.head to check if the URL is "Live" without downloading the whole image
-        await axios.head(imageUrl); 
+    // B. THE AI VISION CHECK (Direct API call to bypass SDK version issues)
+    try {
+      console.log("🛡️ AI Vision: Requesting analysis...");
 
-        // IF THE IMAGE EXISTS: Update status to approved and give points
-        console.log("✅ Image is safe. Rewarding user with 10 points.");
-        await Post.findByIdAndUpdate(savedPost._id, { moderationStatus: "approved" });
+      // Construct Basic Auth for Cloudinary API
+      const auth = Buffer.from(
+        `${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`
+      ).toString('base64');
+      
+      const response = await axios.post(
+        `https://api.cloudinary.com/v2/analysis/${process.env.CLOUDINARY_CLOUD_NAME}/analyze/ai_vision_moderation`,
+        {
+          source: { uri: imageUrl },
+          rejection_questions: [
+            "Does the image contain nudity?",
+            "Does the image contain graphic violence?",
+            "Is this image completely unrelated to food or cooking?"
+          ]
+        },
+        {
+          headers: { Authorization: `Basic ${auth}` }
+        }
+      );
 
-      } catch (error) {
-        // IF THE IMAGE IS GONE (404/403): Cloudinary AI killed it.
-        console.log("❌ 404/403 Detected! Cloudinary removed the image. Deleting post from DB...");
+      const aiResponses = response.data.data.analysis.responses;
+      console.log("🤖 AI Analysis Results:", aiResponses);
+
+      // Check if any answer is "yes"
+      const failedChecks = aiResponses.filter(r => r.value.toLowerCase() === "yes");
+
+      if (failedChecks.length > 0) {
+        console.log(`❌ REJECTED: ${failedChecks[0].prompt}`);
         
-        // This removes the post from your MongoDB entirely
+        // Remove from DB
         await Post.findByIdAndDelete(savedPost._id);
         
-        // Revoke points and set message
+        // Remove from Cloudinary
+        await cloudinary.uploader.destroy(publicId);
+        
+        // Revoke points and set warning message
         await User.findOneAndUpdate(
           { firebaseUid: user },
           { 
             $inc: { points: -10 },
-            $set: { lastMessage: "Your post violated our safety policies and was removed. 10 points have been revoked." }
+            $set: { lastMessage: "Your post violated safety guidelines and was removed." }
           }
         );
+      } else {
+        console.log("✅ AI Vision: Content Approved.");
+        await Post.findByIdAndUpdate(savedPost._id, { moderationStatus: "approved" });
       }
-    }, 8000); 
+
+    } catch (aiError) {
+      console.error("AI Vision API Error:", aiError.response?.data || aiError.message);
+      // In case of API failure, we leave it as pending for manual review
+    }
 
   } catch (err) {
     console.error("Upload Error:", err);
@@ -69,6 +97,7 @@ export const createPost = async (req, res) => {
     }
   }
 };
+
 // 2. Get Feed: Populate user info correctly
 export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -76,8 +105,8 @@ export const getFeed = async (req, res) => {
   const skip = (page - 1) * limit;
 
   try {
-    //added { moderationStatus: { $ne: "rejected" } } so it skips bad images!
-    const posts = await Post.find({ moderationStatus: { $ne: "rejected" } })
+    // Only show approved posts in the feed
+    const posts = await Post.find({ moderationStatus: "approved" })
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -100,21 +129,16 @@ export const getFeed = async (req, res) => {
   }
 };
 
-// 3. Like Post: Author gets 5 points
+// 3. Like Post
 export const likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
     const { userId } = req.body;
-
     if (!post) return res.status(404).json("Post not found");
 
     if (!post.likes.includes(userId)) {
       await post.updateOne({ $push: { likes: userId } });
-
-      await User.findOneAndUpdate(
-        { firebaseUid: post.user },
-        { $inc: { points: 5 } },
-      );
+      await User.findOneAndUpdate({ firebaseUid: post.user }, { $inc: { points: 5 } });
       res.status(200).json("Post liked!");
     } else {
       await post.updateOne({ $pull: { likes: userId } });
@@ -125,7 +149,7 @@ export const likePost = async (req, res) => {
   }
 };
 
-// 4. Add Comment: Author gets 5 points
+// 4. Add Comment
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -150,11 +174,7 @@ export const addComment = async (req, res) => {
       });
 
     if (!updatedPost) return res.status(404).json("Post not found");
-
-    await User.findOneAndUpdate(
-      { firebaseUid: updatedPost.user.firebaseUid },
-      { $inc: { points: 5 } },
-    );
+    await User.findOneAndUpdate({ firebaseUid: updatedPost.user.firebaseUid }, { $inc: { points: 5 } });
 
     res.status(200).json(updatedPost);
   } catch (err) {
@@ -162,7 +182,7 @@ export const addComment = async (req, res) => {
   }
 };
 
-// 5. Delete Post: Only author can delete
+// 5. Delete Post
 export const deletePost = async (req, res) => {
   try {
     const { postId } = req.params;
@@ -170,10 +190,7 @@ export const deletePost = async (req, res) => {
 
     const post = await Post.findById(postId);
     if (!post) return res.status(404).json("Post not found");
-
-    if (post.user !== userId) {
-      return res.status(403).json("You can only delete your own posts!");
-    }
+    if (post.user !== userId) return res.status(403).json("Unauthorized");
 
     await Post.findByIdAndDelete(postId);
     res.status(200).json("Post deleted successfully");

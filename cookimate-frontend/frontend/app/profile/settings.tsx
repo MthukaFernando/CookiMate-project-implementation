@@ -237,47 +237,93 @@ const renderIcon = (item: any, size: number = 20) => {
 
 // ── Modals defined OUTSIDE Settings so they never remount on state change ─────
 
-
 // ── Themed Alert (replaces native Alert.alert for consistent dark styling) ────
-interface ThemedAlertButton { text: string; onPress?: () => void; style?: "default" | "cancel" | "destructive"; }
-interface ThemedAlertConfig { title: string; message?: string; buttons?: ThemedAlertButton[]; type?: "info" | "success" | "error" | "warning"; }
+interface ThemedAlertButton {
+  text: string;
+  onPress?: () => void;
+  style?: "default" | "cancel" | "destructive";
+}
+interface ThemedAlertConfig {
+  title: string;
+  message?: string;
+  buttons?: ThemedAlertButton[];
+  type?: "info" | "success" | "error" | "warning";
+}
 
 const ThemedAlert = ({
-  visible, title, message, buttons, type = "info", onClose,
+  visible,
+  title,
+  message,
+  buttons,
+  type = "info",
+  onClose,
 }: ThemedAlertConfig & { visible: boolean; onClose: () => void }) => {
-  const iconMap = { success: "check-circle", error: "alert-circle", warning: "alert-triangle", info: "info" };
-  const colorMap = { success: "#4CAF50", error: "#FF4444", warning: "#FF9800", info: "#D4AF37" };
-  const icon  = iconMap[type];
+  const iconMap = {
+    success: "check-circle",
+    error: "alert-circle",
+    warning: "alert-triangle",
+    info: "info",
+  };
+  const colorMap = {
+    success: "#4CAF50",
+    error: "#FF4444",
+    warning: "#FF9800",
+    info: "#D4AF37",
+  };
+  const icon = iconMap[type];
   const color = colorMap[type];
 
   return (
-    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+    <Modal
+      transparent
+      visible={visible}
+      animationType="fade"
+      onRequestClose={onClose}
+    >
       <View style={alertStyles.overlay}>
         <View style={alertStyles.card}>
-          <View style={[alertStyles.iconCircle, { backgroundColor: color + "22", borderColor: color + "55" }]}>
+          <View
+            style={[
+              alertStyles.iconCircle,
+              { backgroundColor: color + "22", borderColor: color + "55" },
+            ]}
+          >
             <Feather name={icon as any} size={28} color={color} />
           </View>
           <Text style={alertStyles.title}>{title}</Text>
           {message ? <Text style={alertStyles.message}>{message}</Text> : null}
-          <View style={[alertStyles.btnRow, (buttons?.length ?? 1) === 1 && { justifyContent: "center" }]}>
+          <View
+            style={[
+              alertStyles.btnRow,
+              (buttons?.length ?? 1) === 1 && { justifyContent: "center" },
+            ]}
+          >
             {(buttons ?? [{ text: "OK" }]).map((btn, i) => (
               <TouchableOpacity
                 key={i}
                 style={[
                   alertStyles.btn,
                   btn.style === "destructive" && alertStyles.btnDestructive,
-                  btn.style === "cancel"      && alertStyles.btnCancel,
-                  btn.style !== "destructive" && btn.style !== "cancel" && alertStyles.btnPrimary,
-                  (buttons?.length ?? 1) > 1  && alertStyles.btnFlex,
+                  btn.style === "cancel" && alertStyles.btnCancel,
+                  btn.style !== "destructive" &&
+                    btn.style !== "cancel" &&
+                    alertStyles.btnPrimary,
+                  (buttons?.length ?? 1) > 1 && alertStyles.btnFlex,
                 ]}
-                onPress={() => { onClose(); btn.onPress?.(); }}
+                onPress={() => {
+                  onClose();
+                  btn.onPress?.();
+                }}
               >
-                <Text style={[
-                  alertStyles.btnText,
-                  btn.style === "destructive" && { color: "#FF4444" },
-                  btn.style === "cancel"      && { color: "#A6A6A6" },
-                  btn.style !== "destructive" && btn.style !== "cancel" && { color: "#0A0A0A" },
-                ]}>
+                <Text
+                  style={[
+                    alertStyles.btnText,
+                    btn.style === "destructive" && { color: "#FF4444" },
+                    btn.style === "cancel" && { color: "#A6A6A6" },
+                    btn.style !== "destructive" &&
+                      btn.style !== "cancel" && { color: "#0A0A0A" },
+                  ]}
+                >
                   {btn.text}
                 </Text>
               </TouchableOpacity>
@@ -291,14 +337,27 @@ const ThemedAlert = ({
 
 // Hook to imperatively show themed alerts — mirrors the Alert.alert API
 const useThemedAlert = () => {
-  const [alertConfig, setAlertConfig] = useState<(ThemedAlertConfig & { visible: boolean }) | null>(null);
-  const showAlert = useCallback((title: string, message?: string, buttons?: ThemedAlertButton[], type?: ThemedAlertConfig["type"]) => {
-    setAlertConfig({ visible: true, title, message, buttons, type });
-  }, []);
-  const hideAlert = useCallback(() => setAlertConfig(prev => prev ? { ...prev, visible: false } : null), []);
-  const AlertComponent = alertConfig
-    ? <ThemedAlert {...alertConfig} onClose={hideAlert} />
-    : null;
+  const [alertConfig, setAlertConfig] = useState<
+    (ThemedAlertConfig & { visible: boolean }) | null
+  >(null);
+  const showAlert = useCallback(
+    (
+      title: string,
+      message?: string,
+      buttons?: ThemedAlertButton[],
+      type?: ThemedAlertConfig["type"],
+    ) => {
+      setAlertConfig({ visible: true, title, message, buttons, type });
+    },
+    [],
+  );
+  const hideAlert = useCallback(
+    () => setAlertConfig((prev) => (prev ? { ...prev, visible: false } : null)),
+    [],
+  );
+  const AlertComponent = alertConfig ? (
+    <ThemedAlert {...alertConfig} onClose={hideAlert} />
+  ) : null;
   return { showAlert, AlertComponent };
 };
 
@@ -492,51 +551,115 @@ const CustomPrefModal = ({
 
 // ── Change Password Modal ──────────────────────────────────────────────────────
 const ChangePasswordModal = ({
-  visible, onClose,
-}: { visible: boolean; onClose: () => void }) => {
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) => {
   const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword]         = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrent, setShowCurrent]         = useState(false);
-  const [showNew, setShowNew]                 = useState(false);
-  const [showConfirm, setShowConfirm]         = useState(false);
-  const [saving, setSaving]                   = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [saving, setSaving] = useState(false);
   const { showAlert, AlertComponent: PwAlert } = useThemedAlert();
 
   const reset = () => {
-    setCurrentPassword(""); setNewPassword(""); setConfirmPassword("");
-    setShowCurrent(false); setShowNew(false); setShowConfirm(false);
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setShowCurrent(false);
+    setShowNew(false);
+    setShowConfirm(false);
   };
-  const handleClose = () => { reset(); onClose(); };
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
 
   const handleChangePassword = async () => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showAlert("Missing Fields", "Please fill in all fields.", undefined, "warning"); return;
+      showAlert(
+        "Missing Fields",
+        "Please fill in all fields.",
+        undefined,
+        "warning",
+      );
+      return;
     }
     if (newPassword.length < 6) {
-      showAlert("Too Short", "New password must be at least 6 characters.", undefined, "warning"); return;
+      showAlert(
+        "Too Short",
+        "New password must be at least 6 characters.",
+        undefined,
+        "warning",
+      );
+      return;
     }
     if (newPassword !== confirmPassword) {
-      showAlert("Mismatch", "New passwords do not match.", undefined, "warning"); return;
+      showAlert(
+        "Mismatch",
+        "New passwords do not match.",
+        undefined,
+        "warning",
+      );
+      return;
     }
     if (newPassword === currentPassword) {
-      showAlert("Same Password", "New password must be different from your current one.", undefined, "warning"); return;
+      showAlert(
+        "Same Password",
+        "New password must be different from your current one.",
+        undefined,
+        "warning",
+      );
+      return;
     }
     const user = auth.currentUser;
-    if (!user?.email) { showAlert("Error", "No user session found.", undefined, "error"); return; }
+    if (!user?.email) {
+      showAlert("Error", "No user session found.", undefined, "error");
+      return;
+    }
     setSaving(true);
     try {
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
+      const credential = EmailAuthProvider.credential(
+        user.email,
+        currentPassword,
+      );
       await reauthenticateWithCredential(user, credential);
       await updatePassword(user, newPassword);
-      showAlert("Success", "Password updated successfully!", [{ text: "OK", onPress: handleClose }], "success");
+      showAlert(
+        "Success",
+        "Password updated successfully!",
+        [{ text: "OK", onPress: handleClose }],
+        "success",
+      );
     } catch (err: any) {
-      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        showAlert("Wrong Password", "Your current password is incorrect.", undefined, "error");
+      if (
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        showAlert(
+          "Wrong Password",
+          "Your current password is incorrect.",
+          undefined,
+          "error",
+        );
       } else if (err.code === "auth/too-many-requests") {
-        showAlert("Too Many Attempts", "Too many failed attempts. Try again later.", undefined, "error");
+        showAlert(
+          "Too Many Attempts",
+          "Too many failed attempts. Try again later.",
+          undefined,
+          "error",
+        );
       } else {
-        showAlert("Error", err.message || "Failed to change password.", undefined, "error");
+        showAlert(
+          "Error",
+          err.message || "Failed to change password.",
+          undefined,
+          "error",
+        );
       }
     } finally {
       setSaving(false);
@@ -544,7 +667,12 @@ const ChangePasswordModal = ({
   };
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={handleClose}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={handleClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
@@ -553,38 +681,89 @@ const ChangePasswordModal = ({
               <Feather name="x" size={24} color="#A6A6A6" />
             </TouchableOpacity>
           </View>
-          <Text style={styles.modalSubtitle}>Enter your current password and choose a new one.</Text>
+          <Text style={styles.modalSubtitle}>
+            Enter your current password and choose a new one.
+          </Text>
 
           <Text style={styles.pwLabel}>Current Password</Text>
           <View style={styles.pwInputRow}>
-            <TextInput style={styles.pwInput} placeholder="Current password" placeholderTextColor="#555"
-              secureTextEntry={!showCurrent} value={currentPassword} onChangeText={setCurrentPassword} autoCapitalize="none" />
-            <TouchableOpacity onPress={() => setShowCurrent(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showCurrent ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            <TextInput
+              style={styles.pwInput}
+              placeholder="Current password"
+              placeholderTextColor="#555"
+              secureTextEntry={!showCurrent}
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowCurrent((v) => !v)}
+              style={styles.eyeBtn}
+            >
+              <Feather
+                name={showCurrent ? "eye-off" : "eye"}
+                size={18}
+                color="#A6A6A6"
+              />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.pwLabel}>New Password</Text>
           <View style={styles.pwInputRow}>
-            <TextInput style={styles.pwInput} placeholder="New password (min. 6 characters)" placeholderTextColor="#555"
-              secureTextEntry={!showNew} value={newPassword} onChangeText={setNewPassword} autoCapitalize="none" />
-            <TouchableOpacity onPress={() => setShowNew(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showNew ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            <TextInput
+              style={styles.pwInput}
+              placeholder="New password (min. 6 characters)"
+              placeholderTextColor="#555"
+              secureTextEntry={!showNew}
+              value={newPassword}
+              onChangeText={setNewPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowNew((v) => !v)}
+              style={styles.eyeBtn}
+            >
+              <Feather
+                name={showNew ? "eye-off" : "eye"}
+                size={18}
+                color="#A6A6A6"
+              />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.pwLabel}>Confirm New Password</Text>
           <View style={styles.pwInputRow}>
-            <TextInput style={styles.pwInput} placeholder="Confirm new password" placeholderTextColor="#555"
-              secureTextEntry={!showConfirm} value={confirmPassword} onChangeText={setConfirmPassword} autoCapitalize="none" />
-            <TouchableOpacity onPress={() => setShowConfirm(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showConfirm ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            <TextInput
+              style={styles.pwInput}
+              placeholder="Confirm new password"
+              placeholderTextColor="#555"
+              secureTextEntry={!showConfirm}
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowConfirm((v) => !v)}
+              style={styles.eyeBtn}
+            >
+              <Feather
+                name={showConfirm ? "eye-off" : "eye"}
+                size={18}
+                color="#A6A6A6"
+              />
             </TouchableOpacity>
           </View>
 
-          <TouchableOpacity style={[styles.saveButton, saving && { opacity: 0.6 }]}
-            onPress={handleChangePassword} disabled={saving}>
-            {saving ? <ActivityIndicator color="#0A0A0A" /> : <Text style={styles.saveButtonText}>Update Password</Text>}
+          <TouchableOpacity
+            style={[styles.saveButton, saving && { opacity: 0.6 }]}
+            onPress={handleChangePassword}
+            disabled={saving}
+          >
+            {saving ? (
+              <ActivityIndicator color="#0A0A0A" />
+            ) : (
+              <Text style={styles.saveButtonText}>Update Password</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -595,56 +774,113 @@ const ChangePasswordModal = ({
 
 // ── Delete Account Modal (cross-platform — no Alert.prompt) ───────────────────
 const DeleteAccountModal = ({
-  visible, onClose, onConfirm, deleting,
+  visible,
+  onClose,
+  onConfirm,
+  deleting,
 }: {
-  visible: boolean; onClose: () => void;
-  onConfirm: (password: string) => void; deleting: boolean;
+  visible: boolean;
+  onClose: () => void;
+  onConfirm: (password: string) => void;
+  deleting: boolean;
 }) => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const { showAlert, AlertComponent: DelAlert } = useThemedAlert();
 
-  const handleClose = () => { setPassword(""); setShowPassword(false); onClose(); };
+  const handleClose = () => {
+    setPassword("");
+    setShowPassword(false);
+    onClose();
+  };
   const handleConfirm = () => {
-    if (!password.trim()) { showAlert("Required", "Please enter your password.", undefined, "warning"); return; }
+    if (!password.trim()) {
+      showAlert(
+        "Required",
+        "Please enter your password.",
+        undefined,
+        "warning",
+      );
+      return;
+    }
     onConfirm(password);
   };
 
   return (
-    <Modal animationType="slide" transparent visible={visible} onRequestClose={handleClose}>
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={handleClose}
+    >
       <View style={styles.modalOverlay}>
         <View style={styles.modalContent}>
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: "#FF4444" }]}>Delete Account</Text>
+            <Text style={[styles.modalTitle, { color: "#FF4444" }]}>
+              Delete Account
+            </Text>
             <TouchableOpacity onPress={handleClose}>
               <Feather name="x" size={24} color="#A6A6A6" />
             </TouchableOpacity>
           </View>
 
           <Text style={styles.modalSubtitle}>
-            This action is permanent and cannot be undone. All your data, recipes, and posts will be deleted.
+            This action is permanent and cannot be undone. All your data,
+            recipes, and posts will be deleted.
           </Text>
 
           <Text style={styles.pwLabel}>Enter your password to confirm</Text>
           <View style={styles.pwInputRow}>
-            <TextInput style={styles.pwInput} placeholder="Your password" placeholderTextColor="#555"
-              secureTextEntry={!showPassword} value={password} onChangeText={setPassword} autoCapitalize="none" />
-            <TouchableOpacity onPress={() => setShowPassword(v => !v)} style={styles.eyeBtn}>
-              <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="#A6A6A6" />
+            <TextInput
+              style={styles.pwInput}
+              placeholder="Your password"
+              placeholderTextColor="#555"
+              secureTextEntry={!showPassword}
+              value={password}
+              onChangeText={setPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword((v) => !v)}
+              style={styles.eyeBtn}
+            >
+              <Feather
+                name={showPassword ? "eye-off" : "eye"}
+                size={18}
+                color="#A6A6A6"
+              />
             </TouchableOpacity>
           </View>
 
           <TouchableOpacity
-            style={[styles.saveButton, { backgroundColor: "#FF4444", marginTop: 20 }, deleting && { opacity: 0.6 }]}
-            onPress={handleConfirm} disabled={deleting}>
-            {deleting
-              ? <ActivityIndicator color="#fff" />
-              : <Text style={[styles.saveButtonText, { color: "#fff" }]}>Delete My Account</Text>}
+            style={[
+              styles.saveButton,
+              { backgroundColor: "#FF4444", marginTop: 20 },
+              deleting && { opacity: 0.6 },
+            ]}
+            onPress={handleConfirm}
+            disabled={deleting}
+          >
+            {deleting ? (
+              <ActivityIndicator color="#fff" />
+            ) : (
+              <Text style={[styles.saveButtonText, { color: "#fff" }]}>
+                Delete My Account
+              </Text>
+            )}
           </TouchableOpacity>
 
-          <TouchableOpacity style={[styles.saveButton, { backgroundColor: "#2A2A2A", marginTop: 10 }]}
-            onPress={handleClose} disabled={deleting}>
-            <Text style={[styles.saveButtonText, { color: "#A6A6A6" }]}>Cancel</Text>
+          <TouchableOpacity
+            style={[
+              styles.saveButton,
+              { backgroundColor: "#2A2A2A", marginTop: 10 },
+            ]}
+            onPress={handleClose}
+            disabled={deleting}
+          >
+            <Text style={[styles.saveButtonText, { color: "#A6A6A6" }]}>
+              Cancel
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -674,26 +910,60 @@ const Settings = () => {
   const uid = currentUser?.uid;
   const { showAlert, AlertComponent: SettingsAlert } = useThemedAlert();
 
-  // Load all settings from AsyncStorage on mount — no API calls needed
+  // Load preferences from backend when component mounts
   useEffect(() => {
     const loadSettings = async () => {
       try {
+        // Try to load from backend first if user is logged in
+        if (uid) {
+          const response = await axios.get(
+            `${API_URL}/api/users/preferences/${uid}`,
+          );
+          if (response.data) {
+            setDietaryPreferences(response.data.dietaryPreferences || []);
+            setAllergies(response.data.allergies || []);
+            setCustomPreferences(response.data.customPreferences || []);
+
+            // Also save to AsyncStorage for offline use
+            await persistDietary(
+              response.data.dietaryPreferences || [],
+              response.data.allergies || [],
+              response.data.customPreferences || [],
+            );
+          }
+        } else {
+          // Fallback to AsyncStorage if not logged in
+          const [notif, dietary, allerg, custom] = await Promise.all([
+            AsyncStorage.getItem(STORAGE_KEYS.notifications),
+            AsyncStorage.getItem(STORAGE_KEYS.dietary),
+            AsyncStorage.getItem(STORAGE_KEYS.allergies),
+            AsyncStorage.getItem(STORAGE_KEYS.customPreferences),
+          ]);
+
+          if (notif !== null) setNotificationsEnabled(JSON.parse(notif));
+          if (dietary !== null) setDietaryPreferences(JSON.parse(dietary));
+          if (allerg !== null) setAllergies(JSON.parse(allerg));
+          if (custom !== null) setCustomPreferences(JSON.parse(custom));
+        }
+      } catch (err) {
+        console.error("Error loading settings:", err);
+        // Fallback to AsyncStorage if backend fails
         const [notif, dietary, allerg, custom] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.notifications),
           AsyncStorage.getItem(STORAGE_KEYS.dietary),
           AsyncStorage.getItem(STORAGE_KEYS.allergies),
           AsyncStorage.getItem(STORAGE_KEYS.customPreferences),
         ]);
+
         if (notif !== null) setNotificationsEnabled(JSON.parse(notif));
         if (dietary !== null) setDietaryPreferences(JSON.parse(dietary));
         if (allerg !== null) setAllergies(JSON.parse(allerg));
         if (custom !== null) setCustomPreferences(JSON.parse(custom));
-      } catch (err) {
-        console.error("Error loading settings:", err);
       }
     };
+
     loadSettings();
-  }, []);
+  }, [uid]);
 
   // Persist dietary/allergy/custom data together
   const persistDietary = async (
@@ -736,10 +1006,45 @@ const Settings = () => {
   const saveDietaryPreferences = async () => {
     try {
       setLoading(true);
+
+      // Save to AsyncStorage first (for offline/local use)
       await persistDietary(dietaryPreferences, allergies, customPreferences);
-      showAlert("Success", "Dietary preferences saved!", undefined, "success");
+
+      // Save to backend if user is logged in
+      if (uid) {
+        const response = await axios.put(
+          `${API_URL}/api/users/preferences/${uid}`,
+          {
+            dietaryPreferences,
+            allergies,
+            customPreferences,
+          },
+        );
+
+        if (response.data.success) {
+          showAlert(
+            "Success",
+            "Dietary preferences saved!",
+            undefined,
+            "success",
+          );
+        }
+      } else {
+        showAlert(
+          "Success",
+          "Preferences saved locally!",
+          undefined,
+          "success",
+        );
+      }
     } catch (err) {
-      showAlert("Error", "Failed to save dietary preferences", undefined, "error");
+      console.error("Error saving preferences:", err);
+      showAlert(
+        "Error",
+        "Failed to save dietary preferences",
+        undefined,
+        "error",
+      );
     } finally {
       setLoading(false);
     }
@@ -753,6 +1058,14 @@ const Settings = () => {
     setCustomPreferenceModal(false);
     try {
       await persistDietary(dietaryPreferences, allergies, updated);
+      // Also save to backend if logged in
+      if (uid) {
+        await axios.put(`${API_URL}/api/users/preferences/${uid}`, {
+          dietaryPreferences,
+          allergies,
+          customPreferences: updated,
+        });
+      }
     } catch (err) {
       console.error("Error saving custom preference:", err);
     }
@@ -773,7 +1086,12 @@ const Settings = () => {
             // Adjust this path if your login file lives elsewhere (e.g. "/login").
             router.replace("/(auth)/loginPage" as any);
           } catch (error) {
-            showAlert("Error", "Failed to log out. Please try again.", undefined, "error");
+            showAlert(
+              "Error",
+              "Failed to log out. Please try again.",
+              undefined,
+              "error",
+            );
           }
         },
       },
@@ -787,7 +1105,10 @@ const Settings = () => {
 
   const confirmDeleteAccount = async (password: string) => {
     const user = auth.currentUser;
-    if (!user?.email) { showAlert("Error", "No user session found.", undefined, "error"); return; }
+    if (!user?.email) {
+      showAlert("Error", "No user session found.", undefined, "error");
+      return;
+    }
     setDeleting(true);
     try {
       // Re-authenticate — Firebase requires this before deleting an account
@@ -801,12 +1122,30 @@ const Settings = () => {
       setDeleteAccountModal(false);
       router.replace("/(auth)/loginPage" as any);
     } catch (err: any) {
-      if (err.code === "auth/wrong-password" || err.code === "auth/invalid-credential") {
-        showAlert("Wrong Password", "Incorrect password. Account not deleted.", undefined, "error");
+      if (
+        err.code === "auth/wrong-password" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        showAlert(
+          "Wrong Password",
+          "Incorrect password. Account not deleted.",
+          undefined,
+          "error",
+        );
       } else if (err.code === "auth/too-many-requests") {
-        showAlert("Too Many Attempts", "Too many failed attempts. Try again later.", undefined, "error");
+        showAlert(
+          "Too Many Attempts",
+          "Too many failed attempts. Try again later.",
+          undefined,
+          "error",
+        );
       } else {
-        showAlert("Error", "Failed to delete account. Please try again.", undefined, "error");
+        showAlert(
+          "Error",
+          "Failed to delete account. Please try again.",
+          undefined,
+          "error",
+        );
       }
     } finally {
       setDeleting(false);
@@ -1187,11 +1526,22 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   saveButtonText: { color: "#0A0A0A", fontSize: 16, fontWeight: "600" },
-  pwLabel: { fontSize: 13, fontWeight: "600", color: "#A6A6A6", marginBottom: 6, marginTop: 12 },
+  pwLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: "#A6A6A6",
+    marginBottom: 6,
+    marginTop: 12,
+  },
   pwInputRow: {
-    flexDirection: "row", alignItems: "center", backgroundColor: "#1E1E1E",
-    borderRadius: 12, borderWidth: 1, borderColor: "#2A2A2A",
-    paddingHorizontal: 12, marginBottom: 4,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    paddingHorizontal: 12,
+    marginBottom: 4,
   },
   pwInput: { flex: 1, color: "#FFFFFF", fontSize: 14, paddingVertical: 12 },
   eyeBtn: { padding: 6 },
@@ -1266,9 +1616,13 @@ const alertStyles = StyleSheet.create({
     alignItems: "center",
     minWidth: 100,
   },
-  btnPrimary:     { backgroundColor: "#D4AF37" },
-  btnDestructive: { backgroundColor: "rgba(255,68,68,0.15)", borderWidth: 1, borderColor: "#FF4444" },
-  btnCancel:      { backgroundColor: "#2A2A2A" },
+  btnPrimary: { backgroundColor: "#D4AF37" },
+  btnDestructive: {
+    backgroundColor: "rgba(255,68,68,0.15)",
+    borderWidth: 1,
+    borderColor: "#FF4444",
+  },
+  btnCancel: { backgroundColor: "#2A2A2A" },
   btnText: { fontSize: 15, fontWeight: "600" },
 });
 
