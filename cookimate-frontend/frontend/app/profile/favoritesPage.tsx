@@ -23,9 +23,7 @@ import { auth } from "../../config/firebase";
 const { width } = Dimensions.get("window");
 const IMAGE_SIZE = width * 0.28;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const cuisineOptions = [
   { label: "All Cuisines", value: "All" },
