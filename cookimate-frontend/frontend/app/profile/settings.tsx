@@ -31,9 +31,7 @@ import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const DIETARY_OPTIONS = [
   {
