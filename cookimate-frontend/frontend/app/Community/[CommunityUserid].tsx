@@ -30,9 +30,7 @@ const COLUMN_COUNT = 3;
 const GAP = 5;
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-const debuggerHost = Constants.expoConfig?.hostUri;
-const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-const BASE_URL = `http://${address}:5000/api`;
+const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com/api`;
 
 const COLORS = {
   background: "#050505",
