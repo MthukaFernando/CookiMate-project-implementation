@@ -13,6 +13,7 @@ import {
   Switch,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   Feather,
   Ionicons,
@@ -547,8 +548,6 @@ const CustomPrefModal = ({
   </Modal>
 );
 
-// ── Main component ─────────────────────────────────────────────────────────────
-
 // ── Change Password Modal ──────────────────────────────────────────────────────
 const ChangePasswordModal = ({
   visible,
@@ -889,8 +888,10 @@ const DeleteAccountModal = ({
   );
 };
 
+// ── Main component ─────────────────────────────────────────────────────────────
 const Settings = () => {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(false);
 
   const [dietaryModalVisible, setDietaryModalVisible] = useState(false);
@@ -1153,10 +1154,13 @@ const Settings = () => {
   };
 
   return (
-    <View style={styles.mainContainer}>
+    <View style={[styles.mainContainer, { paddingTop: insets.top }]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 40 },
+        ]}
       >
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color="#D4AF37" />
@@ -1406,8 +1410,14 @@ const Settings = () => {
 };
 
 const styles = StyleSheet.create({
-  mainContainer: { flex: 1, backgroundColor: "#0A0A0A" },
-  scrollContent: { paddingHorizontal: 25, paddingTop: 10, paddingBottom: 40 },
+  mainContainer: {
+    flex: 1,
+    backgroundColor: "#0A0A0A",
+  },
+  scrollContent: {
+    paddingHorizontal: 25,
+    paddingTop: 10,
+  },
   backBtn: {
     marginVertical: 10,
     width: 40,
