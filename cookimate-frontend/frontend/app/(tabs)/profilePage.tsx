@@ -232,6 +232,7 @@ const ProfilePage = () => {
     horizontal
     showsHorizontalScrollIndicator={false}
     contentContainerStyle={styles.badgeScroll}
+    nestedScrollEnabled={true}
   >
     {completedLevels.length === 0 ? (
       <View style={{ paddingVertical: 10 }}>
@@ -308,10 +309,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: { 
     flexGrow: 1,          
-    justifyContent: "center", 
     paddingHorizontal: 25, 
     paddingTop: 5,       
-    paddingBottom: 100, // Slightly increased to ensure bottom items aren't behind the FAB
+    paddingBottom: 150,
     backgroundColor: "#0A0A0A"
   },
   
@@ -381,7 +381,7 @@ const styles = StyleSheet.create({
     borderColor: "#D4AF37",
   },
   sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 15 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 12 },
+  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
   statCard: {
     width: "48%",
     flexDirection: "row",
