@@ -175,7 +175,8 @@ export default function Timer({
             dropDownContainerStyle={styles.dropdownList}
             textStyle={styles.dropdownText}
             listMode="SCROLLVIEW"
-            maxHeight={200}
+            dropDownDirection="TOP"
+            maxHeight={260}
             disabled={running}
             ArrowUpIconComponent={() => (
               <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />
@@ -217,7 +218,7 @@ const styles = StyleSheet.create({
   centeringWrapper: {
     position: 'absolute',
     top: 0,
-    bottom: 120, // Adjust this value to account for your bottom tab bar height
+    bottom: 50,
     left: 24,
     right: 24,
     justifyContent: 'center',
@@ -301,7 +302,8 @@ const styles = StyleSheet.create({
   dropdownContainerWrapper: {
     marginTop: 30,
     width: "100%",
-    zIndex: 1000,
+    zIndex: 9999,
+    elevation: 9999,
   },
   label: {
     fontSize: 12,
