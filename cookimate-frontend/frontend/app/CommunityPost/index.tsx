@@ -29,10 +29,7 @@ const CreatePostScreen: React.FC = () => {
   const [caption, setCaption] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // --- Dynamic IP Detection for Backend ---
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
-  const API_URL = `http://${address}:5000`;
+const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
