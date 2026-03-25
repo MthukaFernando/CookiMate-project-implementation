@@ -56,24 +56,23 @@ const PORT = process.env.PORT || 5000;
 
 // Connect to database and initialize dictionary before starting server
 const startServer = async () => {
+
+  const server = app.listen(PORT, "0.0.0.0", () => {
+    console.log(`🚀 Server listening on port ${PORT}`);
+  });
+
   try {
-    // Connect to MongoDB
     await connectDB();
     console.log("✅ MongoDB connected successfully");
 
-    // Initialize dictionary from MongoDB
     console.log("📚 Loading dictionary from MongoDB...");
     await initDictionary();
     await initDictionaryForController();
     console.log("✅ Dictionary loaded and ready");
 
-    // Start the server
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`🚀 Server humming along on port ${PORT}`);
-    });
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
-    process.exit(1);
+    console.error("❌ Background loading failed:", error);
+
   }
 };
 
