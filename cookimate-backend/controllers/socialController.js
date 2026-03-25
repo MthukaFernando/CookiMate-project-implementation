@@ -10,36 +10,54 @@ dotenv.config();
 // 1. Create Post: Author gets 10 points + AI Vision Moderation
 export const createPost = async (req, res) => {
   try {
-    const { user, caption } = req.body;
-    if (!req.file) return res.status(400).json({ message: "No image file provided" });
+    const { user: firebaseUid, caption } = req.body;
+    
+    // Check if Multer actually caught the file
+    if (!req.file) {
+      console.error("❌ Multer Error: No file found in request.");
+      return res.status(400).json({ message: "No image file provided" });
+    }
 
-    const imageUrl = req.file.path;
-    const publicId = req.file.filename;
+    // 1. EXTRACT CLOUDINARY DATA (Handling different library versions)
+    // We check .path, then .secure_url, then .url to ensure we don't get 'undefined'
+    const imageUrl = req.file.path || req.file.secure_url || req.file.url;
+    const publicId = req.file.filename || req.file.public_id;
 
-    // A. Save the Post immediately as 'pending'
+    console.log("📸 Attempting to save post. Image URL:", imageUrl);
+
+    if (!imageUrl) {
+      return res.status(500).json({ message: "Cloudinary upload succeeded but returned no URL." });
+    }
+
+    // 2. FIND THE MONGODB USER
+    const userDoc = await User.findOne({ firebaseUid: firebaseUid });
+    if (!userDoc) {
+      console.error("❌ User Lookup Error: Firebase UID not found in MongoDB.");
+      return res.status(404).json({ message: "User not found in database." });
+    }
+
+    // 3. SAVE THE POST TO MONGODB
     const newPost = new Post({
-      user: user,
+      user: firebaseUid, // Using the string UID as per your Post schema
       caption: caption,
       imageUrl: imageUrl,
       moderationStatus: "pending", 
     });
+
     const savedPost = await newPost.save();
+    console.log("✅ Post saved to DB successfully:", savedPost._id);
 
-    // Progress bar incremenet
-    const userDoc = await User.findOne({ firebaseUid: user });
-    if (userDoc) {
-      await updateUserStats(userDoc._id, 'SHARE_POST', 1);
-      console.log(`Gamification: Post progress added for ${userDoc.username}`);
-    }
+    // 4. UPDATE USER PROGRESS (Gamification)
+    await updateUserStats(userDoc._id, 'SHARE_POST', 1);
+    console.log(`🏆 Gamification: Progress added for ${userDoc.username}`);
 
-    // Respond to mobile app immediately
+    // 5. RESPOND TO MOBILE APP IMMEDIATELY (So the user doesn't wait for AI)
     res.status(201).json(savedPost);
 
-    // B. THE AI VISION CHECK (Direct API call to bypass SDK version issues)
+    // 6. ASYNCHRONOUS AI VISION CHECK
     try {
-      console.log("🛡️ AI Vision: Requesting analysis...");
+      console.log("🛡️ AI Vision: Starting analysis for post:", savedPost._id);
 
-      // Construct Basic Auth for Cloudinary API
       const auth = Buffer.from(
         `${process.env.CLOUDINARY_API_KEY}:${process.env.CLOUDINARY_API_SECRET}`
       ).toString('base64');
@@ -60,41 +78,33 @@ export const createPost = async (req, res) => {
       );
 
       const aiResponses = response.data.data.analysis.responses;
-      console.log("🤖 AI Analysis Results:", aiResponses);
-
-      // Check if any answer is "yes"
       const failedChecks = aiResponses.filter(r => r.value.toLowerCase() === "yes");
 
       if (failedChecks.length > 0) {
-        console.log(`❌ REJECTED: ${failedChecks[0].prompt}`);
+        console.log(`❌ AI REJECTED: ${failedChecks[0].prompt}`);
         
-        // Remove from DB
+        // Cleanup: Remove from DB and Cloudinary
         await Post.findByIdAndDelete(savedPost._id);
-        
-        // Remove from Cloudinary
         await cloudinary.uploader.destroy(publicId);
         
-        // Revoke points and set warning message
-        if (userDoc) {
-          // Decrement the progress bar because the content was invalid
-          await updateUserStats(userDoc._id, 'SHARE_POST', -1);
-          
-          await User.findByIdAndUpdate(userDoc._id, { 
-            $set: { lastMessage: "Your post violated safety guidelines. Progress has been revoked." }
-          });
-        }
+        // Revoke progress
+        await updateUserStats(userDoc._id, 'SHARE_POST', -1);
+        
+        await User.findByIdAndUpdate(userDoc._id, { 
+          $set: { lastMessage: "Your post violated safety guidelines. Progress has been revoked." }
+        });
       } else {
-        console.log("✅ AI Vision: Content Approved.");
+        console.log("✅ AI Vision: Approved.");
         await Post.findByIdAndUpdate(savedPost._id, { moderationStatus: "approved" });
       }
 
     } catch (aiError) {
-      console.error("AI Vision API Error:", aiError.response?.data || aiError.message);
-      // In case of API failure, we leave it as pending for manual review
+      console.error("⚠️ AI Vision API Error (Non-Fatal):", aiError.response?.data || aiError.message);
+      // We don't delete the post here; it stays 'pending' for safety
     }
 
   } catch (err) {
-    console.error("Upload Error:", err);
+    console.error("🔥 Final Catch Error:", err);
     if (!res.headersSent) {
       res.status(500).json({ message: "Upload failed", error: err.message });
     }
