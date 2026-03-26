@@ -1,4 +1,4 @@
-import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform } from 'react-native';
+import { View, Text, StyleSheet, ImageBackground, TouchableOpacity, TextInput, Alert, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -36,32 +36,42 @@ export default function ForgotPasswordPage() {
       style={styles.container}
       resizeMode="cover"
     >
-      <KeyboardAvoidingView style={styles.keyboardAvoiding} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.card}>
-          <Text style={styles.title}>Reset Password</Text>
-          <Text style={styles.description}>
-            Enter the email associated with your account and we'll send you a link to reset your password.
-          </Text>
+      <KeyboardAvoidingView
+        style={styles.keyboardAvoiding}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      >
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>Reset Password</Text>
+            <Text style={styles.description}>
+              Enter the email associated with your account and we'll send you a link to reset your password.
+            </Text>
 
-          <Text style={styles.label}>Email Address</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Enter your email"
-            placeholderTextColor="#999"
-            value={email}
-            onChangeText={setEmail}
-            keyboardType="email-address"
-            autoCapitalize="none"
-          />
+            <Text style={styles.label}>Email Address</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter your email"
+              placeholderTextColor="#999"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+            />
 
-          <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword}>
-            <Text style={styles.resetText}>Send Reset Link</Text>
-          </TouchableOpacity>
+            <TouchableOpacity style={styles.resetButton} onPress={handleResetPassword}>
+              <Text style={styles.resetText}>Send Reset Link</Text>
+            </TouchableOpacity>
 
-          <TouchableOpacity onPress={() => router.back()}>
-            <Text style={styles.backLink}>Back to Login</Text>
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={styles.backLink}>Back to Login</Text>
+            </TouchableOpacity>
+          </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
   );
@@ -70,12 +80,15 @@ export default function ForgotPasswordPage() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   keyboardAvoiding: {
-    width: '100%',
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   card: {
     width: '90%',
