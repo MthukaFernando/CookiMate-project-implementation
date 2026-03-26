@@ -1,4 +1,7 @@
 import OpenAI from "openai";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -10,6 +13,7 @@ const openai = new OpenAI({
  */
 
 export const checkText = async (content) => {
+    console.log("Testing text for moderation:", content);
     try {
         if(!content || content.trim().length === 0) return false; //If the doesn't write anything, it's safe.
 
