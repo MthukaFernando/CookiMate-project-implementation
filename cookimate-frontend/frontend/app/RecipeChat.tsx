@@ -13,6 +13,8 @@ import {
   ActivityIndicator,
   SafeAreaView,
   Image,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
@@ -26,7 +28,7 @@ type Message = {
 };
 
 type Props = {
-  recipeId: string | number; // pass the recipe's id from the recipe detail screen
+  recipeId: string | number;
 };
 
 export default function RecipeChatbot({ recipeId }: Props) {
@@ -40,13 +42,17 @@ export default function RecipeChatbot({ recipeId }: Props) {
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   // FAB pulse animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
   // Chat slide-up animation
   const slideAnim = useRef(new Animated.Value(300)).current;
+  // Keyboard animation
+  const translateYAnim = useRef(new Animated.Value(0)).current;
 
   const scrollRef = useRef<ScrollView>(null);
+  const inputRef = useRef<TextInput>(null);
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -61,7 +67,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
           duration: 900,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     );
     pulse.start();
     return () => pulse.stop();
@@ -81,8 +87,46 @@ export default function RecipeChatbot({ recipeId }: Props) {
         duration: 250,
         useNativeDriver: true,
       }).start();
+      Keyboard.dismiss();
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        // Animate the chat sheet up when keyboard opens
+        Animated.timing(translateYAnim, {
+          toValue: -e.endCoordinates.height,
+          duration: 250,
+          useNativeDriver: true,
+        }).start(() => {
+          // Scroll to bottom after keyboard animation
+          setTimeout(() => {
+            scrollRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        });
+      },
+    );
+
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
+      () => {
+        setKeyboardHeight(0);
+        Animated.timing(translateYAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }).start();
+      },
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -101,7 +145,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
     setIsThinking(true);
 
     try {
-      // ✅ Your backend: POST /api/recipes/chat with recipeId + message
       const response = await axios.post(`${API_URL}/api/recipes/chat-recipe`, {
         recipeId: recipeId,
         message: trimmed,
@@ -115,12 +158,17 @@ export default function RecipeChatbot({ recipeId }: Props) {
         ...updatedMessages,
         {
           role: "assistant",
-          content: "Sorry, the chef is a bit busy right now. Try again shortly!",
+          content:
+            "Sorry, the chef is a bit busy right now. Try again shortly!",
         },
       ]);
     } finally {
       setIsThinking(false);
     }
+  };
+
+  const dismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   return (
@@ -136,7 +184,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
             activeOpacity={0.85}
           >
             <Image
-              source={require('../assets/images/chatbot-mascot.png')}
+              source={require("../assets/images/chatbot-mascot.png")}
               style={styles.fabImage}
               resizeMode="contain"
             />
@@ -152,15 +200,24 @@ export default function RecipeChatbot({ recipeId }: Props) {
         onRequestClose={() => setIsOpen(false)}
       >
         <SafeAreaView style={styles.overlay} pointerEvents="box-none">
+          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+            <View style={styles.dismissArea} />
+          </TouchableWithoutFeedback>
+
           <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.kvContainer}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+            keyboardVerticalOffset={0}
           >
             <Animated.View
               style={[
                 styles.chatSheet,
-                { transform: [{ translateY: slideAnim }] },
+                {
+                  transform: [
+                    { translateY: slideAnim },
+                    { translateY: translateYAnim },
+                  ],
+                },
               ]}
             >
               {/* Header */}
@@ -168,7 +225,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
                 <View style={styles.headerLeft}>
                   <View style={styles.avatarCircle}>
                     <Image
-                      source={require('../assets/images/chatbot-mascot.png')}
+                      source={require("../assets/images/chatbot-mascot.png")}
                       style={styles.avatarImage}
                       resizeMode="contain"
                     />
@@ -213,7 +270,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
                     {msg.role === "assistant" && (
                       <View style={styles.chefAvatarSmall}>
                         <Image
-                          source={require('../assets/images/chatbot-mascot.png')}
+                          source={require("../assets/images/chatbot-mascot.png")}
                           style={styles.smallAvatarImage}
                           resizeMode="contain"
                         />
@@ -245,12 +302,18 @@ export default function RecipeChatbot({ recipeId }: Props) {
                   <View style={[styles.bubbleRow, styles.bubbleRowChef]}>
                     <View style={styles.chefAvatarSmall}>
                       <Image
-                        source={require('../assets/images/chatbot-mascot.png')}
+                        source={require("../assets/images/chatbot-mascot.png")}
                         style={styles.smallAvatarImage}
                         resizeMode="contain"
                       />
                     </View>
-                    <View style={[styles.bubble, styles.chefBubble, styles.typingBubble]}>
+                    <View
+                      style={[
+                        styles.bubble,
+                        styles.chefBubble,
+                        styles.typingBubble,
+                      ]}
+                    >
                       <View style={styles.typingDots}>
                         <TypingDot delay={0} />
                         <TypingDot delay={200} />
@@ -264,6 +327,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
               {/* Input Row */}
               <View style={styles.inputRow}>
                 <TextInput
+                  ref={inputRef}
                   style={styles.input}
                   value={input}
                   onChangeText={setInput}
@@ -316,7 +380,7 @@ function TypingDot({ delay }: { delay: number }) {
           useNativeDriver: true,
         }),
         Animated.delay(600 - delay),
-      ])
+      ]),
     );
     loop.start();
     return () => loop.stop();
@@ -361,8 +425,10 @@ const styles = StyleSheet.create({
   // Modal overlay
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  dismissArea: {
+    flex: 1,
   },
   kvContainer: {
     justifyContent: "flex-end",
@@ -386,6 +452,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
     paddingVertical: 16,
+    backgroundColor: "#0A0A0A",
   },
   headerLeft: {
     flexDirection: "row",
