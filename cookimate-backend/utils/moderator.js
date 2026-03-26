@@ -16,31 +16,38 @@ try {
 }
 
 export const checkText = async (content) => {
-    console.log("📡 [MODERATOR] Analyzing:", content);
+    console.log("📡 [MODERATOR] Analyzing with Strict Rules:", content);
     
-
-    if (content.toLowerCase().includes("fuck")) {
-        console.log("[MODERATOR] REJECTED (Local)");
-        return true;
-    }
+    // 1. Keep your local check for speed
+    if (content.toLowerCase().includes("fuck")) return true;
 
     try {
-        if (!process.env.OPENAI_API_KEY) {
-            console.warn("⚠️ [MODERATOR] No API Key - Skipping AI check");
-            return false;
-        }
-
-        const response = await openai.moderations.create({
-            model: "omni-moderation-latest",
-            input: content,
+        const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini", 
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a strict content moderator for a cooking app. 
+                    REJECT any text that:
+                    - Contains any sexual content, innuendos, or suggestive language.                 
+                    - Expresses racism, sexism.
+                    - Encourages or glorifies war or violence (e.g., "War is good")
+                    - Is rude, toxic, or insulting.
+                    Respond with ONLY the word 'REJECTED' or 'APPROVED'.`
+                },
+                { role: "user", content: content }
+            ],
+            max_tokens: 5,
+            temperature: 0, // Makes it consistent
         });
 
-        const flagged = response.results[0].flagged;
-        console.log("🛡️ [MODERATOR] OpenAI Flagged:", flagged);
-        return flagged;
+        const result = response.choices[0].message.content.trim();
+        console.log(`🛡️ [MODERATOR] AI Decision: ${result}`);
+
+        return result === "REJECTED";
 
     } catch (error) {
-        console.error("❌ [MODERATOR] API Error:", error.message);
+        console.error("❌ [MODERATOR] AI Error:", error.message);
         return false; 
     }
 };
