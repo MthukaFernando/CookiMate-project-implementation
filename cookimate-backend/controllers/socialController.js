@@ -4,6 +4,7 @@ import { cloudinary } from "../config/cloudinary.js";
 import dotenv from "dotenv";
 import axios from "axios";
 import { updateUserStats } from "../utils/gamificationHelpers.js";
+import { checkText } from "../utils/moderator.js";
 
 dotenv.config();
 
@@ -11,6 +12,14 @@ dotenv.config();
 export const createPost = async (req, res) => {
   try {
     const { user: firebaseUid, caption } = req.body;
+
+    //Caption moderation
+    const isToxicCaption = await checkText(caption);
+    if(isToxicCaption) {
+      return res.status(400).json({
+        message: "Your caption contains inappropriate content. Please keep it user friendly!"
+      });
+    }
     
     // Check if Multer actually caught the file
     if (!req.file) {
