@@ -1,24 +1,48 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
-  ActivityIndicator,
-  Animated,
-  Dimensions,
-  Image,
-  KeyboardAvoidingView,
-  Modal,
-  PanResponder,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
   View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Modal,
+  TextInput,
+  ScrollView,
+  KeyboardAvoidingView,
+  Platform,
+  Animated,
+  ActivityIndicator,
+  Image,
+  PanResponder,
+  Dimensions,
 } from "react-native";
-// Updated to fix the warning
+// CRITICAL: Ensure this is from safe-area-context, not react-native
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+
+// --- GLOBAL STORE CONFIG ---
+interface ChatPositionState {
+  posX: number;
+  posY: number;
+  setPosition: (x: number, y: number) => void;
+}
+
+const useChatStore = create<ChatPositionState>()(
+  persist(
+    (set) => ({
+      posX: 0,
+      posY: 0,
+      setPosition: (x, y) => set({ posX: x, posY: y }),
+    }),
+    {
+      name: "chat-position-storage",
+      storage: createJSONStorage(() => AsyncStorage),
+    },
+  ),
+);
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
@@ -30,12 +54,13 @@ type Message = {
 };
 
 export default function GlobalChatbot() {
+  const { posX, posY, setPosition } = useChatStore();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
       content:
-        "👨‍🍳 Hi! I'm your CookiMate AI Chef. Ask me anything about cooking, ingredients, or kitchen tips!",
+        "👨‍🍳 Hi! I'm your CookiMate AI Chef. Ask me anything about cooking!",
     },
   ]);
   const [input, setInput] = useState("");
@@ -45,10 +70,18 @@ export default function GlobalChatbot() {
   const slideAnim = useRef(new Animated.Value(300)).current;
   const scrollRef = useRef<ScrollView>(null);
 
-  // NEW: Pan ref for dragging
-  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  // Initialize Pan with Global Store values
+  const pan = useRef(new Animated.ValueXY({ x: posX, y: posY })).current;
 
-  // NEW: PanResponder logic
+  // Sync Effect
+  useEffect(() => {
+    Animated.spring(pan, {
+      toValue: { x: posX, y: posY },
+      useNativeDriver: false,
+      friction: 8,
+    }).start();
+  }, [posX, posY]);
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -68,11 +101,8 @@ export default function GlobalChatbot() {
         const currentX = (pan.x as any)._value;
         const currentY = (pan.y as any)._value;
 
-        // Sticky logic: snap to left or right
         const snapRight = 0;
         const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
-
-        // Vertical logic: Don't go below bottom navbar (50px buffer)
         const maxY = 50;
         const minY = -(SCREEN_HEIGHT - 250);
 
@@ -86,7 +116,9 @@ export default function GlobalChatbot() {
           toValue: { x: finalX, y: finalY },
           useNativeDriver: false,
           friction: 7,
-        }).start();
+        }).start(() => {
+          setPosition(finalX, finalY);
+        });
       },
     }),
   ).current;
@@ -97,12 +129,12 @@ export default function GlobalChatbot() {
         Animated.timing(pulseAnim, {
           toValue: 1.12,
           duration: 900,
-          useNativeDriver: false, // CHANGED TO FALSE TO FIX THE ERROR
+          useNativeDriver: false,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 900,
-          useNativeDriver: false, // CHANGED TO FALSE TO FIX THE ERROR
+          useNativeDriver: false,
         }),
       ]),
     );
@@ -152,7 +184,7 @@ export default function GlobalChatbot() {
     } catch (err) {
       setMessages([
         ...updatedMessages,
-        { role: "assistant", content: "Chef is busy right now!" },
+        { role: "assistant", content: "Chef is busy!" },
       ]);
     } finally {
       setIsThinking(false);
@@ -206,7 +238,6 @@ export default function GlobalChatbot() {
                 { transform: [{ translateY: slideAnim }] },
               ]}
             >
-              {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerLeft}>
                   <View style={styles.avatarCircle}>
@@ -231,9 +262,7 @@ export default function GlobalChatbot() {
                   <Ionicons name="chevron-down" size={22} color="#D4AF37" />
                 </TouchableOpacity>
               </View>
-
               <View style={styles.divider} />
-
               <ScrollView
                 ref={scrollRef}
                 style={styles.messagesList}
@@ -303,13 +332,12 @@ export default function GlobalChatbot() {
                   </View>
                 )}
               </ScrollView>
-
               <View style={styles.inputRow}>
                 <TextInput
                   style={styles.input}
                   value={input}
                   onChangeText={setInput}
-                  placeholder="Ask the chef anything..."
+                  placeholder="Ask the chef..."
                   placeholderTextColor="#555"
                 />
                 <TouchableOpacity
@@ -374,17 +402,14 @@ const styles = StyleSheet.create({
     width: 62,
     height: 62,
     borderRadius: 31,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 8,
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 10,
     borderWidth: 2.5,
     borderColor: "#D4AF37",
-    overflow: "hidden",
+    shadowColor: "#D4AF37",
+    shadowOpacity: 0.4,
+    shadowRadius: 10,
   },
   fabImage: { width: 44, height: 44 },
   overlay: {
@@ -397,34 +422,29 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A0A0A",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: "#222",
     height: "78%",
-    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 16,
+    padding: 20,
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
   avatarCircle: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFF",
     borderWidth: 2,
     borderColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
-    overflow: "hidden",
   },
   avatarImage: { width: 34, height: 34 },
-  headerTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
-  onlineRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
+  headerTitle: { color: "#FFF", fontSize: 16, fontWeight: "700" },
+  onlineRow: { flexDirection: "row", alignItems: "center" },
   onlineDot: {
     width: 7,
     height: 7,
@@ -432,31 +452,25 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     marginRight: 5,
   },
-  onlineText: { color: "#4CAF50", fontSize: 11, fontWeight: "500" },
-  closeBtn: {
-    padding: 8,
-    backgroundColor: "#1A1A1A",
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "#333",
-  },
+  onlineText: { color: "#4CAF50", fontSize: 11 },
+  closeBtn: { padding: 8, backgroundColor: "#1A1A1A", borderRadius: 20 },
   divider: { height: 1, backgroundColor: "#1E1E1E" },
   messagesList: { flex: 1 },
-  messagesContent: { paddingHorizontal: 16, paddingVertical: 16 },
+  messagesContent: { padding: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
+  // ADDED MISSING STYLES HERE
   bubbleRowUser: { justifyContent: "flex-end" },
   bubbleRowChef: { justifyContent: "flex-start" },
   chefAvatarSmall: {
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#FFF",
     borderWidth: 1.5,
     borderColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    overflow: "hidden",
   },
   smallAvatarImage: { width: 22, height: 22 },
   bubble: {
@@ -472,41 +486,24 @@ const styles = StyleSheet.create({
     borderColor: "#2A2A2A",
     borderBottomLeftRadius: 4,
   },
-  userText: { color: "#000000", fontSize: 14, fontWeight: "600" },
-  chefText: { color: "#E8E8E8", fontSize: 14 },
-  typingBubble: { paddingVertical: 12, paddingHorizontal: 16 },
-  typingDots: {
-    flexDirection: "row",
-    gap: 5,
-    alignItems: "center",
-    height: 16,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 3.5,
-    backgroundColor: "#D4AF37",
-    marginHorizontal: 2,
-  },
+  userText: { color: "#000", fontWeight: "600" },
+  chefText: { color: "#E8E8E8" },
+  typingBubble: { padding: 12 },
+  typingDots: { flexDirection: "row", gap: 5 },
+  dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#D4AF37" },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    padding: 16,
     borderTopWidth: 1,
     borderTopColor: "#1E1E1E",
-    backgroundColor: "#0A0A0A",
-    gap: 10,
   },
   input: {
     flex: 1,
     backgroundColor: "#161616",
     borderRadius: 24,
     paddingHorizontal: 16,
-    color: "#FFFFFF",
-    fontSize: 14,
-    borderWidth: 1,
-    borderColor: "#2A2A2A",
+    color: "#FFF",
     height: 44,
   },
   sendBtn: {
