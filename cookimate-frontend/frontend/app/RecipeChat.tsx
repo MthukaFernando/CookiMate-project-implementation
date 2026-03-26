@@ -1,26 +1,29 @@
-import React, { useState, useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  TextInput,
-  ScrollView,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
-  ActivityIndicator,
-  SafeAreaView,
-  Image,
-  Keyboard,
-  TouchableWithoutFeedback,
-} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
-import Constants from "expo-constants";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  Keyboard,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  View,
+} from "react-native";
 
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
+const FAB_SIZE = 62;
 
 type Message = {
   role: "user" | "assistant";
@@ -42,17 +45,57 @@ export default function RecipeChatbot({ recipeId }: Props) {
   ]);
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
-  const [keyboardHeight, setKeyboardHeight] = useState(0);
 
-  // FAB pulse animation
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  // Chat slide-up animation
   const slideAnim = useRef(new Animated.Value(300)).current;
-  // Keyboard animation
   const translateYAnim = useRef(new Animated.Value(0)).current;
+  const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   const scrollRef = useRef<ScrollView>(null);
   const inputRef = useRef<TextInput>(null);
+
+  // PanResponder for Draggable logic
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
+      },
+      onPanResponderGrant: () => {
+        // @ts-ignore
+        pan.setOffset({ x: pan.x._value, y: pan.y._value });
+        pan.setValue({ x: 0, y: 0 });
+      },
+      onPanResponderMove: Animated.event([null, { dx: pan.x, dy: pan.y }], {
+        useNativeDriver: false,
+      }),
+      onPanResponderRelease: () => {
+        pan.flattenOffset();
+        const currentX = (pan.x as any)._value;
+        const currentY = (pan.y as any)._value;
+
+        // Snap to edges logic
+        const snapRight = 0;
+        const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
+
+        // Vertical constraints (keep away from bottom tab bar / notch)
+        const maxY = 50;
+        const minY = -(SCREEN_HEIGHT - 250);
+
+        const finalX =
+          Math.abs(currentX - snapLeft) < Math.abs(currentX - snapRight)
+            ? snapLeft
+            : snapRight;
+        const finalY = Math.max(minY, Math.min(currentY, maxY));
+
+        Animated.spring(pan, {
+          toValue: { x: finalX, y: finalY },
+          useNativeDriver: false,
+          friction: 7,
+        }).start();
+      },
+    }),
+  ).current;
 
   useEffect(() => {
     const pulse = Animated.loop(
@@ -60,12 +103,12 @@ export default function RecipeChatbot({ recipeId }: Props) {
         Animated.timing(pulseAnim, {
           toValue: 1.12,
           duration: 900,
-          useNativeDriver: true,
+          useNativeDriver: false, // Set to false to work with dragging
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
           duration: 900,
-          useNativeDriver: true,
+          useNativeDriver: false,
         }),
       ]),
     );
@@ -95,14 +138,11 @@ export default function RecipeChatbot({ recipeId }: Props) {
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
       (e) => {
-        setKeyboardHeight(e.endCoordinates.height);
-        // Animate the chat sheet up when keyboard opens
         Animated.timing(translateYAnim, {
           toValue: -e.endCoordinates.height,
           duration: 250,
           useNativeDriver: true,
         }).start(() => {
-          // Scroll to bottom after keyboard animation
           setTimeout(() => {
             scrollRef.current?.scrollToEnd({ animated: true });
           }, 100);
@@ -113,7 +153,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
     const keyboardWillHide = Keyboard.addListener(
       Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
       () => {
-        setKeyboardHeight(0);
         Animated.timing(translateYAnim, {
           toValue: 0,
           duration: 250,
@@ -135,7 +174,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isThinking) return;
-
     const updatedMessages: Message[] = [
       ...messages,
       { role: "user", content: trimmed },
@@ -143,10 +181,9 @@ export default function RecipeChatbot({ recipeId }: Props) {
     setMessages(updatedMessages);
     setInput("");
     setIsThinking(true);
-
     try {
       const response = await axios.post(`${API_URL}/api/recipes/chat-recipe`, {
-        recipeId: recipeId,
+        recipeId,
         message: trimmed,
       });
       setMessages([
@@ -158,8 +195,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
         ...updatedMessages,
         {
           role: "assistant",
-          content:
-            "Sorry, the chef is a bit busy right now. Try again shortly!",
+          content: "Sorry, the chef is a bit busy right now.",
         },
       ]);
     } finally {
@@ -167,16 +203,21 @@ export default function RecipeChatbot({ recipeId }: Props) {
     }
   };
 
-  const dismissKeyboard = () => {
-    Keyboard.dismiss();
-  };
-
   return (
     <>
-      {/* Floating Action Button */}
       {!isOpen && (
         <Animated.View
-          style={[styles.fabWrapper, { transform: [{ scale: pulseAnim }] }]}
+          {...panResponder.panHandlers}
+          style={[
+            styles.fabWrapper,
+            {
+              transform: [
+                { translateX: pan.x },
+                { translateY: pan.y },
+                { scale: pulseAnim },
+              ],
+            },
+          ]}
         >
           <TouchableOpacity
             style={styles.fab}
@@ -192,7 +233,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
         </Animated.View>
       )}
 
-      {/* Chat Modal */}
       <Modal
         visible={isOpen}
         transparent
@@ -200,14 +240,13 @@ export default function RecipeChatbot({ recipeId }: Props) {
         onRequestClose={() => setIsOpen(false)}
       >
         <SafeAreaView style={styles.overlay} pointerEvents="box-none">
-          <TouchableWithoutFeedback onPress={dismissKeyboard}>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
             <View style={styles.dismissArea} />
           </TouchableWithoutFeedback>
 
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.kvContainer}
-            keyboardVerticalOffset={0}
           >
             <Animated.View
               style={[
@@ -220,7 +259,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
                 },
               ]}
             >
-              {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerLeft}>
                   <View style={styles.avatarCircle}>
@@ -246,10 +284,8 @@ export default function RecipeChatbot({ recipeId }: Props) {
                 </TouchableOpacity>
               </View>
 
-              {/* Divider */}
               <View style={styles.divider} />
 
-              {/* Messages */}
               <ScrollView
                 ref={scrollRef}
                 style={styles.messagesList}
@@ -296,8 +332,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
                     </View>
                   </View>
                 ))}
-
-                {/* Typing indicator */}
                 {isThinking && (
                   <View style={[styles.bubbleRow, styles.bubbleRowChef]}>
                     <View style={styles.chefAvatarSmall}>
@@ -324,7 +358,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
                 )}
               </ScrollView>
 
-              {/* Input Row */}
               <View style={styles.inputRow}>
                 <TextInput
                   ref={inputRef}
@@ -335,7 +368,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
                   placeholderTextColor="#555"
                   onSubmitEditing={handleSend}
                   returnKeyType="send"
-                  multiline={false}
                   editable={!isThinking}
                 />
                 <TouchableOpacity
@@ -361,10 +393,8 @@ export default function RecipeChatbot({ recipeId }: Props) {
   );
 }
 
-// Animated typing dot sub-component
 function TypingDot({ delay }: { delay: number }) {
   const anim = useRef(new Animated.Value(0)).current;
-
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
@@ -385,7 +415,6 @@ function TypingDot({ delay }: { delay: number }) {
     loop.start();
     return () => loop.stop();
   }, []);
-
   return (
     <Animated.View
       style={[styles.dot, { transform: [{ translateY: anim }] }]}
@@ -394,13 +423,7 @@ function TypingDot({ delay }: { delay: number }) {
 }
 
 const styles = StyleSheet.create({
-  // FAB
-  fabWrapper: {
-    position: "absolute",
-    bottom: 80,
-    right: 22,
-    zIndex: 999,
-  },
+  fabWrapper: { position: "absolute", bottom: 80, right: 22, zIndex: 999 },
   fab: {
     width: 62,
     height: 62,
@@ -417,24 +440,10 @@ const styles = StyleSheet.create({
     borderColor: "#D4AF37",
     overflow: "hidden",
   },
-  fabImage: {
-    width: 44,
-    height: 44,
-  },
-
-  // Modal overlay
-  overlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  dismissArea: {
-    flex: 1,
-  },
-  kvContainer: {
-    justifyContent: "flex-end",
-  },
-
-  // Chat sheet
+  fabImage: { width: 44, height: 44 },
+  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
+  dismissArea: { flex: 1 },
+  kvContainer: { justifyContent: "flex-end" },
   chatSheet: {
     backgroundColor: "#0A0A0A",
     borderTopLeftRadius: 28,
@@ -444,8 +453,6 @@ const styles = StyleSheet.create({
     height: "78%",
     overflow: "hidden",
   },
-
-  // Header
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -454,11 +461,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: "#0A0A0A",
   },
-  headerLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-  },
+  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
   avatarCircle: {
     width: 44,
     height: 44,
@@ -470,27 +473,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 10,
     overflow: "hidden",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  avatarImage: {
-    width: 34,
-    height: 34,
-  },
-  headerTitle: {
-    color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "700",
-    letterSpacing: 0.3,
-  },
-  onlineRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 2,
-  },
+  avatarImage: { width: 34, height: 34 },
+  headerTitle: { color: "#FFFFFF", fontSize: 16, fontWeight: "700" },
+  onlineRow: { flexDirection: "row", alignItems: "center", marginTop: 2 },
   onlineDot: {
     width: 7,
     height: 7,
@@ -498,11 +484,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#4CAF50",
     marginRight: 5,
   },
-  onlineText: {
-    color: "#4CAF50",
-    fontSize: 11,
-    fontWeight: "500",
-  },
+  onlineText: { color: "#4CAF50", fontSize: 11, fontWeight: "500" },
   closeBtn: {
     padding: 8,
     backgroundColor: "#1A1A1A",
@@ -510,33 +492,16 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#333",
   },
-
-  divider: {
-    height: 1,
-    backgroundColor: "#1E1E1E",
-    marginHorizontal: 0,
-  },
-
-  // Messages
-  messagesList: {
-    flex: 1,
-  },
+  divider: { height: 1, backgroundColor: "#1E1E1E" },
+  messagesList: { flex: 1 },
   messagesContent: {
     paddingHorizontal: 16,
     paddingVertical: 16,
     paddingBottom: 8,
   },
-  bubbleRow: {
-    flexDirection: "row",
-    marginBottom: 12,
-    alignItems: "flex-end",
-  },
-  bubbleRowUser: {
-    justifyContent: "flex-end",
-  },
-  bubbleRowChef: {
-    justifyContent: "flex-start",
-  },
+  bubbleRow: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
+  bubbleRowUser: { justifyContent: "flex-end" },
+  bubbleRowChef: { justifyContent: "flex-start" },
   chefAvatarSmall: {
     width: 30,
     height: 30,
@@ -547,51 +512,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    flexShrink: 0,
     overflow: "hidden",
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 2,
   },
-  smallAvatarImage: {
-    width: 22,
-    height: 22,
-  },
+  smallAvatarImage: { width: 22, height: 22 },
   bubble: {
     paddingHorizontal: 14,
     paddingVertical: 10,
     borderRadius: 18,
     maxWidth: "78%",
   },
-  userBubble: {
-    backgroundColor: "#D4AF37",
-    borderBottomRightRadius: 4,
-  },
+  userBubble: { backgroundColor: "#D4AF37", borderBottomRightRadius: 4 },
   chefBubble: {
     backgroundColor: "#161616",
     borderWidth: 1,
     borderColor: "#2A2A2A",
     borderBottomLeftRadius: 4,
   },
-  userText: {
-    color: "#000000",
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
-  chefText: {
-    color: "#E8E8E8",
-    fontSize: 14,
-    lineHeight: 21,
-  },
-
-  // Typing indicator
-  typingBubble: {
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-  },
+  userText: { color: "#000000", fontSize: 14, fontWeight: "600" },
+  chefText: { color: "#E8E8E8", fontSize: 14 },
+  typingBubble: { paddingVertical: 12, paddingHorizontal: 16 },
   typingDots: {
     flexDirection: "row",
     gap: 5,
@@ -605,8 +544,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#D4AF37",
     marginHorizontal: 2,
   },
-
-  // Input
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -622,7 +559,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#161616",
     borderRadius: 24,
     paddingHorizontal: 16,
-    paddingVertical: 10,
     color: "#FFFFFF",
     fontSize: 14,
     borderWidth: 1,
@@ -636,15 +572,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#D4AF37",
     justifyContent: "center",
     alignItems: "center",
-    elevation: 3,
-    shadowColor: "#D4AF37",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
   },
-  sendBtnDisabled: {
-    backgroundColor: "#3A3A2A",
-    shadowOpacity: 0,
-    elevation: 0,
-  },
+  sendBtnDisabled: { backgroundColor: "#3A3A2A" },
 });
