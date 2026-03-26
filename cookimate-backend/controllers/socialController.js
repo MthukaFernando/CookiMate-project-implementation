@@ -4,6 +4,7 @@ import { cloudinary } from "../config/cloudinary.js";
 import dotenv from "dotenv";
 import axios from "axios";
 import { updateUserStats } from "../utils/gamificationHelpers.js";
+import { isContentToxic } from "../utils/moderator.js"; 
 
 dotenv.config();
 
@@ -11,6 +12,11 @@ dotenv.config();
 export const createPost = async (req, res) => {
   try {
     const { user: firebaseUid, caption } = req.body;
+
+    // --- NEW FILTER CHECK FOR CAPTIONS ---
+    if (isContentToxic(caption)) {
+      return res.status(400).json({ message: "Post caption contains inappropriate language." });
+    }
     
     // Check if Multer actually caught the file
     if (!req.file) {
@@ -18,8 +24,7 @@ export const createPost = async (req, res) => {
       return res.status(400).json({ message: "No image file provided" });
     }
 
-    // 1. EXTRACT CLOUDINARY DATA (Handling different library versions)
-    // We check .path, then .secure_url, then .url to ensure we don't get 'undefined'
+    // 1. EXTRACT CLOUDINARY DATA
     const imageUrl = req.file.path || req.file.secure_url || req.file.url;
     const publicId = req.file.filename || req.file.public_id;
 
@@ -38,7 +43,7 @@ export const createPost = async (req, res) => {
 
     // 3. SAVE THE POST TO MONGODB
     const newPost = new Post({
-      user: firebaseUid, // Using the string UID as per your Post schema
+      user: firebaseUid, 
       caption: caption,
       imageUrl: imageUrl,
       moderationStatus: "pending", 
@@ -51,7 +56,7 @@ export const createPost = async (req, res) => {
     await updateUserStats(userDoc._id, 'SHARE_POST', 1);
     console.log(`🏆 Gamification: Progress added for ${userDoc.username}`);
 
-    // 5. RESPOND TO MOBILE APP IMMEDIATELY (So the user doesn't wait for AI)
+    // 5. RESPOND TO MOBILE APP IMMEDIATELY
     res.status(201).json(savedPost);
 
     // 6. ASYNCHRONOUS AI VISION CHECK
@@ -85,12 +90,8 @@ export const createPost = async (req, res) => {
 
       if (failedChecks.length > 0) {
         console.log(`❌ AI REJECTED: ${failedChecks[0].prompt}`);
-        
-        // Cleanup: Remove from DB and Cloudinary
         await Post.findByIdAndDelete(savedPost._id);
         await cloudinary.uploader.destroy(publicId);
-        
-        // Revoke progress
         await updateUserStats(userDoc._id, 'SHARE_POST', -1);
         
         await User.findByIdAndUpdate(userDoc._id, { 
@@ -103,7 +104,6 @@ export const createPost = async (req, res) => {
 
     } catch (aiError) {
       console.error("⚠️ AI Vision API Error (Non-Fatal):", aiError.response?.data || aiError.message);
-      // We don't delete the post here; it stays 'pending' for safety
     }
 
   } catch (err) {
@@ -119,24 +119,19 @@ export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
-  const { uid } = req.query; // ✅ current logged-in user's firebaseUid
+  const { uid } = req.query; 
  
   try {
     let blockedUids = [];
- 
     if (uid) {
       const currentUser = await User.findOne({ firebaseUid: uid });
       if (currentUser && Array.isArray(currentUser.blockedUsers)) {
-        // ✅ blockedUsers is now a flat [String] array of firebaseUids
         blockedUids = currentUser.blockedUsers;
       }
     }
  
-    
- 
     const posts = await Post.find({
       moderationStatus: { $ne: "rejected" },
-      // ✅ post.user is a firebaseUid string — $nin correctly excludes blocked ones
       user: { $nin: blockedUids },
     })
       .sort({ createdAt: -1 })
@@ -161,32 +156,26 @@ export const getFeed = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
 // 3. Like Post
 export const likePost = async (req, res) => {
   try {
     const post = await Post.findById(req.params.id);
-    const { userId } = req.body; // The person clicking the button
+    const { userId } = req.body;
 
     if (!post) return res.status(404).json("Post not found");
 
-    // 1. Find the AUTHOR of the post (the person who gets the progress)
     const authorDoc = await User.findOne({ firebaseUid: post.user });
 
     if (!post.likes.includes(userId)) {
       await post.updateOne({ $push: { likes: userId } });
-
       if (authorDoc) {
-        // Increment the author's get likes progress bar
         await updateUserStats(authorDoc._id, 'RECEIVE_LIKE', 1);
-        console.log(`Gamification: ${authorDoc.username} received a like.`);
       }
       res.status(200).json("Post liked!");
     } else {
-      // UNLIKE ACTION
       await post.updateOne({ $pull: { likes: userId } });
-
       if (authorDoc) {
-        // Decrement the progress
         await updateUserStats(authorDoc._id, 'RECEIVE_LIKE', -1);
       }
       res.status(200).json("Post unliked.");
@@ -196,36 +185,43 @@ export const likePost = async (req, res) => {
   }
 };
 
-// 4. Add Comment
+// 4. Add Comment 
 export const addComment = async (req, res) => {
   try {
     const { postId } = req.params;
     const { userId, text } = req.body;
 
+    // 1. Explicitly check toxicity first
+    if (isContentToxic(text)) {
+      console.log("🚫 Blocked toxic comment:", text);
+      return res.status(400).json({ message: "Comment contains inappropriate language." });
+    }
+
+    // 2. Add the comment
     const updatedPost = await Post.findByIdAndUpdate(
       postId,
       { $push: { comments: { user: userId, text } } },
-      { new: true },
-    )
-      .populate({
-        path: "comments.user",
-        model: "User",
-        foreignField: "firebaseUid",
-        select: "username profilePic",
-      })
-      .populate({
-        path: "user",
-        model: "User",
-        foreignField: "firebaseUid",
-        select: "username firebaseUid",
-      });
+      { new: true }
+    ).populate({
+      path: "comments.user",
+      model: "User",
+      foreignField: "firebaseUid",
+      select: "username profilePic",
+    });
 
     if (!updatedPost) return res.status(404).json("Post not found");
-    await User.findOneAndUpdate({ firebaseUid: updatedPost.user.firebaseUid }, { $inc: { points: 5 } });
+    
+    // 3. Award points to the AUTHOR of the post for receiving a comment
+    // Use the field directly from the post doc to be safe
+    await User.findOneAndUpdate(
+      { firebaseUid: updatedPost.user }, 
+      { $inc: { points: 5 } }
+    );
 
     res.status(200).json(updatedPost);
   } catch (err) {
-    res.status(500).json(err);
+    console.error("Comment Error:", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };
 
@@ -246,18 +242,19 @@ export const deletePost = async (req, res) => {
   }
 };
 
+// 6. Delete Comment
 export const deleteComment = async (req, res) => {
   try {
     const { postId, commentId } = req.params;
-    const { userId } = req.body; // This is the logged-in user's UID
+    const { userId } = req.body;
 
     const updatedPost = await Post.findOneAndUpdate(
       { 
         _id: postId, 
-        "comments._id": commentId, // Target the specific comment ID
-        "comments.user": userId    // Safety: Ensure the UID matches the commenter
+        "comments._id": commentId,
+        "comments.user": userId 
       },
-      { $pull: { comments: { _id: commentId } } }, // Remove that specific comment object
+      { $pull: { comments: { _id: commentId } } },
       { new: true }
     ).populate({
       path: "comments.user",

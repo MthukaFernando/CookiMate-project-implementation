@@ -208,8 +208,10 @@ export default function CommunityFeed() {
       });
       setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
       setCommentText("");
-    } catch (err) {
-      console.error(err);
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.message || "Could not post comment.";
+      Alert.alert("Comment Blocked", message); 
     } finally {
       setIsSubmitting(false);
     }
