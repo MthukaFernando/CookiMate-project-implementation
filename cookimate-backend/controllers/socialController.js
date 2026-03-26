@@ -69,7 +69,10 @@ export const createPost = async (req, res) => {
           rejection_questions: [
             "Does the image contain nudity?",
             "Does the image contain graphic violence?",
-            "Is this image completely unrelated to food or cooking?"
+            "Is this image completely unrelated to food or cooking?",
+            "Does the food in the image look rotten, moldy, or infested with insects?",
+            "Does the image contain unhygienic items mixed with food, like hair, trash, or pests?",
+            "Is the food presented in a way that is intentionally gross, slimy, or visually repulsive?"
           ]
         },
         {
