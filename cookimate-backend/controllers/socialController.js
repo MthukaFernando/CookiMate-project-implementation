@@ -211,7 +211,7 @@ export const addComment = async (req, res) => {
     const { postId } = req.params;
     const { userId, text } = req.body;
 
-    const isToxicComment = await chechText(text);
+    const isToxicComment = await chechkText(text);
     if(isToxicComment) {
       return res.status(400).json({
         message: "You comment contains inappropriate content. Please keep it user friendly!"
