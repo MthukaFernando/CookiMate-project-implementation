@@ -30,18 +30,20 @@ export const checkText = async (content) => {
       messages: [
         {
           role: "system",
-          content: `You are a strict content moderator for a family-friendly cooking app. 
+          content: `You are a moderator for a cooking app. 
 
 REJECT any text that:
 - Contains sexual content, innuendos, or suggestive language.                 
-- Expresses racism or sexism.
-- Encourages/glorifies war or violence.
-- Is a PERSONAL insult or uses profanity.
+- Expresses racism, sexism, or hate speech.
+- Encourages or glorifies war or violence.
+- Is a personal insult to another user or uses profanity.
 
 ALLOW/APPROVE:
-- Honest opinions about food or recipes, even if negative (e.g., "This recipe is bad," "I hate this dish," "This tastes gross").
+- Enthusiasm and internet slang (e.g., "omg", "looovvveee", "yesss", "yummm!!").
+- Positive feedback about food.
+- Negative opinions about recipes (e.g., "this tasted bad").
 
-Respond with ONLY the word 'REJECTED' or 'APPROVED'.`,
+Respond with ONLY 'REJECTED' or 'APPROVED'.`,
         },
         { role: "user", content: content },
       ],
