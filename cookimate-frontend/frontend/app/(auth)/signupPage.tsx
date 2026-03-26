@@ -31,6 +31,7 @@ export default function SignupPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [email, setEmail] = useState("");
   const [emailError, setEmailError] = useState("");
@@ -41,6 +42,10 @@ export default function SignupPage() {
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordTouched, setPasswordTouched] = useState(false);
+
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
 
   const validateEmail = (value: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -55,13 +60,40 @@ export default function SignupPage() {
     if (!value) setPasswordError("Password is required");
     else if (value.length < 6) setPasswordError("At least 6 characters");
     else setPasswordError("");
+
+    if (confirmPassword) {
+      if (value !== confirmPassword) {
+        setConfirmPasswordError("Passwords do not match");
+      } else {
+        setConfirmPasswordError("");
+      }
+    }
+  };
+
+  const validateConfirmPassword = (value: string) => {
+    setConfirmPassword(value);
+    if (!value) {
+      setConfirmPasswordError("Please confirm your password");
+    } else if (value !== password) {
+      setConfirmPasswordError("Passwords do not match");
+    } else {
+      setConfirmPasswordError("");
+    }
   };
 
   const handleSignup = async () => {
     setEmailTouched(true);
     setPasswordTouched(true);
+    setConfirmPasswordTouched(true);
 
-    if (!email || !password || emailError || passwordError) {
+    if (
+      !email ||
+      !password ||
+      !confirmPassword ||
+      emailError ||
+      passwordError ||
+      confirmPasswordError
+    ) {
       Alert.alert("Error", "Please fix the errors in the form.");
       return;
     }
@@ -161,6 +193,7 @@ export default function SignupPage() {
                 secureTextEntry={!showPassword}
                 value={password}
                 onChangeText={validatePassword}
+                onBlur={() => setPasswordTouched(true)}
               />
               <TouchableOpacity
                 onPress={() => setShowPassword(!showPassword)}
@@ -175,6 +208,39 @@ export default function SignupPage() {
             </View>
             {passwordTouched && passwordError ? (
               <Text style={styles.errorText}>{passwordError}</Text>
+            ) : null}
+
+            <Text style={styles.label}>Confirm Password</Text>
+            <View
+              style={[
+                styles.passwordContainer,
+                confirmPasswordTouched && confirmPasswordError
+                  ? styles.errorBorder
+                  : null,
+              ]}
+            >
+              <TextInput
+                style={styles.passwordInput}
+                placeholder="Confirm your password"
+                placeholderTextColor="#999"
+                secureTextEntry={!showConfirmPassword}
+                value={confirmPassword}
+                onChangeText={validateConfirmPassword}
+                onBlur={() => setConfirmPasswordTouched(true)}
+              />
+              <TouchableOpacity
+                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={styles.eyeIcon}
+              >
+                <Ionicons
+                  name={showConfirmPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color="#D4AF37"
+                />
+              </TouchableOpacity>
+            </View>
+            {confirmPasswordTouched && confirmPasswordError ? (
+              <Text style={styles.errorText}>{confirmPasswordError}</Text>
             ) : null}
 
             <TouchableOpacity
