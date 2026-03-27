@@ -14,9 +14,9 @@ import {
   Image,
   PanResponder,
   Dimensions,
+  TouchableWithoutFeedback,
 } from "react-native";
-// CRITICAL: Ensure this is from safe-area-context, not react-native
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 import { create } from "zustand";
@@ -54,7 +54,9 @@ type Message = {
 };
 
 export default function GlobalChatbot() {
+  const insets = useSafeAreaInsets();
   const { posX, posY, setPosition } = useChatStore();
+
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -66,14 +68,13 @@ export default function GlobalChatbot() {
   const [input, setInput] = useState("");
   const [isThinking, setIsThinking] = useState(false);
 
+  // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
+  const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const scrollRef = useRef<ScrollView>(null);
-
-  // Initialize Pan with Global Store values
   const pan = useRef(new Animated.ValueXY({ x: posX, y: posY })).current;
 
-  // Sync Effect
+  // Keep pan synced with store
   useEffect(() => {
     Animated.spring(pan, {
       toValue: { x: posX, y: posY },
@@ -82,12 +83,12 @@ export default function GlobalChatbot() {
     }).start();
   }, [posX, posY]);
 
+  // FAB Drag Logic
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
-      },
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
       onPanResponderGrant: () => {
         // @ts-ignore
         pan.setOffset({ x: pan.x._value, y: pan.y._value });
@@ -103,14 +104,13 @@ export default function GlobalChatbot() {
 
         const snapRight = 0;
         const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
-        const maxY = 50;
-        const minY = -(SCREEN_HEIGHT - 250);
 
         const finalX =
           Math.abs(currentX - snapLeft) < Math.abs(currentX - snapRight)
             ? snapLeft
             : snapRight;
-        const finalY = Math.max(minY, Math.min(currentY, maxY));
+
+        const finalY = Math.max(-(SCREEN_HEIGHT - 250), Math.min(currentY, 50));
 
         Animated.spring(pan, {
           toValue: { x: finalX, y: finalY },
@@ -123,6 +123,7 @@ export default function GlobalChatbot() {
     }),
   ).current;
 
+  // Pulse effect for FAB
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
@@ -142,6 +143,7 @@ export default function GlobalChatbot() {
     return () => pulse.stop();
   }, []);
 
+  // Modal Slide Animation
   useEffect(() => {
     if (isOpen) {
       Animated.spring(slideAnim, {
@@ -152,13 +154,14 @@ export default function GlobalChatbot() {
       }).start();
     } else {
       Animated.timing(slideAnim, {
-        toValue: 400,
+        toValue: SCREEN_HEIGHT,
         duration: 250,
         useNativeDriver: true,
       }).start();
     }
   }, [isOpen]);
 
+  // Auto-scroll messages
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages, isThinking]);
@@ -166,25 +169,24 @@ export default function GlobalChatbot() {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isThinking) return;
-    const updatedMessages: Message[] = [
-      ...messages,
-      { role: "user", content: trimmed },
-    ];
-    setMessages(updatedMessages);
+
+    const updated = [...messages, { role: "user" as const, content: trimmed }];
+    setMessages(updated);
     setInput("");
     setIsThinking(true);
+
     try {
       const response = await axios.post(`${API_URL}/api/recipes/global-chat`, {
-        messages: updatedMessages,
+        messages: updated,
       });
       setMessages([
-        ...updatedMessages,
+        ...updated,
         { role: "assistant", content: response.data.reply },
       ]);
     } catch (err) {
       setMessages([
-        ...updatedMessages,
-        { role: "assistant", content: "Chef is busy!" },
+        ...updated,
+        { role: "assistant", content: "Chef is busy right now!" },
       ]);
     } finally {
       setIsThinking(false);
@@ -193,6 +195,7 @@ export default function GlobalChatbot() {
 
   return (
     <>
+      {/* Floating Action Button */}
       {!isOpen && (
         <Animated.View
           {...panResponder.panHandlers}
@@ -221,23 +224,35 @@ export default function GlobalChatbot() {
         </Animated.View>
       )}
 
+      {/* Chat Interface Modal */}
       <Modal
         visible={isOpen}
         transparent
         animationType="none"
+        statusBarTranslucent
         onRequestClose={() => setIsOpen(false)}
       >
-        <SafeAreaView style={styles.overlay} edges={["bottom"]}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.kvContainer}
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback onPress={() => setIsOpen(false)}>
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+
+          <Animated.View
+            style={[
+              styles.chatSheet,
+              {
+                transform: [{ translateY: slideAnim }],
+                // Manually setting height to cover navigation bar leak
+                height: SCREEN_HEIGHT * 0.78 + insets.bottom,
+              },
+            ]}
           >
-            <Animated.View
-              style={[
-                styles.chatSheet,
-                { transform: [{ translateY: slideAnim }] },
-              ]}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "android" ? 64 : 0}
+              style={{ flex: 1 }}
             >
+              {/* Header */}
               <View style={styles.header}>
                 <View style={styles.headerLeft}>
                   <View style={styles.avatarCircle}>
@@ -262,7 +277,10 @@ export default function GlobalChatbot() {
                   <Ionicons name="chevron-down" size={22} color="#D4AF37" />
                 </TouchableOpacity>
               </View>
+
               <View style={styles.divider} />
+
+              {/* Messages Area */}
               <ScrollView
                 ref={scrollRef}
                 style={styles.messagesList}
@@ -307,6 +325,7 @@ export default function GlobalChatbot() {
                     </View>
                   </View>
                 ))}
+
                 {isThinking && (
                   <View style={[styles.bubbleRow, styles.bubbleRowChef]}>
                     <View style={styles.chefAvatarSmall}>
@@ -332,32 +351,41 @@ export default function GlobalChatbot() {
                   </View>
                 )}
               </ScrollView>
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Ask the chef..."
-                  placeholderTextColor="#555"
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendBtn,
-                    (!input.trim() || isThinking) && styles.sendBtnDisabled,
-                  ]}
-                  onPress={handleSend}
-                  disabled={!input.trim() || isThinking}
-                >
-                  {isThinking ? (
-                    <ActivityIndicator size="small" color="#000" />
-                  ) : (
-                    <Ionicons name="send" size={18} color="#000" />
-                  )}
-                </TouchableOpacity>
+
+              {/* Input Area */}
+              <View
+                style={[
+                  styles.inputContainer,
+                  { paddingBottom: insets.bottom + 10 },
+                ]}
+              >
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.input}
+                    value={input}
+                    onChangeText={setInput}
+                    placeholder="Ask the chef..."
+                    placeholderTextColor="#555"
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sendBtn,
+                      (!input.trim() || isThinking) && styles.sendBtnDisabled,
+                    ]}
+                    onPress={handleSend}
+                    disabled={!input.trim() || isThinking}
+                  >
+                    {isThinking ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <Ionicons name="send" size={18} color="#000" />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </Animated.View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+            </KeyboardAvoidingView>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
@@ -399,30 +427,33 @@ const styles = StyleSheet.create({
     elevation: 20,
   },
   fab: {
-    width: 62,
-    height: 62,
-    borderRadius: 31,
+    width: FAB_SIZE,
+    height: FAB_SIZE,
+    borderRadius: FAB_SIZE / 2,
     backgroundColor: "#FFF",
     justifyContent: "center",
     alignItems: "center",
     borderWidth: 2.5,
     borderColor: "#D4AF37",
-    shadowColor: "#D4AF37",
-    shadowOpacity: 0.4,
-    shadowRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 5,
   },
   fabImage: { width: 44, height: 44 },
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
   },
-  kvContainer: { justifyContent: "flex-end" },
   chatSheet: {
     backgroundColor: "#0A0A0A",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    height: "78%",
+    width: "100%",
+    position: "absolute",
+    bottom: 0,
+    overflow: "hidden",
   },
   header: {
     flexDirection: "row",
@@ -458,7 +489,6 @@ const styles = StyleSheet.create({
   messagesList: { flex: 1 },
   messagesContent: { padding: 16 },
   bubbleRow: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end" },
-  // ADDED MISSING STYLES HERE
   bubbleRowUser: { justifyContent: "flex-end" },
   bubbleRowChef: { justifyContent: "flex-start" },
   chefAvatarSmall: {
@@ -491,12 +521,16 @@ const styles = StyleSheet.create({
   typingBubble: { padding: 12 },
   typingDots: { flexDirection: "row", gap: 5 },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#D4AF37" },
+  inputContainer: {
+    backgroundColor: "#0A0A0A",
+    borderTopWidth: 1,
+    borderTopColor: "#1E1E1E",
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#1E1E1E",
+    gap: 10,
   },
   input: {
     flex: 1,
