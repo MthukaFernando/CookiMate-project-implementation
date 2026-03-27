@@ -453,6 +453,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2.5,
     borderColor: "#D4AF37",
+    overflow: "hidden"
   },
   fabImage: { width: 44, height: 44 },
   overlay: {
@@ -493,6 +494,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 10,
+    overflow: "hidden"
   },
   avatarImage: { width: 34, height: 34 },
   headerTitle: { color: "#FFF", fontSize: 16, fontWeight: "700" },
@@ -522,6 +524,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
+    overflow: "hidden"
   },
   smallAvatarImage: { width: 22, height: 22 },
   bubble: {
