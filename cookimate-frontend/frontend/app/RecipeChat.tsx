@@ -14,8 +14,9 @@ import {
   Image,
   PanResponder,
   Dimensions,
+  TouchableWithoutFeedback,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import axios from "axios";
 
@@ -28,11 +29,12 @@ type Message = {
   content: string;
 };
 
-type Props = {
+export default function RecipeChatbot({
+  recipeId,
+}: {
   recipeId: string | number;
-};
-
-export default function RecipeChatbot({ recipeId }: Props) {
+}) {
+  const insets = useSafeAreaInsets();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -47,17 +49,13 @@ export default function RecipeChatbot({ recipeId }: Props) {
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const scrollRef = useRef<ScrollView>(null);
-
-  // For Recipe Chat, we usually don't persist position in a global store
-  // to avoid it overlapping with the Global Bot, but we use the same Pan logic.
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => {
-        return Math.abs(gestureState.dx) > 5 || Math.abs(gestureState.dy) > 5;
-      },
+      onMoveShouldSetPanResponder: (_, gs) =>
+        Math.abs(gs.dx) > 5 || Math.abs(gs.dy) > 5,
       onPanResponderGrant: () => {
         // @ts-ignore
         pan.setOffset({ x: pan.x._value, y: pan.y._value });
@@ -68,19 +66,12 @@ export default function RecipeChatbot({ recipeId }: Props) {
       }),
       onPanResponderRelease: () => {
         pan.flattenOffset();
-        const currentX = (pan.x as any)._value;
-        const currentY = (pan.y as any)._value;
-
-        const snapRight = 0;
-        const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
         const finalX =
-          Math.abs(currentX - snapLeft) < Math.abs(currentX - snapRight)
-            ? snapLeft
-            : snapRight;
-        const finalY = Math.max(-(SCREEN_HEIGHT - 250), Math.min(currentY, 50));
-
+          (pan.x as any)._value < -(SCREEN_WIDTH / 2)
+            ? -(SCREEN_WIDTH - FAB_SIZE - 44)
+            : 0;
         Animated.spring(pan, {
-          toValue: { x: finalX, y: finalY },
+          toValue: { x: finalX, y: (pan.y as any)._value },
           useNativeDriver: false,
           friction: 7,
         }).start();
@@ -131,25 +122,25 @@ export default function RecipeChatbot({ recipeId }: Props) {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isThinking) return;
-    const updatedMessages: Message[] = [
+    const updated: Message[] = [
       ...messages,
       { role: "user", content: trimmed },
     ];
-    setMessages(updatedMessages);
+    setMessages(updated);
     setInput("");
     setIsThinking(true);
     try {
       const response = await axios.post(`${API_URL}/api/recipes/chat-recipe`, {
-        recipeId, // Context for the specific recipe
+        recipeId,
         message: trimmed,
       });
       setMessages([
-        ...updatedMessages,
+        ...updated,
         { role: "assistant", content: response.data.reply },
       ]);
     } catch (err) {
       setMessages([
-        ...updatedMessages,
+        ...updated,
         { role: "assistant", content: "Chef is busy!" },
       ]);
     } finally {
@@ -173,11 +164,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
             },
           ]}
         >
-          <TouchableOpacity
-            style={styles.fab}
-            onPress={() => setIsOpen(true)}
-            activeOpacity={0.85}
-          >
+          <TouchableOpacity style={styles.fab} onPress={() => setIsOpen(true)}>
             <Image
               source={require("../assets/images/chatbot-mascot.png")}
               style={styles.fabImage}
@@ -191,18 +178,28 @@ export default function RecipeChatbot({ recipeId }: Props) {
         visible={isOpen}
         transparent
         animationType="none"
+        statusBarTranslucent
         onRequestClose={() => setIsOpen(false)}
       >
-        <SafeAreaView style={styles.overlay} edges={["bottom"]}>
-          <KeyboardAvoidingView
-            behavior={Platform.OS === "ios" ? "padding" : "height"}
-            style={styles.kvContainer}
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback onPress={() => setIsOpen(false)}>
+            <View style={{ flex: 1 }} />
+          </TouchableWithoutFeedback>
+
+          <Animated.View
+            style={[
+              styles.chatSheet,
+              {
+                transform: [{ translateY: slideAnim }],
+                height: SCREEN_HEIGHT * 0.78 + insets.bottom,
+              },
+            ]}
           >
-            <Animated.View
-              style={[
-                styles.chatSheet,
-                { transform: [{ translateY: slideAnim }] },
-              ]}
+            {/* KEYBOARD FIX: Added behavior="height" and an offset for Android */}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === "ios" ? "padding" : "height"}
+              keyboardVerticalOffset={Platform.OS === "android" ? 60 : 0}
+              style={{ flex: 1 }}
             >
               <View style={styles.header}>
                 <View style={styles.headerLeft}>
@@ -301,32 +298,39 @@ export default function RecipeChatbot({ recipeId }: Props) {
                 )}
               </ScrollView>
 
-              <View style={styles.inputRow}>
-                <TextInput
-                  style={styles.input}
-                  value={input}
-                  onChangeText={setInput}
-                  placeholder="Ask about this recipe..."
-                  placeholderTextColor="#555"
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.sendBtn,
-                    (!input.trim() || isThinking) && styles.sendBtnDisabled,
-                  ]}
-                  onPress={handleSend}
-                  disabled={!input.trim() || isThinking}
-                >
-                  {isThinking ? (
-                    <ActivityIndicator size="small" color="#000" />
-                  ) : (
-                    <Ionicons name="send" size={18} color="#000" />
-                  )}
-                </TouchableOpacity>
+              <View
+                style={[
+                  styles.inputContainer,
+                  { paddingBottom: insets.bottom + 10 },
+                ]}
+              >
+                <View style={styles.inputRow}>
+                  <TextInput
+                    style={styles.input}
+                    value={input}
+                    onChangeText={setInput}
+                    placeholder="Ask about this recipe..."
+                    placeholderTextColor="#555"
+                  />
+                  <TouchableOpacity
+                    style={[
+                      styles.sendBtn,
+                      (!input.trim() || isThinking) && styles.sendBtnDisabled,
+                    ]}
+                    onPress={handleSend}
+                    disabled={!input.trim() || isThinking}
+                  >
+                    {isThinking ? (
+                      <ActivityIndicator size="small" color="#000" />
+                    ) : (
+                      <Ionicons name="send" size={18} color="#000" />
+                    )}
+                  </TouchableOpacity>
+                </View>
               </View>
-            </Animated.View>
-          </KeyboardAvoidingView>
-        </SafeAreaView>
+            </KeyboardAvoidingView>
+          </Animated.View>
+        </View>
       </Modal>
     </>
   );
@@ -380,15 +384,16 @@ const styles = StyleSheet.create({
   fabImage: { width: 44, height: 44 },
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
     backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
   },
-  kvContainer: { justifyContent: "flex-end" },
   chatSheet: {
     backgroundColor: "#0A0A0A",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    height: "78%",
+    width: "100%",
+    position: "absolute",
+    bottom: 0,
   },
   header: {
     flexDirection: "row",
@@ -456,12 +461,16 @@ const styles = StyleSheet.create({
   typingBubble: { padding: 12 },
   typingDots: { flexDirection: "row", gap: 5 },
   dot: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: "#D4AF37" },
+  inputContainer: {
+    backgroundColor: "#0A0A0A",
+    borderTopWidth: 1,
+    borderTopColor: "#1E1E1E",
+  },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#1E1E1E",
+    gap: 10,
   },
   input: {
     flex: 1,
