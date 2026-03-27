@@ -11,7 +11,6 @@ import {
   Modal,
   PanResponder,
   Platform,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -47,8 +46,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
   const [isThinking, setIsThinking] = useState(false);
 
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const slideAnim = useRef(new Animated.Value(300)).current;
-  const translateYAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(400)).current;
   const pan = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
 
   const scrollRef = useRef<ScrollView>(null);
@@ -74,11 +72,8 @@ export default function RecipeChatbot({ recipeId }: Props) {
         const currentX = (pan.x as any)._value;
         const currentY = (pan.y as any)._value;
 
-        // Snap to edges logic
         const snapRight = 0;
         const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
-
-        // Vertical constraints (keep away from bottom tab bar / notch)
         const maxY = 50;
         const minY = -(SCREEN_HEIGHT - 250);
 
@@ -103,7 +98,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
         Animated.timing(pulseAnim, {
           toValue: 1.12,
           duration: 900,
-          useNativeDriver: false, // Set to false to work with dragging
+          useNativeDriver: false,
         }),
         Animated.timing(pulseAnim, {
           toValue: 1,
@@ -133,39 +128,6 @@ export default function RecipeChatbot({ recipeId }: Props) {
       Keyboard.dismiss();
     }
   }, [isOpen]);
-
-  useEffect(() => {
-    const keyboardWillShow = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (e) => {
-        Animated.timing(translateYAnim, {
-          toValue: -e.endCoordinates.height,
-          duration: 250,
-          useNativeDriver: true,
-        }).start(() => {
-          setTimeout(() => {
-            scrollRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-        });
-      },
-    );
-
-    const keyboardWillHide = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      () => {
-        Animated.timing(translateYAnim, {
-          toValue: 0,
-          duration: 250,
-          useNativeDriver: true,
-        }).start();
-      },
-    );
-
-    return () => {
-      keyboardWillShow.remove();
-      keyboardWillHide.remove();
-    };
-  }, []);
 
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
@@ -236,27 +198,28 @@ export default function RecipeChatbot({ recipeId }: Props) {
       <Modal
         visible={isOpen}
         transparent
-        animationType="none"
+        animationType="fade"
         onRequestClose={() => setIsOpen(false)}
       >
-        <SafeAreaView style={styles.overlay} pointerEvents="box-none">
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.overlay}>
+          <TouchableWithoutFeedback
+            onPress={() => {
+              Keyboard.dismiss();
+              setIsOpen(false);
+            }}
+          >
             <View style={styles.dismissArea} />
           </TouchableWithoutFeedback>
 
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
             style={styles.kvContainer}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
           >
             <Animated.View
               style={[
                 styles.chatSheet,
-                {
-                  transform: [
-                    { translateY: slideAnim },
-                    { translateY: translateYAnim },
-                  ],
-                },
+                { transform: [{ translateY: slideAnim }] },
               ]}
             >
               <View style={styles.header}>
@@ -387,7 +350,7 @@ export default function RecipeChatbot({ recipeId }: Props) {
               </View>
             </Animated.View>
           </KeyboardAvoidingView>
-        </SafeAreaView>
+        </View>
       </Modal>
     </>
   );
@@ -423,6 +386,27 @@ function TypingDot({ delay }: { delay: number }) {
 }
 
 const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.6)",
+    justifyContent: "flex-end",
+  },
+  dismissArea: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  kvContainer: {
+    width: "100%",
+    justifyContent: "flex-end",
+  },
+  chatSheet: {
+    backgroundColor: "#0A0A0A",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    borderWidth: 1,
+    borderColor: "#222",
+    height: SCREEN_HEIGHT * 0.78,
+    overflow: "hidden",
+  },
   fabWrapper: { position: "absolute", bottom: 80, right: 22, zIndex: 999 },
   fab: {
     width: 62,
@@ -438,21 +422,8 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     borderWidth: 2.5,
     borderColor: "#D4AF37",
-    overflow: "hidden",
   },
   fabImage: { width: 44, height: 44 },
-  overlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.6)" },
-  dismissArea: { flex: 1 },
-  kvContainer: { justifyContent: "flex-end" },
-  chatSheet: {
-    backgroundColor: "#0A0A0A",
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    borderWidth: 1,
-    borderColor: "#222",
-    height: "78%",
-    overflow: "hidden",
-  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -461,7 +432,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     backgroundColor: "#0A0A0A",
   },
-  headerLeft: { flexDirection: "row", alignItems: "center", gap: 12 },
+  headerLeft: { flexDirection: "row", alignItems: "center" },
   avatarCircle: {
     width: 44,
     height: 44,
@@ -512,7 +483,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginRight: 8,
-    overflow: "hidden",
   },
   smallAvatarImage: { width: 22, height: 22 },
   bubble: {
