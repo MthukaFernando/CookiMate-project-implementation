@@ -7,14 +7,14 @@ import {
   Modal,
   TextInput,
   ScrollView,
-  KeyboardAvoidingView,
-  Platform,
   Animated,
   ActivityIndicator,
   Image,
   PanResponder,
   Dimensions,
   TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -71,10 +71,44 @@ export default function GlobalChatbot() {
   // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const slideAnim = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+  const keyboardOffset = useRef(new Animated.Value(0)).current; // New: Manual keyboard lift
   const scrollRef = useRef<ScrollView>(null);
   const pan = useRef(new Animated.ValueXY({ x: posX, y: posY })).current;
 
-  // Keep pan synced with store
+  // Keyboard Listeners for manual lifting
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+
+    const onKeyboardShow = (e: any) => {
+      Animated.timing(keyboardOffset, {
+        toValue:
+          -e.endCoordinates.height +
+          (Platform.OS === "android" ? insets.bottom : 0),
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const onKeyboardHide = () => {
+      Animated.timing(keyboardOffset, {
+        toValue: 0,
+        duration: 250,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const showSubscription = Keyboard.addListener(showEvent, onKeyboardShow);
+    const hideSubscription = Keyboard.addListener(hideEvent, onKeyboardHide);
+
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [insets.bottom]);
+
   useEffect(() => {
     Animated.spring(pan, {
       toValue: { x: posX, y: posY },
@@ -83,7 +117,6 @@ export default function GlobalChatbot() {
     }).start();
   }, [posX, posY]);
 
-  // FAB Drag Logic
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
@@ -101,17 +134,13 @@ export default function GlobalChatbot() {
         pan.flattenOffset();
         const currentX = (pan.x as any)._value;
         const currentY = (pan.y as any)._value;
-
         const snapRight = 0;
         const snapLeft = -(SCREEN_WIDTH - FAB_SIZE - 44);
-
         const finalX =
           Math.abs(currentX - snapLeft) < Math.abs(currentX - snapRight)
             ? snapLeft
             : snapRight;
-
         const finalY = Math.max(-(SCREEN_HEIGHT - 250), Math.min(currentY, 50));
-
         Animated.spring(pan, {
           toValue: { x: finalX, y: finalY },
           useNativeDriver: false,
@@ -123,7 +152,6 @@ export default function GlobalChatbot() {
     }),
   ).current;
 
-  // Pulse effect for FAB
   useEffect(() => {
     const pulse = Animated.loop(
       Animated.sequence([
@@ -143,7 +171,6 @@ export default function GlobalChatbot() {
     return () => pulse.stop();
   }, []);
 
-  // Modal Slide Animation
   useEffect(() => {
     if (isOpen) {
       Animated.spring(slideAnim, {
@@ -161,7 +188,6 @@ export default function GlobalChatbot() {
     }
   }, [isOpen]);
 
-  // Auto-scroll messages
   useEffect(() => {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100);
   }, [messages, isThinking]);
@@ -169,12 +195,10 @@ export default function GlobalChatbot() {
   const handleSend = async () => {
     const trimmed = input.trim();
     if (!trimmed || isThinking) return;
-
     const updated = [...messages, { role: "user" as const, content: trimmed }];
     setMessages(updated);
     setInput("");
     setIsThinking(true);
-
     try {
       const response = await axios.post(`${API_URL}/api/recipes/global-chat`, {
         messages: updated,
@@ -195,7 +219,6 @@ export default function GlobalChatbot() {
 
   return (
     <>
-      {/* Floating Action Button */}
       {!isOpen && (
         <Animated.View
           {...panResponder.panHandlers}
@@ -224,7 +247,6 @@ export default function GlobalChatbot() {
         </Animated.View>
       )}
 
-      {/* Chat Interface Modal */}
       <Modal
         visible={isOpen}
         transparent
@@ -233,101 +255,73 @@ export default function GlobalChatbot() {
         onRequestClose={() => setIsOpen(false)}
       >
         <View style={styles.overlay}>
-          <TouchableWithoutFeedback onPress={() => setIsOpen(false)}>
-            <View style={{ flex: 1 }} />
+          <TouchableWithoutFeedback
+            onPress={() => {
+              Keyboard.dismiss();
+              setIsOpen(false);
+            }}
+          >
+            <View style={styles.dismissArea} />
           </TouchableWithoutFeedback>
 
           <Animated.View
             style={[
               styles.chatSheet,
               {
-                transform: [{ translateY: slideAnim }],
-                // Manually setting height to cover navigation bar leak
-                height: SCREEN_HEIGHT * 0.78 + insets.bottom,
+                // COMBINED: Slide up animation + Keyboard lift animation
+                transform: [
+                  { translateY: slideAnim },
+                  { translateY: keyboardOffset },
+                ],
+                height: SCREEN_HEIGHT * 0.6,
+                paddingBottom: insets.bottom,
               },
             ]}
           >
-            <KeyboardAvoidingView
-              behavior={Platform.OS === "ios" ? "padding" : "height"}
-              keyboardVerticalOffset={Platform.OS === "android" ? 64 : 0}
-              style={{ flex: 1 }}
-            >
-              {/* Header */}
-              <View style={styles.header}>
-                <View style={styles.headerLeft}>
-                  <View style={styles.avatarCircle}>
-                    <Image
-                      source={require("../assets/images/chatbot-mascot.png")}
-                      style={styles.avatarImage}
-                      resizeMode="contain"
-                    />
-                  </View>
-                  <View>
-                    <Text style={styles.headerTitle}>CookiMate Chef</Text>
-                    <View style={styles.onlineRow}>
-                      <View style={styles.onlineDot} />
-                      <Text style={styles.onlineText}>Online</Text>
-                    </View>
+            <View style={styles.header}>
+              <View style={styles.headerLeft}>
+                <View style={styles.avatarCircle}>
+                  <Image
+                    source={require("../assets/images/chatbot-mascot.png")}
+                    style={styles.avatarImage}
+                    resizeMode="contain"
+                  />
+                </View>
+                <View>
+                  <Text style={styles.headerTitle}>CookiMate Chef</Text>
+                  <View style={styles.onlineRow}>
+                    <View style={styles.onlineDot} />
+                    <Text style={styles.onlineText}>Online</Text>
                   </View>
                 </View>
-                <TouchableOpacity
-                  style={styles.closeBtn}
-                  onPress={() => setIsOpen(false)}
-                >
-                  <Ionicons name="chevron-down" size={22} color="#D4AF37" />
-                </TouchableOpacity>
               </View>
-
-              <View style={styles.divider} />
-
-              {/* Messages Area */}
-              <ScrollView
-                ref={scrollRef}
-                style={styles.messagesList}
-                contentContainerStyle={styles.messagesContent}
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setIsOpen(false)}
               >
-                {messages.map((msg, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.bubbleRow,
-                      msg.role === "user"
-                        ? styles.bubbleRowUser
-                        : styles.bubbleRowChef,
-                    ]}
-                  >
-                    {msg.role === "assistant" && (
-                      <View style={styles.chefAvatarSmall}>
-                        <Image
-                          source={require("../assets/images/chatbot-mascot.png")}
-                          style={styles.smallAvatarImage}
-                          resizeMode="contain"
-                        />
-                      </View>
-                    )}
-                    <View
-                      style={[
-                        styles.bubble,
-                        msg.role === "user"
-                          ? styles.userBubble
-                          : styles.chefBubble,
-                      ]}
-                    >
-                      <Text
-                        style={
-                          msg.role === "user"
-                            ? styles.userText
-                            : styles.chefText
-                        }
-                      >
-                        {msg.content}
-                      </Text>
-                    </View>
-                  </View>
-                ))}
+                <Ionicons name="chevron-down" size={22} color="#D4AF37" />
+              </TouchableOpacity>
+            </View>
 
-                {isThinking && (
-                  <View style={[styles.bubbleRow, styles.bubbleRowChef]}>
+            <View style={styles.divider} />
+
+            <ScrollView
+              ref={scrollRef}
+              style={styles.messagesList}
+              contentContainerStyle={styles.messagesContent}
+              keyboardShouldPersistTaps="handled"
+            >
+              {messages.map((msg, i) => (
+                <View
+                  key={i}
+                  style={[
+                    styles.bubbleRow,
+                    msg.role === "user"
+                      ? styles.bubbleRowUser
+                      : styles.bubbleRowChef,
+                  ]}
+                >
+                  {msg.role === "assistant" && (
                     <View style={styles.chefAvatarSmall}>
                       <Image
                         source={require("../assets/images/chatbot-mascot.png")}
@@ -335,56 +329,80 @@ export default function GlobalChatbot() {
                         resizeMode="contain"
                       />
                     </View>
-                    <View
-                      style={[
-                        styles.bubble,
-                        styles.chefBubble,
-                        styles.typingBubble,
-                      ]}
+                  )}
+                  <View
+                    style={[
+                      styles.bubble,
+                      msg.role === "user"
+                        ? styles.userBubble
+                        : styles.chefBubble,
+                    ]}
+                  >
+                    <Text
+                      style={
+                        msg.role === "user" ? styles.userText : styles.chefText
+                      }
                     >
-                      <View style={styles.typingDots}>
-                        <TypingDot delay={0} />
-                        <TypingDot delay={200} />
-                        <TypingDot delay={400} />
-                      </View>
+                      {msg.content}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+              {isThinking && (
+                <View style={[styles.bubbleRow, styles.bubbleRowChef]}>
+                  <View style={styles.chefAvatarSmall}>
+                    <Image
+                      source={require("../assets/images/chatbot-mascot.png")}
+                      style={styles.smallAvatarImage}
+                      resizeMode="contain"
+                    />
+                  </View>
+                  <View
+                    style={[
+                      styles.bubble,
+                      styles.chefBubble,
+                      styles.typingBubble,
+                    ]}
+                  >
+                    <View style={styles.typingDots}>
+                      <TypingDot delay={0} />
+                      <TypingDot delay={200} />
+                      <TypingDot delay={400} />
                     </View>
                   </View>
-                )}
-              </ScrollView>
-
-              {/* Input Area */}
-              <View
-                style={[
-                  styles.inputContainer,
-                  { paddingBottom: insets.bottom + 10 },
-                ]}
-              >
-                <View style={styles.inputRow}>
-                  <TextInput
-                    style={styles.input}
-                    value={input}
-                    onChangeText={setInput}
-                    placeholder="Ask the chef..."
-                    placeholderTextColor="#555"
-                  />
-                  <TouchableOpacity
-                    style={[
-                      styles.sendBtn,
-                      (!input.trim() || isThinking) && styles.sendBtnDisabled,
-                    ]}
-                    onPress={handleSend}
-                    disabled={!input.trim() || isThinking}
-                  >
-                    {isThinking ? (
-                      <ActivityIndicator size="small" color="#000" />
-                    ) : (
-                      <Ionicons name="send" size={18} color="#000" />
-                    )}
-                  </TouchableOpacity>
                 </View>
+              )}
+            </ScrollView>
+
+            <View style={styles.inputContainer}>
+              <View style={styles.inputRow}>
+                <TextInput
+                  style={styles.input}
+                  value={input}
+                  onChangeText={setInput}
+                  placeholder="Ask the chef..."
+                  placeholderTextColor="#555"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.sendBtn,
+                    (!input.trim() || isThinking) && styles.sendBtnDisabled,
+                  ]}
+                  onPress={handleSend}
+                  disabled={!input.trim() || isThinking}
+                >
+                  {isThinking ? (
+                    <ActivityIndicator size="small" color="#000" />
+                  ) : (
+                    <Ionicons name="send" size={18} color="#000" />
+                  )}
+                </TouchableOpacity>
               </View>
-            </KeyboardAvoidingView>
+            </View>
           </Animated.View>
+
+          {/* This ensures NO peak-through content even when shifted up */}
+          <View style={[styles.bottomGapFiller, { height: 1000 }]} />
         </View>
       </Modal>
     </>
@@ -435,10 +453,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderWidth: 2.5,
     borderColor: "#D4AF37",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
   },
   fabImage: { width: 44, height: 44 },
   overlay: {
@@ -446,14 +460,21 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.6)",
     justifyContent: "flex-end",
   },
+  dismissArea: { flex: 1 },
   chatSheet: {
     backgroundColor: "#0A0A0A",
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     width: "100%",
+    zIndex: 10,
+  },
+  bottomGapFiller: {
+    backgroundColor: "#0A0A0A",
     position: "absolute",
-    bottom: 0,
-    overflow: "hidden",
+    bottom: -1000,
+    left: 0,
+    right: 0,
+    zIndex: 5,
   },
   header: {
     flexDirection: "row",
@@ -525,6 +546,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#0A0A0A",
     borderTopWidth: 1,
     borderTopColor: "#1E1E1E",
+    paddingBottom: 10,
   },
   inputRow: {
     flexDirection: "row",
