@@ -85,7 +85,7 @@ export default function GlobalChatbot() {
     const onKeyboardShow = (e: any) => {
       Animated.timing(keyboardOffset, {
         toValue:
-          -e.endCoordinates.height +
+          -e.endCoordinates.height * 1.08 +
           (Platform.OS === "android" ? insets.bottom : 0),
         duration: 250,
         useNativeDriver: true,
