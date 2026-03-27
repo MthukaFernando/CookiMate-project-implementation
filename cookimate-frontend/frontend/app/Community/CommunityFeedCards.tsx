@@ -198,18 +198,27 @@ export default function CommunityFeed() {
     }
   };
 
-  const handleCommentSubmit = async (postId: string) => {
+const handleCommentSubmit = async (postId: string) => {
     if (!commentText.trim() || !currentUser) return;
+    
     setIsSubmitting(true);
+    
     try {
       const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
         userId: currentUser.uid,
         text: commentText,
       });
+
       setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
       setCommentText("");
-    } catch (err) {
-      console.error(err);
+      
+    } catch (err: any) {
+      if (err.response && err.response.status === 400) {
+        Alert.alert("Moderation", err.response.data.message);
+      } else {
+        console.error("Comment failed:", err);
+        Alert.alert("Error", "Could not post comment. Please check your connection.");
+      }
     } finally {
       setIsSubmitting(false);
     }
