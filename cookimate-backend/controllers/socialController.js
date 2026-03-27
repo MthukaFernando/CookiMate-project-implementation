@@ -214,7 +214,7 @@ export const addComment = async (req, res) => {
     const isToxicComment = await checkText(text);
     if(isToxicComment) {
       return res.status(400).json({
-        message: "You comment contains inappropriate content. Please keep it user friendly!"
+        message: "Your comment contains inappropriate content. Please keep it user friendly!"
       });
     }
 
@@ -236,7 +236,7 @@ export const addComment = async (req, res) => {
         select: "username firebaseUid",
       });
 
-    if (!updatedPost) return res.status(404).json("Post not found");
+    if (!updatedPost) return res.status(404).json({ message: "Post not found" });
     await User.findOneAndUpdate({ firebaseUid: updatedPost.user.firebaseUid }, { $inc: { points: 5 } });
 
     res.status(200).json(updatedPost);
