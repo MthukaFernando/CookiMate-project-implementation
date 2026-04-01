@@ -24,14 +24,14 @@ import { globalStyle } from "../globalStyleSheet.style";
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const AVATAR_OPTIONS = [
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1770965619/profile_pic1_plo6pj.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1770965627/profile_pic2_lvcgse.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1774065156/profile_pics/profile_pic4_004.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103677/profile_pics/dp_3.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103699/profile_pics/dp_4.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103707/profile_pics/dp_2.png",
-  "https://res.cloudinary.com/cookimate-images/image/upload/v1774103733/profile_pics/dp_1.png",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic1_001.png?updatedAt=1775042457460",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic2_002.png?updatedAt=1775042457346",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic3_003.png?updatedAt=1775042457456",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic4_004.png?updatedAt=1775042457679",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic_5.png?updatedAt=1775042457640",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic_006.png?updatedAt=1775042457684",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic_007.png?updatedAt=1775042457708",
+  "https://ik.imagekit.io/cookimateImages/profile_pics/profile_pic_008.png?updatedAt=1775042457682",
 ];
 
 const EditProfile = () => {
