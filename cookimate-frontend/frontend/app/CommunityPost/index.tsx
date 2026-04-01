@@ -118,7 +118,7 @@ const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      behavior={Platform.OS === "ios" ? "padding" : undefined} 
       style={styles.mainContainer}
     >
       <ScrollView contentContainerStyle={styles.container}>
