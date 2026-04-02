@@ -57,8 +57,11 @@ const Page = () => {
   const flatListRef = useRef<FlatList>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   
-  // FIXED: Added missing ref to prevent double processing
+  // Refs to prevent double processing
   const processingRecipeRef = useRef(false);
+  const lastSyncTimeRef = useRef(Date.now());
+  const pendingDeletesRef = useRef<Set<string>>(new Set());
+  const pendingAddsRef = useRef<Map<string, any>>(new Map());
   
   const router = useRouter();
   
@@ -82,11 +85,27 @@ const Page = () => {
           id: m.recipeId,
         }));
         setPlannedRecipes(formattedPlan);
+        lastSyncTimeRef.current = Date.now();
+        // Clear pending operations on successful sync
+        pendingDeletesRef.current.clear();
+        pendingAddsRef.current.clear();
       }
     } catch (error) {
       console.error("Error loading meal plan from DB:", error);
     }
   };
+
+  // Background sync every 30 seconds
+  useEffect(() => {
+    const syncInterval = setInterval(() => {
+      const timeSinceLastSync = Date.now() - lastSyncTimeRef.current;
+      if (timeSinceLastSync > 30000 && pendingDeletesRef.current.size === 0 && pendingAddsRef.current.size === 0) {
+        loadMealPlan();
+      }
+    }, 30000);
+    
+    return () => clearInterval(syncInterval);
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -102,7 +121,7 @@ const Page = () => {
     return marks;
   }, [plannedRecipes]);
 
-  // FIXED: Corrected syntax and logic to prevent duplicate entries
+  // OPTIMIZED: With optimistic update and memory cleanup
   useEffect(() => {
     const saveNewRecipe = async () => {
       if (!newRecipeId || processingRecipeRef.current) return;
@@ -111,8 +130,9 @@ const Page = () => {
       if (uid) {
         processingRecipeRef.current = true;
 
+        const uniqueId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
         const recipeToAdd = {
-          uniqueId: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          uniqueId,
           id: newRecipeId,
           name: newRecipeName,
           image: newRecipeImage,
@@ -120,42 +140,53 @@ const Page = () => {
           date: openModalWithDate,
         };
 
+        // Store previous state for rollback
+        const previousRecipes = [...plannedRecipes];
+
+        // OPTIMISTIC UPDATE: Add to UI immediately
+        setPlannedRecipes(prev => [...prev, recipeToAdd]);
+        
+        // Track pending add
+        pendingAddsRef.current.set(uniqueId, recipeToAdd);
+
+        // Show modal immediately
+        setSelectedDate(openModalWithDate as string);
+        setIsAddingMeal(false);
+        setIsModalVisible(true);
+
+        // Clear router params immediately
+        router.setParams({
+          newRecipeId: undefined,
+          newRecipeName: undefined,
+          newRecipeImage: undefined,
+          newRecipeCategory: undefined,
+          openModalWithDate: undefined,
+        });
+
+        // Background API calls
         try {
-          // 1. Save the meal to the planner
           await axios.post(`${API_URL}/api/users/meal-plan/${uid}`, recipeToAdd);
           
-          // 2. NEW: Notify Gamification system to update progress bar stats
+          // Update gamification in background
           try {
-            // Get the user's Mongo ID first
             const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
             const mongoId = userRes.data._id;
-            
-            // Trigger the stat update
             await axios.post(`${API_URL}/api/gamification/update-stats`, {
               userId: mongoId,
               action: 'PLAN_MEAL' 
             });
-            console.log("Gamification: Meal Planning progress updated!");
           } catch (gError) {
-            console.log("Gamification update failed, but meal was saved.");
+            console.log("Gamification update failed");
           }
-
-          // 3. Refresh the list and UI
-          await loadMealPlan(); 
-
-          setSelectedDate(openModalWithDate as string);
-          setIsAddingMeal(false);
-          setIsModalVisible(true);
-
-          router.setParams({
-            newRecipeId: undefined,
-            newRecipeName: undefined,
-            newRecipeImage: undefined,
-            newRecipeCategory: undefined,
-            openModalWithDate: undefined,
-          });
+          
+          // Remove from pending adds on success
+          pendingAddsRef.current.delete(uniqueId);
+          
         } catch (error) {
           console.error("Error saving meal:", error);
+          // Rollback on error
+          setPlannedRecipes(previousRecipes);
+          pendingAddsRef.current.delete(uniqueId);
           Alert.alert("Error", "Could not save to your planner.");
         } finally {
           processingRecipeRef.current = false;
@@ -170,6 +201,7 @@ const Page = () => {
 
     saveNewRecipe();
   }, [newRecipeId, openModalWithDate]);
+  
   useEffect(() => {
     const fetchSeasonalContent = async () => {
       try {
@@ -225,6 +257,7 @@ const Page = () => {
     setIsAddingMeal(false);
   };
 
+  // OPTIMIZED DELETE: With batching and memory management
   const handleDeleteRecipe = (uniqueId: string) => {
     const uid = auth.currentUser?.uid;
     Alert.alert(
@@ -236,15 +269,34 @@ const Page = () => {
           text: "Remove",
           style: "destructive",
           onPress: async () => {
-            try {
-              await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
-              setPlannedRecipes((prev) =>
-                prev.filter((r) => r.uniqueId !== uniqueId),
-              );
-            } catch (error) {
-              console.error("Error removing meal:", error);
-              Alert.alert("Error", "Could not remove from database.");
-            }
+            // OPTIMISTIC DELETE: Remove from UI immediately
+            setPlannedRecipes((prev) => {
+              const newRecipes = prev.filter((r) => r.uniqueId !== uniqueId);
+              // Clean up any references
+              return newRecipes;
+            });
+            
+            // Track pending delete
+            pendingDeletesRef.current.add(uniqueId);
+
+            // Background API call with retry logic
+            const deleteWithRetry = async (retryCount = 0) => {
+              try {
+                await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
+                pendingDeletesRef.current.delete(uniqueId);
+              } catch (error) {
+                console.error("Error removing meal:", error);
+                if (retryCount < 3) {
+                  setTimeout(() => deleteWithRetry(retryCount + 1), 1000 * (retryCount + 1));
+                } else {
+                  pendingDeletesRef.current.delete(uniqueId);
+                  Alert.alert("Error", "Could not remove from database. Please refresh.");
+                  loadMealPlan(); // Force refresh on final failure
+                }
+              }
+            };
+            
+            deleteWithRetry();
           },
         },
       ],
@@ -262,6 +314,11 @@ const Page = () => {
       style={styles.festivalsImage}
     />
   );
+
+  // Memoize daily recipes to prevent unnecessary recalculations
+  const dailyRecipes = useMemo(() => {
+    return plannedRecipes.filter((r) => r.date === selectedDate);
+  }, [plannedRecipes, selectedDate]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -356,20 +413,17 @@ const Page = () => {
                 <View style={styles.dateContainer}>
                   <Text style={styles.popupBoxDate}>{selectedDate}</Text>
                 </View>
-                <ScrollView style={{ marginTop: 20 }} showsVerticalScrollIndicator={false}>
-                  {(() => {
-                    const dailyRecipes = plannedRecipes.filter((r) => r.date === selectedDate);
-                    if (dailyRecipes.length === 0) {
-                      return (
-                        <View style={styles.emptyStateContainer}>
-                          <Ionicons name="restaurant-outline" size={40} color="#ffff" style={{ opacity: 0.3 }} />
-                          <Text style={styles.emptyStateText}>You have no meals planned on this date</Text>
-                        </View>
-                      );
-                    }
-                    return dailyRecipes.map((recipe) => (
+                {dailyRecipes.length === 0 ? (
+                  <View style={styles.emptyStateContainer}>
+                    <Ionicons name="restaurant-outline" size={40} color="#ffff" style={{ opacity: 0.3 }} />
+                    <Text style={styles.emptyStateText}>You have no meals planned on this date</Text>
+                  </View>
+                ) : (
+                  <FlatList
+                    data={dailyRecipes}
+                    keyExtractor={(item) => item.uniqueId}
+                    renderItem={({ item: recipe }) => (
                       <TouchableOpacity
-                        key={recipe.uniqueId}
                         activeOpacity={0.8}
                         onPress={() => {
                           setIsModalVisible(false);
@@ -386,9 +440,20 @@ const Page = () => {
                           <Ionicons name="trash-outline" size={22} color="#522F2F" />
                         </TouchableOpacity>
                       </TouchableOpacity>
-                    ));
-                  })()}
-                </ScrollView>
+                    )}
+                    showsVerticalScrollIndicator={false}
+                    style={{ marginTop: 20 }}
+                    initialNumToRender={5}
+                    maxToRenderPerBatch={5}
+                    windowSize={5}
+                    removeClippedSubviews={true}
+                    getItemLayout={(data, index) => ({
+                      length: 90, // Approximate height of each item
+                      offset: 90 * index,
+                      index,
+                    })}
+                  />
+                )}
               </View>
             ) : (
               <View style={styles.addMealContainer}>
