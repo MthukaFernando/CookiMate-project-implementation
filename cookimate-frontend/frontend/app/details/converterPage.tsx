@@ -116,6 +116,7 @@ export default function ConverterPage() {
           <ScrollView 
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={true}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.content}>
               {!conversionType ? (
