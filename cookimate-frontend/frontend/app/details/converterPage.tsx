@@ -110,8 +110,9 @@ export default function ConverterPage() {
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          behavior="padding"
           style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 120}
         >
           <ScrollView 
             contentContainerStyle={styles.scrollContent}
