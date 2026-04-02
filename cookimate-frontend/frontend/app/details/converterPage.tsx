@@ -11,7 +11,7 @@ import {
   Modal,
   FlatList,
   StatusBar,
-  ScrollView, // ADDED FOR COMMIT 1
+  ScrollView,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -107,7 +107,10 @@ export default function ConverterPage() {
     <View style={styles.outerContainer}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <ScrollView>  {/* ADDED FOR COMMIT 1 */}
+        <ScrollView 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={true}
+        >
           <View style={styles.content}>
             {!conversionType ? (
               <View style={styles.gridContainer}>
@@ -206,7 +209,7 @@ export default function ConverterPage() {
               </View>
             )}
           </View>
-        </ScrollView>  {/* ADDED FOR COMMIT 1 */}
+        </ScrollView>
 
         <Modal visible={!!showPicker} transparent animationType="slide">
           <TouchableOpacity
@@ -245,6 +248,9 @@ export default function ConverterPage() {
 const styles = StyleSheet.create({
   outerContainer: { flex: 1, backgroundColor: BRAND.bg },
   container: { flex: 1, backgroundColor: BRAND.bg },
+  scrollContent: {
+    flexGrow: 1,
+  },
   content: { flex: 1, padding: 25, justifyContent: "center" },
   gridContainer: { width: "100%" },
   sectionLabel: {
