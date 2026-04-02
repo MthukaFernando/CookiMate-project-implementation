@@ -12,6 +12,8 @@ import {
   FlatList,
   StatusBar,
   ScrollView,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 
 const { width } = Dimensions.get("window");
@@ -107,109 +109,114 @@ export default function ConverterPage() {
     <View style={styles.outerContainer}>
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" />
-        <ScrollView 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={true}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
         >
-          <View style={styles.content}>
-            {!conversionType ? (
-              <View style={styles.gridContainer}>
-                <Text style={styles.sectionLabel}>CHOOSE CATEGORY</Text>
+          <ScrollView 
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={true}
+          >
+            <View style={styles.content}>
+              {!conversionType ? (
+                <View style={styles.gridContainer}>
+                  <Text style={styles.sectionLabel}>CHOOSE CATEGORY</Text>
 
-                <View style={styles.grid}>
-                  {categories.map((item) => (
-                    <TouchableOpacity
-                      key={item.id}
-                      style={styles.menuCard}
-                      activeOpacity={0.7}
-                      onPress={() => setConversionType(item.id)}
-                    >
-                      <View style={styles.iconCircle}>
-                        <Ionicons
-                          name={item.icon as any}
-                          size={32}
-                          color={BRAND.accent}
-                        />
-                      </View>
-                      <Text style={styles.cardLabel}>
-                        {item.id.toUpperCase()}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.converterCard}>
-                <TouchableOpacity
-                  style={styles.backLink}
-                  onPress={() => setConversionType(null)}
-                >
-                  <Ionicons name="arrow-back" size={20} color={BRAND.accent} />
-                  <Text style={styles.backText}>CATEGORIES</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.activeCategory}>{conversionType}</Text>
-
-                <View style={styles.inputWrapper}>
-                  <TextInput
-                    style={styles.mainInput}
-                    value={input1}
-                    onChangeText={(t) => handleTextChange(t, true)}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor={BRAND.textMuted}
-                  />
-                  <TouchableOpacity
-                    style={styles.unitPickerBtn}
-                    onPress={() => setShowPicker({ side: "left" })}
-                  >
-                    <Text style={styles.unitBtnText}>{unitLeft}</Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={14}
-                      color={BRAND.accent}
-                    />
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.swapContainer}>
-                  <View style={styles.swapLine} />
-                  <View style={styles.swapCircle}>
-                    <Ionicons name="swap-vertical" size={22} color={BRAND.bg} />
+                  <View style={styles.grid}>
+                    {categories.map((item) => (
+                      <TouchableOpacity
+                        key={item.id}
+                        style={styles.menuCard}
+                        activeOpacity={0.7}
+                        onPress={() => setConversionType(item.id)}
+                      >
+                        <View style={styles.iconCircle}>
+                          <Ionicons
+                            name={item.icon as any}
+                            size={32}
+                            color={BRAND.accent}
+                          />
+                        </View>
+                        <Text style={styles.cardLabel}>
+                          {item.id.toUpperCase()}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
                   </View>
-                  <View style={styles.swapLine} />
                 </View>
-
-                <View
-                  style={[
-                    styles.inputWrapper,
-                    { borderColor: BRAND.accent, borderBottomWidth: 2 },
-                  ]}
-                >
-                  <TextInput
-                    style={styles.mainInput}
-                    value={input2}
-                    onChangeText={(t) => handleTextChange(t, false)}
-                    keyboardType="numeric"
-                    placeholder="0.00"
-                    placeholderTextColor={BRAND.textMuted}
-                  />
+              ) : (
+                <View style={styles.converterCard}>
                   <TouchableOpacity
-                    style={styles.unitPickerBtn}
-                    onPress={() => setShowPicker({ side: "right" })}
+                    style={styles.backLink}
+                    onPress={() => setConversionType(null)}
                   >
-                    <Text style={styles.unitBtnText}>{unitRight}</Text>
-                    <Ionicons
-                      name="chevron-down"
-                      size={14}
-                      color={BRAND.accent}
-                    />
+                    <Ionicons name="arrow-back" size={20} color={BRAND.accent} />
+                    <Text style={styles.backText}>CATEGORIES</Text>
                   </TouchableOpacity>
+
+                  <Text style={styles.activeCategory}>{conversionType}</Text>
+
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.mainInput}
+                      value={input1}
+                      onChangeText={(t) => handleTextChange(t, true)}
+                      keyboardType="numeric"
+                      placeholder="0.00"
+                      placeholderTextColor={BRAND.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.unitPickerBtn}
+                      onPress={() => setShowPicker({ side: "left" })}
+                    >
+                      <Text style={styles.unitBtnText}>{unitLeft}</Text>
+                      <Ionicons
+                        name="chevron-down"
+                        size={14}
+                        color={BRAND.accent}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  <View style={styles.swapContainer}>
+                    <View style={styles.swapLine} />
+                    <View style={styles.swapCircle}>
+                      <Ionicons name="swap-vertical" size={22} color={BRAND.bg} />
+                    </View>
+                    <View style={styles.swapLine} />
+                  </View>
+
+                  <View
+                    style={[
+                      styles.inputWrapper,
+                      { borderColor: BRAND.accent, borderBottomWidth: 2 },
+                    ]}
+                  >
+                    <TextInput
+                      style={styles.mainInput}
+                      value={input2}
+                      onChangeText={(t) => handleTextChange(t, false)}
+                      keyboardType="numeric"
+                      placeholder="0.00"
+                      placeholderTextColor={BRAND.textMuted}
+                    />
+                    <TouchableOpacity
+                      style={styles.unitPickerBtn}
+                      onPress={() => setShowPicker({ side: "right" })}
+                    >
+                      <Text style={styles.unitBtnText}>{unitRight}</Text>
+                      <Ionicons
+                        name="chevron-down"
+                        size={14}
+                        color={BRAND.accent}
+                      />
+                    </TouchableOpacity>
+                  </View>
                 </View>
-              </View>
-            )}
-          </View>
-        </ScrollView>
+              )}
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
 
         <Modal visible={!!showPicker} transparent animationType="slide">
           <TouchableOpacity
