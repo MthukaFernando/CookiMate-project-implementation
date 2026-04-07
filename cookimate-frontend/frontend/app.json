@@ -2,7 +2,7 @@
   "expo": {
     "name": "CookiMate",
     "slug": "cookimate",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "frontend",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.cookimateLabs.cookimate",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 11,
+      "versionCode": 12,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
