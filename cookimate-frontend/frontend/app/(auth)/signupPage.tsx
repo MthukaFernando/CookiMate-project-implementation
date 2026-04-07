@@ -5,7 +5,7 @@ import {
   ImageBackground,
   TouchableOpacity,
   TextInput,
-  Alert,
+  Modal,
   KeyboardAvoidingView,
   ScrollView,
   Platform,
@@ -46,6 +46,23 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmPasswordError, setConfirmPasswordError] = useState("");
   const [confirmPasswordTouched, setConfirmPasswordTouched] = useState(false);
+
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    buttons: { text: string; style?: "default" | "cancel"; onPress?: () => void }[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons: { text: string; style?: "default" | "cancel"; onPress?: () => void }[] = [{ text: "OK" }],
+    icon?: string
+  ) => setAlertConfig({ visible: true, title, message, buttons, icon });
+
+  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
 
   const validateEmail = (value: string) => {
     const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -94,7 +111,7 @@ export default function SignupPage() {
       passwordError ||
       confirmPasswordError
     ) {
-      Alert.alert("Error", "Please fix the errors in the form.");
+      showAlert("Fix Errors", "Please fix the errors in the form.", [{ text: "OK" }], "alert-circle");
       return;
     }
 
@@ -117,18 +134,20 @@ export default function SignupPage() {
       await signOut(auth);
 
       setIsLoading(false);
-      Alert.alert(
+      showAlert(
         "Verify Your Email",
         `An activation link has been sent to ${email}.`,
         [{ text: "OK", onPress: () => router.replace("/loginPage") }],
+        "mail"
       );
     } catch (error: any) {
       setIsLoading(false);
-      Alert.alert("Signup Error", error.message);
+      showAlert("Signup Failed", error.message, [{ text: "Try Again" }], "alert-circle");
     }
   };
 
   return (
+    <View style={{ flex: 1 }}>
     <ImageBackground
       source={require("../../assets/images/background.jpeg")}
       style={styles.container}
@@ -265,6 +284,48 @@ export default function SignupPage() {
         </ScrollView>
       </KeyboardAvoidingView>
     </ImageBackground>
+
+      {/* Custom Alert Modal */}
+      <Modal transparent visible={alertConfig.visible} animationType="fade" onRequestClose={hideAlert}>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            {alertConfig.icon && (
+              <View style={[
+                styles.alertIconWrapper,
+                { borderColor: alertConfig.icon === "mail" ? "#D4AF37" : "#FF5252" }
+              ]}>
+                <Ionicons
+                  name={alertConfig.icon as any}
+                  size={30}
+                  color={alertConfig.icon === "mail" ? "#D4AF37" : "#FF5252"}
+                />
+              </View>
+            )}
+            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
+              {alertConfig.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.alertButton,
+                    btn.style === "cancel" ? styles.alertButtonCancel : styles.alertButtonDefault,
+                  ]}
+                  onPress={() => { hideAlert(); btn.onPress?.(); }}
+                >
+                  <Text style={[
+                    styles.alertButtonText,
+                    btn.style === "cancel" ? styles.alertBtnTextCancel : styles.alertBtnTextDefault,
+                  ]}>
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
@@ -345,4 +406,62 @@ const styles = StyleSheet.create({
     color: "#D4AF37",
     fontSize: 15,
   },
+  // Custom Alert styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.78)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  alertBox: {
+    backgroundColor: "#121212",
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "rgba(212, 175, 55, 0.25)",
+  },
+  alertIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#0A0A0A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#D4AF37",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  alertButtonDefault: { backgroundColor: "#D4AF37" },
+  alertButtonCancel: { backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333333" },
+  alertButtonText: { fontSize: 14, fontWeight: "700" },
+  alertBtnTextDefault: { color: "#000000" },
+  alertBtnTextCancel: { color: "#AAAAAA" },
 });
