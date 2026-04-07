@@ -83,6 +83,9 @@ export default function CommunityFeed() {
   // --- DELETED ACCOUNT MODAL ---
   const [deletedAccountModalVisible, setDeletedAccountModalVisible] = useState(false);
 
+  // --- NETWORK ERROR MODAL (tapping profile while offline) ---
+  const [networkProfileModalVisible, setNetworkProfileModalVisible] = useState(false);
+
   // --- REPORT STATES ---
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showOtherInput, setShowOtherInput] = useState(false);
@@ -305,11 +308,27 @@ const handleCommentSubmit = async (postId: string) => {
             <View style={styles.postHeaderRow}>
               <TouchableOpacity
                 style={styles.userRow}
-                onPress={() => {
-                  if (!item.user) {
+                onPress={async () => {
+                  if (!item.user || !item.user?.firebaseUid) {
                     setDeletedAccountModalVisible(true);
-                  } else {
-                    router.push(`/Community/${item.user?.firebaseUid}`);
+                    return;
+                  }
+                  // Verify connectivity before navigating — avoids 404 on bad network
+                  try {
+                    await axios.get(`${BASE_URL}/users/${item.user.firebaseUid}`, { timeout: 5000 });
+                    router.push(`/Community/${item.user.firebaseUid}`);
+                  } catch (err: any) {
+                    const isNetworkIssue =
+                      !err.response ||
+                      err.code === "ECONNABORTED" ||
+                      err.message === "Network Error";
+                    if (isNetworkIssue) {
+                      setNetworkProfileModalVisible(true);
+                    } else if (err.response?.status === 404) {
+                      setDeletedAccountModalVisible(true);
+                    } else {
+                      setNetworkProfileModalVisible(true);
+                    }
                   }
                 }}
               >
@@ -512,6 +531,27 @@ const handleCommentSubmit = async (postId: string) => {
         onScrollBeginDrag={() => setIsSearching(false)}
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
+
+      {/* --- NETWORK ERROR MODAL (tapping profile while offline) --- */}
+      <Modal visible={networkProfileModalVisible} transparent animationType="fade" onRequestClose={() => setNetworkProfileModalVisible(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.reportCard}>
+            <View style={styles.thankYouArea}>
+              <Ionicons name="cloud-offline-outline" size={60} color={theme.muted} style={{ marginBottom: 15 }} />
+              <Text style={[styles.thankYouTitle, { color: theme.muted }]}>No Connection</Text>
+              <Text style={styles.thankYouText}>
+                Couldn't load this profile. Check your internet connection and try again.
+              </Text>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: theme.gold, marginTop: 10, width: "100%" }]}
+                onPress={() => setNetworkProfileModalVisible(false)}
+              >
+                <Text style={[styles.modalBtnText, { color: "#000", textAlign: "center" }]}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* --- DELETED ACCOUNT MODAL --- */}
       <Modal visible={deletedAccountModalVisible} transparent animationType="fade" onRequestClose={() => setDeletedAccountModalVisible(false)}>
