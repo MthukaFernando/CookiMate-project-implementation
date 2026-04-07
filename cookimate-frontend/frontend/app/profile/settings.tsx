@@ -11,9 +11,11 @@ import {
   FlatList,
   ActivityIndicator,
   Switch,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "@react-navigation/native";
 import {
   Feather,
   Ionicons,
@@ -31,7 +33,9 @@ import axios from "axios";
 import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const API_URL = `http://${address}:5000`;
 
 const DIETARY_OPTIONS = [
   {
@@ -546,6 +550,162 @@ const CustomPrefModal = ({
   </Modal>
 );
 
+// Blocked Users Modal
+const BlockedUsersModal = ({
+  visible,
+  onClose,
+}: {
+  visible: boolean;
+  onClose: () => void;
+}) => {
+  const [blockedUsers, setBlockedUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [unblockingId, setUnblockingId] = useState<string | null>(null);
+  const currentUser = auth.currentUser;
+  const uid = currentUser?.uid;
+  const { showAlert, AlertComponent } = useThemedAlert();
+
+  const fetchBlockedUsers = async () => {
+    if (!uid) return;
+    
+    try {
+      setLoading(true);
+      const response = await axios.get(`${API_URL}/api/users/blocked/${uid}`);
+      setBlockedUsers(response.data.blockedUsers || []);
+    } catch (error) {
+      console.error("Error fetching blocked users:", error);
+      showAlert("Error", "Could not fetch blocked users", undefined, "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (visible) {
+      fetchBlockedUsers();
+    }
+  }, [visible, uid]);
+
+  const handleUnblock = async (targetUser: any) => {
+    if (!uid) return;
+    
+    showAlert(
+      "Unblock User",
+      `Are you sure you want to unblock @${targetUser.username}?`,
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Unblock",
+          style: "destructive",
+          onPress: async () => {
+            setUnblockingId(targetUser.id);
+            try {
+              await axios.delete(`${API_URL}/api/users/unblock/${uid}/${targetUser.firebaseUid}`);
+              // Remove from list
+              setBlockedUsers(prev => prev.filter(u => u.id !== targetUser.id));
+              showAlert("Success", `@${targetUser.username} has been unblocked`, undefined, "success");
+            } catch (error) {
+              console.error("Error unblocking user:", error);
+              showAlert("Error", "Could not unblock user", undefined, "error");
+            } finally {
+              setUnblockingId(null);
+            }
+          },
+        },
+      ],
+      "warning"
+    );
+  };
+
+  const renderBlockedUser = ({ item }: { item: any }) => (
+    <View style={styles.blockedUserCard}>
+      <View style={styles.blockedUserInfo}>
+        <Image
+          source={{ uri: item.profilePic || "https://cdn-icons-png.flaticon.com/512/149/149071.png" }}
+          style={styles.blockedUserAvatar}
+        />
+        <View style={styles.blockedUserDetails}>
+          <Text style={styles.blockedUserName}>{item.name || item.username}</Text>
+          <Text style={styles.blockedUserHandle}>@{item.username}</Text>
+          {item.bio && (
+            <Text style={styles.blockedUserBio} numberOfLines={1}>
+              {item.bio}
+            </Text>
+          )}
+          <Text style={styles.blockedDate}>
+            Blocked on {new Date(item.blockedAt).toLocaleDateString()}
+          </Text>
+        </View>
+      </View>
+      
+      <TouchableOpacity
+        style={styles.unblockButton}
+        onPress={() => handleUnblock(item)}
+        disabled={unblockingId === item.id}
+      >
+        {unblockingId === item.id ? (
+          <ActivityIndicator size="small" color="#D4AF37" />
+        ) : (
+          <>
+            <Ionicons name="checkmark-circle" size={18} color="#D4AF37" />
+            <Text style={styles.unblockButtonText}>Unblock</Text>
+          </>
+        )}
+      </TouchableOpacity>
+    </View>
+  );
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={[styles.modalContent, { maxHeight: "85%" }]}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>Blocked Users</Text>
+            <TouchableOpacity onPress={onClose}>
+              <Feather name="x" size={24} color="#A6A6A6" />
+            </TouchableOpacity>
+          </View>
+          
+          {loading ? (
+            <View style={styles.blockedLoadingContainer}>
+              <ActivityIndicator size="large" color="#D4AF37" />
+              <Text style={styles.blockedLoadingText}>Loading blocked users...</Text>
+            </View>
+          ) : blockedUsers.length === 0 ? (
+            <View style={styles.blockedEmptyContainer}>
+              <Ionicons name="ban-outline" size={60} color="#555" />
+              <Text style={styles.blockedEmptyText}>No blocked users</Text>
+              <Text style={styles.blockedEmptySubtext}>
+                Users you block will appear here
+              </Text>
+            </View>
+          ) : (
+            <>
+              <View style={styles.blockedStatsBar}>
+                <Text style={styles.blockedStatsText}>
+                  {blockedUsers.length} blocked {blockedUsers.length === 1 ? "user" : "users"}
+                </Text>
+              </View>
+              <FlatList
+                data={blockedUsers}
+                keyExtractor={(item) => item.id}
+                renderItem={renderBlockedUser}
+                showsVerticalScrollIndicator={false}
+              />
+            </>
+          )}
+        </View>
+      </View>
+      {AlertComponent}
+    </Modal>
+  );
+};
+
 // ── Change Password Modal ──────────────────────────────────────────────────────
 const ChangePasswordModal = ({
   visible,
@@ -897,6 +1057,7 @@ const Settings = () => {
   const [customPreferenceModal, setCustomPreferenceModal] = useState(false);
   const [changePasswordModal, setChangePasswordModal] = useState(false);
   const [deleteAccountModal, setDeleteAccountModal] = useState(false);
+  const [blockedUsersModalVisible, setBlockedUsersModalVisible] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
@@ -904,10 +1065,36 @@ const Settings = () => {
   const [customPreferences, setCustomPreferences] = useState<string[]>([]);
   const [newCustomPreference, setNewCustomPreference] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  
+  // Blocked users count state
+  const [blockedUsersCount, setBlockedUsersCount] = useState(0);
+  const [loadingBlockedCount, setLoadingBlockedCount] = useState(false);
 
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
   const { showAlert, AlertComponent: SettingsAlert } = useThemedAlert();
+
+  // Fetch blocked users count
+  const fetchBlockedUsersCount = async () => {
+    if (!uid) return;
+    
+    try {
+      setLoadingBlockedCount(true);
+      const response = await axios.get(`${API_URL}/api/users/blocked/${uid}`);
+      setBlockedUsersCount(response.data.count || 0);
+    } catch (error) {
+      console.error("Error fetching blocked users count:", error);
+    } finally {
+      setLoadingBlockedCount(false);
+    }
+  };
+
+  // Use useFocusEffect to refresh the count when returning to this screen
+  useFocusEffect(
+    useCallback(() => {
+      fetchBlockedUsersCount();
+    }, [uid])
+  );
 
   // Load preferences from backend when component mounts
   useEffect(() => {
@@ -944,6 +1131,9 @@ const Settings = () => {
           if (allerg !== null) setAllergies(JSON.parse(allerg));
           if (custom !== null) setCustomPreferences(JSON.parse(custom));
         }
+        
+        // Fetch blocked users count
+        await fetchBlockedUsersCount();
       } catch (err) {
         console.error("Error loading settings:", err);
         // Fallback to AsyncStorage if backend fails
@@ -958,6 +1148,9 @@ const Settings = () => {
         if (dietary !== null) setDietaryPreferences(JSON.parse(dietary));
         if (allerg !== null) setAllergies(JSON.parse(allerg));
         if (custom !== null) setCustomPreferences(JSON.parse(custom));
+        
+        // Try to fetch blocked count anyway
+        await fetchBlockedUsersCount();
       }
     };
 
@@ -1081,8 +1274,6 @@ const Settings = () => {
           try {
             await auth.signOut();
             await AsyncStorage.removeItem("userToken");
-            // Use the absolute Expo Router path to your login screen.
-            // Adjust this path if your login file lives elsewhere (e.g. "/login").
             router.replace("/(auth)/loginPage" as any);
           } catch (error) {
             showAlert(
@@ -1110,12 +1301,9 @@ const Settings = () => {
     }
     setDeleting(true);
     try {
-      // Re-authenticate — Firebase requires this before deleting an account
       const credential = EmailAuthProvider.credential(user.email, password);
       await reauthenticateWithCredential(user, credential);
-      // Delete MongoDB document first
       if (uid) await axios.delete(`${API_URL}/api/users/${uid}`);
-      // Then delete Firebase account
       await user.delete();
       await AsyncStorage.removeItem("userToken");
       setDeleteAccountModal(false);
@@ -1285,6 +1473,36 @@ const Settings = () => {
           <Feather name="chevron-right" size={24} color="#D4AF37" />
         </TouchableOpacity>
 
+        {/* Blocked Users - Modal Trigger */}
+        <TouchableOpacity
+          style={styles.settingCard}
+          onPress={() => setBlockedUsersModalVisible(true)}
+        >
+          <View style={styles.cardContent}>
+            <View
+              style={[
+                styles.iconContainer,
+                { backgroundColor: "rgba(212,175,55,0.15)" },
+              ]}
+            >
+              <Ionicons name="ban-outline" size={24} color="#D4AF37" />
+            </View>
+            <View style={styles.textContainer}>
+              <Text style={styles.cardTitle}>Blocked Users</Text>
+              <Text style={styles.cardSubtitle}>
+                {loadingBlockedCount ? (
+                  "Loading..."
+                ) : blockedUsersCount > 0 ? (
+                  `${blockedUsersCount} blocked user${blockedUsersCount > 1 ? 's' : ''}`
+                ) : (
+                  "Manage your blocked users"
+                )}
+              </Text>
+            </View>
+          </View>
+          <Feather name="chevron-right" size={24} color="#D4AF37" />
+        </TouchableOpacity>
+
         {/* Change Password */}
         <TouchableOpacity
           style={styles.settingCard}
@@ -1358,7 +1576,7 @@ const Settings = () => {
         <View style={styles.bottomSpacing} />
       </ScrollView>
 
-      {/* Modals receive state as props — no remounting */}
+      {/* Modals */}
       <ChangePasswordModal
         visible={changePasswordModal}
         onClose={() => setChangePasswordModal(false)}
@@ -1395,6 +1613,10 @@ const Settings = () => {
         value={newCustomPreference}
         onChange={setNewCustomPreference}
         onAdd={addCustomPreference}
+      />
+      <BlockedUsersModal
+        visible={blockedUsersModalVisible}
+        onClose={() => setBlockedUsersModalVisible(false)}
       />
 
       {SettingsAlert}
@@ -1562,6 +1784,104 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(10,10,10,0.7)",
     justifyContent: "center",
     alignItems: "center",
+  },
+  // Blocked Users Modal Styles
+  blockedUserCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#1E1E1E",
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  blockedUserInfo: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  blockedUserAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 1.5,
+    borderColor: "#D4AF37",
+  },
+  blockedUserDetails: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  blockedUserName: {
+    fontSize: 15,
+    fontWeight: "600",
+    color: "#FFFFFF",
+  },
+  blockedUserHandle: {
+    fontSize: 12,
+    color: "#D4AF37",
+    marginTop: 2,
+  },
+  blockedUserBio: {
+    fontSize: 11,
+    color: "#A6A6A6",
+    marginTop: 2,
+  },
+  blockedDate: {
+    fontSize: 10,
+    color: "#666",
+    marginTop: 2,
+  },
+  unblockButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "#2A2A2A",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "#D4AF37",
+  },
+  unblockButtonText: {
+    color: "#D4AF37",
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  blockedLoadingContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  blockedLoadingText: {
+    color: "#A6A6A6",
+    marginTop: 12,
+  },
+  blockedEmptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  blockedEmptyText: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginTop: 16,
+  },
+  blockedEmptySubtext: {
+    fontSize: 12,
+    color: "#A6A6A6",
+    marginTop: 8,
+    textAlign: "center",
+  },
+  blockedStatsBar: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+    marginBottom: 12,
+  },
+  blockedStatsText: {
+    color: "#A6A6A6",
+    fontSize: 13,
   },
 });
 
