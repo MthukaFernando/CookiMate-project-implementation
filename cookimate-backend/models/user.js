@@ -86,19 +86,33 @@ const userSchema = new mongoose.Schema(
           type: Date,
           default: Date.now,
         },
-        timesCooked: { 
-          type: Number, 
-          default: 1 
-        }
-      }
+        timesCooked: {
+          type: Number,
+          default: 1,
+        },
+      },
     ],
     lastMessage: {
       type: String,
       default: "",
     },
+    // In your userSchema, change blockedUsers to:
+    // In userSchema, change blockedUsers to store an object:
     blockedUsers: [
       {
-        type: String,
+        firebaseUid: {
+          type: String,
+          required: true,
+        },
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        blockedAt: {
+          type: Date,
+          default: Date.now,
+        },
       },
     ],
     mealPlan: [
