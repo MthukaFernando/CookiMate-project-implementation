@@ -11,6 +11,8 @@ import {
   FlatList,
   ActivityIndicator,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -503,48 +505,118 @@ const AllergiesModal = ({
 const CustomPrefModal = ({
   visible,
   onClose,
-  value,
-  onChange,
-  onAdd,
+  customPreferences,
+  onRemove,
+  onAddNew,
 }: {
   visible: boolean;
   onClose: () => void;
-  value: string;
-  onChange: (t: string) => void;
-  onAdd: () => void;
-}) => (
-  <Modal
-    animationType="slide"
-    transparent
-    visible={visible}
-    onRequestClose={onClose}
-  >
-    <View style={styles.modalOverlay}>
-      <View style={styles.modalContent}>
-        <View style={styles.modalHeader}>
-          <Text style={styles.modalTitle}>Add Custom Preference</Text>
-          <TouchableOpacity onPress={onClose}>
-            <Feather name="x" size={24} color="#A6A6A6" />
-          </TouchableOpacity>
+  customPreferences: string[];
+  onRemove: (pref: string) => void;
+  onAddNew: (preference: string) => void;
+}) => {
+  const [newPreference, setNewPreference] = useState("");
+
+  const handleAdd = () => {
+    if (newPreference.trim()) {
+      onAddNew(newPreference.trim());
+      setNewPreference("");
+    }
+  };
+
+  return (
+    <Modal
+      animationType="slide"
+      transparent
+      visible={visible}
+      onRequestClose={onClose}
+    >
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
+        <View style={styles.modalContent}>
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Preferences</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Feather name="x" size={24} color="#A6A6A6" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Add new preference section */}
+            <View style={styles.addSectionTop}>
+              <Text style={styles.modalSubtitle}>Add new preference:</Text>
+              <View style={styles.addRow}>
+                <TextInput
+                  style={styles.customInputInline}
+                  placeholder="e.g., No mushrooms, Low sodium, etc."
+                  placeholderTextColor="#A6A6A6"
+                  value={newPreference}
+                  onChangeText={setNewPreference}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAdd}
+                />
+                <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+                  <Feather name="plus" size={24} color="#0A0A0A" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text style={[styles.modalSubtitle, { marginTop: 20 }]}>
+              Your custom preferences:
+            </Text>
+
+            {/* List of custom preferences */}
+            {customPreferences.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No custom preferences added yet
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.customPrefList}>
+                {customPreferences.map((item, index) => (
+                  <View key={`${item}-${index}`} style={styles.customPrefItem}>
+                    <View style={styles.customPrefItemContent}>
+                      <View
+                        style={[
+                          styles.optionIcon,
+                          {
+                            backgroundColor: "rgba(212,175,55,0.15)",
+                            width: 36,
+                            height: 36,
+                          },
+                        ]}
+                      >
+                        <Feather name="edit" size={18} color="#D4AF37" />
+                      </View>
+                      <Text style={styles.customPrefText}>{item}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => onRemove(item)}
+                    >
+                      <Feather name="trash-2" size={20} color="#FF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.saveButton} onPress={onClose}>
+              <Text style={styles.saveButtonText}>Done</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-        <Text style={styles.modalSubtitle}>
-          Enter your custom dietary preference:
-        </Text>
-        <TextInput
-          style={styles.customInput}
-          placeholder="e.g., No mushrooms, Low sodium, etc."
-          placeholderTextColor="#A6A6A6"
-          value={value}
-          onChangeText={onChange}
-          multiline
-        />
-        <TouchableOpacity style={styles.saveButton} onPress={onAdd}>
-          <Text style={styles.saveButtonText}>Add Preference</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  </Modal>
-);
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
 
 // ── Change Password Modal ──────────────────────────────────────────────────────
 const ChangePasswordModal = ({
@@ -902,7 +974,6 @@ const Settings = () => {
   const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
   const [allergies, setAllergies] = useState<string[]>([]);
   const [customPreferences, setCustomPreferences] = useState<string[]>([]);
-  const [newCustomPreference, setNewCustomPreference] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const currentUser = auth.currentUser;
@@ -1049,12 +1120,9 @@ const Settings = () => {
     }
   };
 
-  const addCustomPreference = async () => {
-    if (!newCustomPreference.trim()) return;
-    const updated = [...customPreferences, newCustomPreference.trim()];
+  const addCustomPreference = async (newPreference: string) => {
+    const updated = [...customPreferences, newPreference];
     setCustomPreferences(updated);
-    setNewCustomPreference("");
-    setCustomPreferenceModal(false);
     try {
       await persistDietary(dietaryPreferences, allergies, updated);
       // Also save to backend if logged in
@@ -1065,8 +1133,30 @@ const Settings = () => {
           customPreferences: updated,
         });
       }
+      showAlert("Success", "Custom preference added!", undefined, "success");
     } catch (err) {
       console.error("Error saving custom preference:", err);
+      showAlert("Error", "Failed to add custom preference", undefined, "error");
+    }
+  };
+
+  const removeCustomPreference = async (preferenceToRemove: string) => {
+    const updated = customPreferences.filter(p => p !== preferenceToRemove);
+    setCustomPreferences(updated);
+    try {
+      await persistDietary(dietaryPreferences, allergies, updated);
+      // Also save to backend if logged in
+      if (uid) {
+        await axios.put(`${API_URL}/api/users/preferences/${uid}`, {
+          dietaryPreferences,
+          allergies,
+          customPreferences: updated,
+        });
+      }
+      showAlert("Success", "Custom preference removed!", undefined, "success");
+    } catch (err) {
+      console.error("Error removing custom preference:", err);
+      showAlert("Error", "Failed to remove custom preference", undefined, "error");
     }
   };
 
@@ -1392,9 +1482,9 @@ const Settings = () => {
       <CustomPrefModal
         visible={customPreferenceModal}
         onClose={() => setCustomPreferenceModal(false)}
-        value={newCustomPreference}
-        onChange={setNewCustomPreference}
-        onAdd={addCustomPreference}
+        customPreferences={customPreferences}
+        onRemove={removeCustomPreference}
+        onAddNew={addCustomPreference}
       />
 
       {SettingsAlert}
@@ -1525,6 +1615,78 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     minHeight: 80,
     textAlignVertical: "top",
+  },
+  customPrefList: {
+    marginBottom: 20,
+  },
+  customPrefItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: 12,
+    borderRadius: 12,
+    marginBottom: 8,
+    backgroundColor: "#1E1E1E",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  customPrefItemContent: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+  },
+  customPrefText: {
+    fontSize: 14,
+    color: "#FFFFFF",
+    flex: 1,
+    marginLeft: 8,
+  },
+  removeButton: {
+    padding: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(255,68,68,0.15)",
+  },
+  
+  emptyContainer: {
+    padding: 40,
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    color: "#A6A6A6",
+    textAlign: "center",
+  },
+  addSection: {
+    marginTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
+    paddingTop: 15,
+  },
+  addSectionTop: {
+    marginBottom: 10,
+  },
+  addRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  customInputInline: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: "#FFFFFF",
+    backgroundColor: "#1E1E1E",
+  },
+  addButton: {
+    backgroundColor: "#D4AF37",
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: "center",
+    alignItems: "center",
   },
   saveButton: {
     backgroundColor: "#D4AF37",
