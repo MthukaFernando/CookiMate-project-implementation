@@ -86,17 +86,26 @@ export default function RecipeDetails() {
     title: string;
     message: string;
     icon?: string;
-    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[];
+    buttons: {
+      text: string;
+      style?: "default" | "cancel" | "destructive";
+      onPress?: () => void;
+    }[];
   }>({ visible: false, title: "", message: "", buttons: [] });
 
   const showAlert = (
     title: string,
     message: string,
-    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "OK" }],
-    icon?: string
+    buttons: {
+      text: string;
+      style?: "default" | "cancel" | "destructive";
+      onPress?: () => void;
+    }[] = [{ text: "OK" }],
+    icon?: string,
   ) => setAlertConfig({ visible: true, title, message, buttons, icon });
 
-  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
+  const hideAlert = () =>
+    setAlertConfig((prev) => ({ ...prev, visible: false }));
 
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
@@ -115,7 +124,7 @@ export default function RecipeDetails() {
   };
 
   // New function to handle recipe completion
-const handleCompleteRecipe = async () => {
+  const handleCompleteRecipe = async () => {
     try {
       const currentUserUid = auth.currentUser?.uid;
 
@@ -123,11 +132,18 @@ const handleCompleteRecipe = async () => {
         // MATCHING YOUR ROUTE: /api/users/complete-recipe/:uid
         await axios.put(
           `${API_URL}/api/users/complete-recipe/${currentUserUid}`,
-          { recipeId: recipe._id } 
+          { recipeId: recipe._id },
         );
-        
-        console.log("Recipe completed! History updated and gamification checked.");
-        showAlert("Chef Status! 🎉", `You've mastered ${recipe.name}!`, [{ text: "Awesome!" }], "trophy");
+
+        console.log(
+          "Recipe completed! History updated and gamification checked.",
+        );
+        showAlert(
+          "Chef Status! 🎉",
+          `You've mastered ${recipe.name}!`,
+          [{ text: "Awesome!" }],
+          "trophy",
+        );
       } else {
         console.error("Missing UID or Recipe ID");
       }
@@ -136,7 +152,12 @@ const handleCompleteRecipe = async () => {
     } catch (err) {
       console.error("Failed to update cook count", err);
       setCookingMode(false);
-      showAlert("Done!", "Recipe finished, but we couldn't save to history.", [{ text: "OK" }], "alert-circle");
+      showAlert(
+        "Done!",
+        "Recipe finished, but we couldn't save to history.",
+        [{ text: "OK" }],
+        "alert-circle",
+      );
     }
   };
 
@@ -169,13 +190,23 @@ const handleCompleteRecipe = async () => {
       setIsFavorite(false);
     } catch (error) {
       console.log("Error removing favorite", error);
-      showAlert("Error", "Could not remove from favourites.", [{ text: "OK" }], "alert-circle");
+      showAlert(
+        "Error",
+        "Could not remove from favourites.",
+        [{ text: "OK" }],
+        "alert-circle",
+      );
     }
   };
 
   const toggleFavorite = async () => {
     if (!uid) {
-      showAlert("Sign In Required", "You must be logged in to favourite recipes.", [{ text: "OK" }], "lock-closed");
+      showAlert(
+        "Sign In Required",
+        "You must be logged in to favourite recipes.",
+        [{ text: "OK" }],
+        "lock-closed",
+      );
       return;
     }
     if (isFavorite) {
@@ -184,9 +215,13 @@ const handleCompleteRecipe = async () => {
         "Are you sure you want to remove this recipe from your favourites?",
         [
           { text: "Cancel", style: "cancel" },
-          { text: "Remove", style: "destructive", onPress: handleRemoveFavorite },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: handleRemoveFavorite,
+          },
         ],
-        "heart-dislike"
+        "heart-dislike",
       );
     } else {
       try {
@@ -213,7 +248,12 @@ const handleCompleteRecipe = async () => {
         if (error.response?.status === 400) {
           setIsFavorite(true);
         } else {
-          showAlert("Error", "Could not add to favourites.", [{ text: "OK" }], "alert-circle");
+          showAlert(
+            "Error",
+            "Could not add to favourites.",
+            [{ text: "OK" }],
+            "alert-circle",
+          );
         }
       }
     }
@@ -258,7 +298,10 @@ const handleCompleteRecipe = async () => {
     return (
       <View style={styles.centerContainer}>
         <Text style={styles.errorText}>{error || "Recipe not found"}</Text>
-        <TouchableOpacity style={styles.backButtonFixed} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButtonFixed}
+          onPress={() => router.back()}
+        >
           <Text style={styles.backButtonText}>Go Back</Text>
         </TouchableOpacity>
       </View>
@@ -272,10 +315,15 @@ const handleCompleteRecipe = async () => {
           {recipe.image ? (
             <Image source={{ uri: recipe.image }} style={styles.headerImage} />
           ) : (
-            <View style={[styles.headerImage, { backgroundColor: "#1A1A1A" }]} />
+            <View
+              style={[styles.headerImage, { backgroundColor: "#1A1A1A" }]}
+            />
           )}
 
-          <TouchableOpacity style={styles.roundBackButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.roundBackButton}
+            onPress={() => router.back()}
+          >
             <Ionicons name="arrow-back" size={24} color="#D4AF37" />
           </TouchableOpacity>
 
@@ -306,8 +354,16 @@ const handleCompleteRecipe = async () => {
 
           <View style={styles.divider} />
 
-          <TouchableOpacity style={styles.startCookingButton} onPress={handleStartCooking}>
-            <Ionicons name="play-circle" size={24} color="#000" style={{ marginRight: 8 }} />
+          <TouchableOpacity
+            style={styles.startCookingButton}
+            onPress={handleStartCooking}
+          >
+            <Ionicons
+              name="play-circle"
+              size={24}
+              color="#000"
+              style={{ marginRight: 8 }}
+            />
             <Text style={styles.startCookingText}>Start Cooking</Text>
           </TouchableOpacity>
 
@@ -337,14 +393,24 @@ const handleCompleteRecipe = async () => {
                     <Text style={styles.stepNumber}>{index + 1}</Text>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.listItem}>{step}</Text>
-                      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          flexWrap: "wrap",
+                          gap: 8,
+                        }}
+                      >
                         {timings.map((seconds, tIdx) => (
                           <TouchableOpacity
                             key={tIdx}
                             style={styles.inlineTimerButton}
                             onPress={() => handleTriggerTimer(seconds)}
                           >
-                            <Ionicons name="timer-outline" size={14} color="#FFFFFF" />
+                            <Ionicons
+                              name="timer-outline"
+                              size={14}
+                              color="#FFFFFF"
+                            />
                             <Text style={styles.inlineTimerText}>
                               {formatDisplayTime(seconds)}
                             </Text>
@@ -376,7 +442,10 @@ const handleCompleteRecipe = async () => {
       >
         <SafeAreaView style={styles.modalContainer}>
           <View style={styles.modalHeader}>
-            <TouchableOpacity onPress={closeCookingMode} style={styles.closeButton}>
+            <TouchableOpacity
+              onPress={closeCookingMode}
+              style={styles.closeButton}
+            >
               <Ionicons name="close" size={28} color="#D4AF37" />
             </TouchableOpacity>
             {recipe?.steps && currentStepIndex < recipe.steps.length && (
@@ -395,27 +464,47 @@ const handleCompleteRecipe = async () => {
                   showsVerticalScrollIndicator={false}
                   contentContainerStyle={styles.stepScrollContent}
                 >
-                  <Text style={styles.stepText}>{recipe.steps[currentStepIndex]}</Text>
+                  <Text style={styles.stepText}>
+                    {recipe.steps[currentStepIndex]}
+                  </Text>
 
-                  <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 12 }}>
-                    {extractAllTimings(recipe.steps[currentStepIndex]).map((seconds, tIdx) => (
-                      <TouchableOpacity
-                        key={tIdx}
-                        style={styles.modalTimerButton}
-                        onPress={() => handleTriggerTimer(seconds)}
-                      >
-                        <Ionicons name="timer-outline" size={24} color="#FFFFFF" />
-                        <Text style={styles.modalTimerText}>
-                          Start {formatDisplayTime(seconds)} Timer
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      flexWrap: "wrap",
+                      justifyContent: "center",
+                      gap: 12,
+                    }}
+                  >
+                    {extractAllTimings(recipe.steps[currentStepIndex]).map(
+                      (seconds, tIdx) => (
+                        <TouchableOpacity
+                          key={tIdx}
+                          style={styles.modalTimerButton}
+                          onPress={() => handleTriggerTimer(seconds)}
+                        >
+                          <Ionicons
+                            name="timer-outline"
+                            size={24}
+                            color="#FFFFFF"
+                          />
+                          <Text style={styles.modalTimerText}>
+                            Start {formatDisplayTime(seconds)} Timer
+                          </Text>
+                        </TouchableOpacity>
+                      ),
+                    )}
                   </View>
                 </ScrollView>
 
-                <TouchableOpacity style={styles.nextStepButton} onPress={handleNextStep}>
+                <TouchableOpacity
+                  style={styles.nextStepButton}
+                  onPress={handleNextStep}
+                >
                   <Text style={styles.nextStepText}>
-                    {currentStepIndex === recipe.steps.length - 1 ? "Finish Cooking" : "Next Step"}
+                    {currentStepIndex === recipe.steps.length - 1
+                      ? "Finish Cooking"
+                      : "Next Step"}
                   </Text>
                   <Ionicons name="arrow-forward" size={20} color="#000" />
                 </TouchableOpacity>
@@ -438,9 +527,15 @@ const handleCompleteRecipe = async () => {
                 <Text style={styles.completedTitle}>Yum!</Text>
                 <Text style={styles.completedSub}>
                   You just cooked{" "}
-                  <Text style={{ fontWeight: "bold", color: "#D4AF37" }}>{recipe?.name}</Text>!
+                  <Text style={{ fontWeight: "bold", color: "#D4AF37" }}>
+                    {recipe?.name}
+                  </Text>
+                  !
                 </Text>
-                <TouchableOpacity style={styles.doneButton} onPress={handleCompleteRecipe}>
+                <TouchableOpacity
+                  style={styles.doneButton}
+                  onPress={handleCompleteRecipe}
+                >
                   <Text style={styles.doneButtonText}>Complete Recipe</Text>
                 </TouchableOpacity>
               </View>
@@ -458,41 +553,81 @@ const handleCompleteRecipe = async () => {
       </Modal>
 
       {/* Custom Alert Modal */}
-      <Modal transparent visible={alertConfig.visible} animationType="fade" onRequestClose={hideAlert}>
+      <Modal
+        transparent
+        visible={alertConfig.visible}
+        animationType="fade"
+        onRequestClose={hideAlert}
+      >
         <View style={styles.alertOverlay}>
           <View style={styles.alertBox}>
             {alertConfig.icon && (
-              <View style={[
-                styles.alertIconWrapper,
-                { borderColor: alertConfig.icon === "trophy" ? "#D4AF37" : alertConfig.icon === "heart-dislike" ? "#FF5252" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252" }
-              ]}>
+              <View
+                style={[
+                  styles.alertIconWrapper,
+                  {
+                    borderColor:
+                      alertConfig.icon === "trophy"
+                        ? "#D4AF37"
+                        : alertConfig.icon === "heart-dislike"
+                          ? "#FF5252"
+                          : alertConfig.icon === "lock-closed"
+                            ? "#FF8C00"
+                            : "#FF5252",
+                  },
+                ]}
+              >
                 <Ionicons
                   name={alertConfig.icon as any}
                   size={30}
-                  color={alertConfig.icon === "trophy" ? "#D4AF37" : alertConfig.icon === "heart-dislike" ? "#FF5252" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252"}
+                  color={
+                    alertConfig.icon === "trophy"
+                      ? "#D4AF37"
+                      : alertConfig.icon === "heart-dislike"
+                        ? "#FF5252"
+                        : alertConfig.icon === "lock-closed"
+                          ? "#FF8C00"
+                          : "#FF5252"
+                  }
                 />
               </View>
             )}
             <Text style={styles.alertTitle}>{alertConfig.title}</Text>
             <Text style={styles.alertMessage}>{alertConfig.message}</Text>
-            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
+            <View
+              style={[
+                styles.alertButtonRow,
+                alertConfig.buttons.length === 1 && {
+                  justifyContent: "center",
+                },
+              ]}
+            >
               {alertConfig.buttons.map((btn, idx) => (
                 <TouchableOpacity
                   key={idx}
                   style={[
                     styles.alertButton,
-                    btn.style === "destructive" ? styles.alertButtonDestructive
-                      : btn.style === "cancel" ? styles.alertButtonCancel
-                      : styles.alertButtonDefault,
+                    btn.style === "destructive"
+                      ? styles.alertButtonDestructive
+                      : btn.style === "cancel"
+                        ? styles.alertButtonCancel
+                        : styles.alertButtonDefault,
                   ]}
-                  onPress={() => { hideAlert(); btn.onPress?.(); }}
+                  onPress={() => {
+                    hideAlert();
+                    btn.onPress?.();
+                  }}
                 >
-                  <Text style={[
-                    styles.alertButtonText,
-                    btn.style === "destructive" ? styles.alertBtnTextDestructive
-                      : btn.style === "cancel" ? styles.alertBtnTextCancel
-                      : styles.alertBtnTextDefault,
-                  ]}>
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "destructive"
+                        ? styles.alertBtnTextDestructive
+                        : btn.style === "cancel"
+                          ? styles.alertBtnTextCancel
+                          : styles.alertBtnTextDefault,
+                    ]}
+                  >
                     {btn.text}
                   </Text>
                 </TouchableOpacity>
@@ -552,8 +687,17 @@ const styles = StyleSheet.create({
     padding: 24,
     minHeight: 500,
   },
-  title: { fontSize: 26, fontWeight: "bold", color: "#FFFFFF", marginBottom: 16 },
-  statsRow: { flexDirection: "row", justifyContent: "flex-start", marginBottom: 16 },
+  title: {
+    fontSize: 26,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 16,
+  },
+  statsRow: {
+    flexDirection: "row",
+    justifyContent: "flex-start",
+    marginBottom: 16,
+  },
   statItem: { flexDirection: "row", alignItems: "center", marginRight: 24 },
   statText: { color: "#FFFFFF", fontWeight: "600", fontSize: 14 },
   divider: { height: 1, backgroundColor: "#333333", marginVertical: 20 },
@@ -569,8 +713,17 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   startCookingText: { color: "#000", fontSize: 18, fontWeight: "bold" },
-  sectionTitle: { fontSize: 20, fontWeight: "700", color: "#D4AF37", marginBottom: 12 },
-  listItemRow: { flexDirection: "row", alignItems: "flex-start", marginBottom: 8 },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: "#D4AF37",
+    marginBottom: 12,
+  },
+  listItemRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    marginBottom: 8,
+  },
   bullet: {
     width: 6,
     height: 6,
@@ -601,7 +754,12 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 6,
   },
-  inlineTimerText: { color: "#FFFFFF", fontSize: 12, fontWeight: "700", marginLeft: 4 },
+  inlineTimerText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+    marginLeft: 4,
+  },
   errorText: { color: "#e74c3c", fontSize: 16, marginBottom: 20 },
   backButtonFixed: { padding: 10, backgroundColor: "#D4AF37", borderRadius: 8 },
   backButtonText: { color: "black", fontWeight: "bold" },
@@ -616,7 +774,12 @@ const styles = StyleSheet.create({
   },
   closeButton: { padding: 10 },
   stepProgress: { fontSize: 16, fontWeight: "600", color: "#BBBBBB" },
-  modalContent: { flex: 1, paddingHorizontal: 20, paddingBottom: 40, justifyContent: "center" },
+  modalContent: {
+    flex: 1,
+    paddingHorizontal: 20,
+    paddingBottom: 40,
+    justifyContent: "center",
+  },
   stepCard: {
     backgroundColor: "#121212",
     borderRadius: 30,
@@ -657,8 +820,17 @@ const styles = StyleSheet.create({
     width: "100%",
     justifyContent: "center",
   },
-  nextStepText: { color: "#000", fontSize: 18, fontWeight: "bold", marginRight: 10 },
-  completedContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  nextStepText: {
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginRight: 10,
+  },
+  completedContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   mascotContainer: {
     width: 250,
     height: 250,
@@ -667,7 +839,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   mascotImage: { width: "100%", height: "100%" },
-  completedTitle: { fontSize: 36, fontWeight: "900", color: "#D4AF37", marginBottom: 10 },
+  completedTitle: {
+    fontSize: 36,
+    fontWeight: "900",
+    color: "#D4AF37",
+    marginBottom: 10,
+  },
   completedSub: {
     fontSize: 18,
     color: "#BBBBBB",
@@ -692,7 +869,12 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     marginTop: 10,
   },
-  modalTimerText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
+  modalTimerText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "bold",
+    marginLeft: 8,
+  },
   // Custom Alert styles
   alertOverlay: {
     flex: 1,
@@ -747,8 +929,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   alertButtonDefault: { backgroundColor: "#D4AF37" },
-  alertButtonDestructive: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#FF5252" },
-  alertButtonCancel: { backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333333" },
+  alertButtonDestructive: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FF5252",
+  },
+  alertButtonCancel: {
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
   alertButtonText: { fontSize: 14, fontWeight: "700" },
   alertBtnTextDefault: { color: "#000000" },
   alertBtnTextDestructive: { color: "#FF5252" },

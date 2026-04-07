@@ -96,6 +96,7 @@ const MyRecipesPage = () => {
   const [time, setTime] = useState("All");
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeFilterCount, setActiveFilterCount] = useState(0);
+  const [networkErrorVisible, setNetworkErrorVisible] = useState(false);
 
   // Custom Alert state
   const [alertConfig, setAlertConfig] = useState<{
@@ -159,8 +160,13 @@ const MyRecipesPage = () => {
       const response = await axios.get(`${API_URL}/api/users/${uid}`);
       const favIds = response.data.favorites.map((f: any) => f.id);
       setFavorites(favIds);
-    } catch (error) {
-      console.error("Error loading favorites from DB:", error);
+    } catch (error: any) {
+      const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        console.error("Error loading favorites from DB:", error.message);
+      }
     }
   };
 
@@ -171,9 +177,14 @@ const MyRecipesPage = () => {
         recipeId,
       });
       setFavorites((prev) => prev.filter((id) => id !== recipeId));
-    } catch (error) {
-      console.error("Error removing favorite:", error);
-      showAlert("Error", "Could not remove from favorites.", [{ text: "OK" }], "alert-circle");
+    } catch (error: any) {
+      const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        console.error("Error removing favorite:", error.message);
+        showAlert("Error", "Could not remove from favorites.", [{ text: "OK" }], "alert-circle");
+      }
     }
   };
 
@@ -218,8 +229,13 @@ const MyRecipesPage = () => {
           console.log("Gamification update failed.");
         }
 
-      } catch (error) {
-        showAlert("Error", "Could not add to favourites.", [{ text: "OK" }], "alert-circle");
+      } catch (error: any) {
+        const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+        if (isNetworkIssue) {
+          setNetworkErrorVisible(true);
+        } else {
+          showAlert("Error", "Could not add to favourites.", [{ text: "OK" }], "alert-circle");
+        }
       }
     }
   };
@@ -256,14 +272,19 @@ const MyRecipesPage = () => {
               }
             }
           } catch (error: any) {
-            console.error("Error deleting recipe:", error);
-            showAlert(
-              "Error",
-              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe",
-              [{ text: "OK" }],
-              "alert-circle"
-            );
-          }
+              const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+              if (isNetworkIssue) {
+                setNetworkErrorVisible(true);
+              } else {
+                console.error("Error deleting recipe:", error.message);
+                showAlert(
+                  "Error",
+                  error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe",
+                  [{ text: "OK" }],
+                  "alert-circle"
+                );
+              }
+            }
         }
       }
     ],
@@ -284,8 +305,13 @@ const MyRecipesPage = () => {
         },
       });
       setRecipes(response.data);
-    } catch (error) {
-      console.error("Backend error:", error);
+    } catch (error: any) {
+      const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        console.error("Backend error:", error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -578,6 +604,32 @@ const MyRecipesPage = () => {
       {/* 2. Added GlobalChatbot here */}
       <GlobalChatbot />
 
+      {/* --- NETWORK ERROR MODAL --- */}
+      <Modal 
+        visible={networkErrorVisible} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setNetworkErrorVisible(false)}
+      >
+        <View style={styles.networkModalOverlay}>
+          <View style={styles.networkErrorCard}>
+            <View style={styles.networkErrorContent}>
+              <Ionicons name="cloud-offline-outline" size={60} color="#AAAAAA" style={{ marginBottom: 15 }} />
+              <Text style={styles.networkErrorTitle}>No Connection</Text>
+              <Text style={styles.networkErrorText}>
+                Couldn't complete the request. Please check your internet connection and try again.
+              </Text>
+              <TouchableOpacity 
+                style={styles.modalCloseBtn} 
+                onPress={() => setNetworkErrorVisible(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       {/* Custom Alert Modal */}
       <Modal
         transparent
@@ -823,6 +875,54 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  // Network Error Modal Styles
+  networkModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  networkErrorCard: {
+    backgroundColor: "#1E1E1E",
+    borderRadius: 24,
+    padding: 25,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
+  networkErrorContent: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  networkErrorTitle: {
+    color: "#D4AF37",
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  networkErrorText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalCloseBtn: {
+    backgroundColor: "#D4AF37",
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalCloseBtnText: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "bold",
   },
   // Custom Alert styles
   alertOverlay: {

@@ -141,7 +141,8 @@ export default function GenerateRecipesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showInputForm, setShowInputForm] = useState(true); 
+  const [showInputForm, setShowInputForm] = useState(true);
+  const [networkErrorVisible, setNetworkErrorVisible] = useState(false);
 
   // User preferences state
   const [userPreferences, setUserPreferences] = useState<{
@@ -191,9 +192,17 @@ export default function GenerateRecipesPage() {
             });
             console.log("User preferences loaded:", response.data);
           }
-        } catch (error) {
-          console.error("Failed to fetch user preferences:", error);
+        } catch (error: any) {
+        // Check if it's a network issue
+        const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error';
+        
+        if (isNetworkIssue) {
+          setNetworkErrorVisible(true); 
+        } else {
+          // Only log actual server/logic errors, not connection ones
+          console.log("User preferences not found (Standard behavior for new users)");
         }
+      }
       }
     };
 
@@ -351,10 +360,19 @@ export default function GenerateRecipesPage() {
       setRecipeImage(data.image);
       setShowInputForm(false); // Hide input form, show recipe card
     } catch (error: any) {
-      if (__DEV__) {
-        console.log("Error caught:", error.message);
+      // Detect network error similar to CommunityFeedCards.tsx
+      const isNetworkIssue =
+        !error.response ||
+        error.message === "Network Error" ||
+        error.message === "Failed to fetch";
+
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        setError(
+          error.message || "Failed to generate recipe. Please try again.",
+        );
       }
-      setError(error.message || "Failed to generate recipe. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -408,7 +426,17 @@ export default function GenerateRecipesPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setError(error.message || "Failed to save recipe");
+      // Check for network connectivity issues
+      const isNetworkIssue =
+        !error.response ||
+        error.message === "Network Error" ||
+        error.message === "Failed to fetch";
+
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        setError(error.message || "Failed to save recipe");
+      }
     } finally {
       setSaveLoading(false);
     }
@@ -454,10 +482,20 @@ export default function GenerateRecipesPage() {
       }
       setCookingMode(false);
       setCurrentStepIndex(0);
-    } catch (err) {
-      console.error("Failed to update cook count", err);
-      setCookingMode(false);
+    } catch (error: any) {
+    const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error';
+    
+    if (isNetworkIssue) {
+      // Show the modal instead of an error message
+      setNetworkErrorVisible(true);
+    } else {
+      // Only show the standard error if it's NOT a network issue
+      setError("Could not update cook count."); 
     }
+    
+    // Still close the cooking mode so the user isn't stuck
+    setCookingMode(false);
+  }
   };
 
   const panResponder = useRef(
@@ -1114,6 +1152,38 @@ export default function GenerateRecipesPage() {
           onClose={() => setShowTimerModal(false)}
         />
       </Modal>
+
+      {/* --- NETWORK ERROR MODAL --- */}
+      <Modal
+        visible={networkErrorVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNetworkErrorVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.networkErrorCard}>
+            <View style={styles.networkErrorContent}>
+              <Ionicons
+                name="cloud-offline-outline"
+                size={60}
+                color={BRAND.textMuted}
+                style={{ marginBottom: 15 }}
+              />
+              <Text style={styles.networkErrorTitle}>No Connection</Text>
+              <Text style={styles.networkErrorText}>
+                Couldn't complete the request. Please check your internet
+                connection and try again.
+              </Text>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setNetworkErrorVisible(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1647,5 +1717,52 @@ const styles = StyleSheet.create({
     color: BRAND.textMain,
     fontSize: 12,
     fontWeight: "500",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  networkErrorCard: {
+    backgroundColor: BRAND.surface,
+    borderRadius: 24,
+    padding: 25,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: BRAND.border,
+  },
+  networkErrorContent: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  networkErrorTitle: {
+    color: BRAND.accent,
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  networkErrorText: {
+    color: BRAND.textMain,
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalCloseBtn: {
+    backgroundColor: BRAND.accent,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalCloseBtnText: {
+    color: BRAND.bg,
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });
