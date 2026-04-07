@@ -11,7 +11,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   ScrollView,
-  Alert,
+  Modal,
 } from "react-native";
 import { Ionicons, Feather } from "@expo/vector-icons";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -89,6 +89,24 @@ const FavoritesPage = () => {
   const [time, setTime] = useState("All");
   const [activeFilterCount, setActiveFilterCount] = useState(0);
 
+  // Custom Alert state
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "OK" }],
+    icon?: string
+  ) => setAlertConfig({ visible: true, title, message, buttons, icon });
+
+  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
+
   useEffect(() => {
     let count = 0;
     if (searchQuery) count++;
@@ -160,7 +178,7 @@ const FavoritesPage = () => {
   );
 
   const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
-  Alert.alert(
+  showAlert(
     "Delete Recipe",
     `Are you sure you want to delete "${recipeName}"? This will remove it from your favorites and permanently delete it.`,
     [
@@ -172,7 +190,7 @@ const FavoritesPage = () => {
           try {
             const uid = auth.currentUser?.uid;
             if (!uid) {
-              Alert.alert("Error", "You must be logged in to delete recipes");
+              showAlert("Sign In Required", "You must be logged in to delete recipes.", [{ text: "OK" }], "lock-closed");
               return;
             }
 
@@ -182,20 +200,23 @@ const FavoritesPage = () => {
             );
 
             if (response.data.success) {
-              Alert.alert("Success", "Recipe deleted successfully");
+              showAlert("Deleted", "Recipe deleted successfully.", [{ text: "OK" }], "checkmark-circle");
               // Refresh the favorites list
               fetchFavorites();
             }
           } catch (error: any) {
             console.error("Error deleting recipe:", error);
-            Alert.alert(
-              "Error", 
-              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe"
+            showAlert(
+              "Error",
+              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe",
+              [{ text: "OK" }],
+              "alert-circle"
             );
           }
         }
       }
-    ]
+    ],
+    "trash"
   );
 };
 
@@ -205,17 +226,14 @@ const FavoritesPage = () => {
       handleDeleteGeneratedRecipe(recipeId, recipeName);
     } else {
       // For regular recipes, just remove from favorites
-      Alert.alert(
-        "Remove Favorite",
-        "Are you sure you want to remove this recipe from favorites?",
+      showAlert(
+        "Remove Favourite",
+        "Are you sure you want to remove this recipe from favourites?",
         [
           { text: "Cancel", style: "cancel" },
-          {
-            text: "Remove",
-            style: "destructive",
-            onPress: () => handleRemove(recipeId),
-          },
+          { text: "Remove", style: "destructive", onPress: () => handleRemove(recipeId) },
         ],
+        "heart-dislike"
       );
     }
   };
@@ -227,7 +245,7 @@ const FavoritesPage = () => {
       });
       setRecipes((prev) => prev.filter((item: any) => item.id !== recipeId));
     } catch (err) {
-      Alert.alert("Error", "Could not remove recipe.");
+      showAlert("Error", "Could not remove recipe.", [{ text: "OK" }], "alert-circle");
     }
   };
 
@@ -417,6 +435,51 @@ const FavoritesPage = () => {
           contentContainerStyle={styles.listContent}
         />
       )}
+
+      {/* Custom Alert Modal */}
+      <Modal transparent visible={alertConfig.visible} animationType="fade" onRequestClose={hideAlert}>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            {alertConfig.icon && (
+              <View style={[
+                styles.alertIconWrapper,
+                { borderColor: alertConfig.icon === "checkmark-circle" ? "#D4AF37" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252" }
+              ]}>
+                <Ionicons
+                  name={alertConfig.icon as any}
+                  size={30}
+                  color={alertConfig.icon === "checkmark-circle" ? "#D4AF37" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252"}
+                />
+              </View>
+            )}
+            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
+              {alertConfig.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.alertButton,
+                    btn.style === "destructive" ? styles.alertButtonDestructive
+                      : btn.style === "cancel" ? styles.alertButtonCancel
+                      : styles.alertButtonDefault,
+                  ]}
+                  onPress={() => { hideAlert(); btn.onPress?.(); }}
+                >
+                  <Text style={[
+                    styles.alertButtonText,
+                    btn.style === "destructive" ? styles.alertBtnTextDestructive
+                      : btn.style === "cancel" ? styles.alertBtnTextCancel
+                      : styles.alertBtnTextDefault,
+                  ]}>
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -557,6 +620,66 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: "center",
   },
+  // Custom Alert styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.78)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  alertBox: {
+    backgroundColor: "#1b1b1b",
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  alertIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#0A0A0A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "white",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  alertButtonDefault: { backgroundColor: "#D4AF37" },
+  alertButtonDestructive: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#FF5252" },
+  alertButtonCancel: { backgroundColor: "#2A2A2A", borderWidth: 1, borderColor: "#333333" },
+  alertButtonText: { fontSize: 14, fontWeight: "700" },
+  alertBtnTextDefault: { color: "#000000" },
+  alertBtnTextDestructive: { color: "#FF5252" },
+  alertBtnTextCancel: { color: "#AAAAAA" },
 });
 
 export default FavoritesPage;

@@ -10,7 +10,7 @@ import {
   TextInput,
   ActivityIndicator,
   ScrollView,
-  Alert,
+  Modal,
   Platform,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
@@ -97,6 +97,28 @@ const MyRecipesPage = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
   const [activeFilterCount, setActiveFilterCount] = useState(0);
 
+  // Custom Alert state
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "OK" }],
+    icon?: string
+  ) => {
+    setAlertConfig({ visible: true, title, message, buttons, icon });
+  };
+
+  const hideAlert = () => {
+    setAlertConfig((prev) => ({ ...prev, visible: false }));
+  };
+
   useFocusEffect(
     useCallback(() => {
       loadFavorites();
@@ -151,23 +173,23 @@ const MyRecipesPage = () => {
       setFavorites((prev) => prev.filter((id) => id !== recipeId));
     } catch (error) {
       console.error("Error removing favorite:", error);
-      Alert.alert("Error", "Could not remove from favorites.");
+      showAlert("Error", "Could not remove from favorites.", [{ text: "OK" }], "alert-circle");
     }
   };
 
   const toggleFavorite = async (recipeId: string) => {
     const uid = auth.currentUser?.uid;
     if (!uid) {
-      Alert.alert("Error", "You must be logged in to save favorites");
+      showAlert("Sign In Required", "You must be logged in to save favorites.", [{ text: "OK" }], "lock-closed");
       return;
     }
 
     const isCurrentlyFavorite = favorites.includes(recipeId);
 
     if (isCurrentlyFavorite) {
-      Alert.alert(
-        "Remove Favorite",
-        "Are you sure you want to remove this recipe from your favorites?",
+      showAlert(
+        "Remove Favourite",
+        "Are you sure you want to remove this recipe from your favourites?",
         [
           { text: "Cancel", style: "cancel" },
           {
@@ -176,6 +198,7 @@ const MyRecipesPage = () => {
             onPress: () => handleRemoveFavorite(recipeId),
           },
         ],
+        "heart-dislike"
       );
     } else {
       try {
@@ -196,13 +219,13 @@ const MyRecipesPage = () => {
         }
 
       } catch (error) {
-        Alert.alert("Error", "Could not add to favorites :<");
+        showAlert("Error", "Could not add to favourites.", [{ text: "OK" }], "alert-circle");
       }
     }
   };
 
   const handleDeleteGeneratedRecipe = async (recipeId: string, recipeName: string) => {
-  Alert.alert(
+  showAlert(
     "Delete Recipe",
     `Are you sure you want to delete "${recipeName}"? This action cannot be undone.`,
     [
@@ -214,7 +237,7 @@ const MyRecipesPage = () => {
           try {
             const uid = auth.currentUser?.uid;
             if (!uid) {
-              Alert.alert("Error", "You must be logged in to delete recipes");
+              showAlert("Sign In Required", "You must be logged in to delete recipes.", [{ text: "OK" }], "lock-closed");
               return;
             }
 
@@ -224,7 +247,7 @@ const MyRecipesPage = () => {
             );
 
             if (response.data.success) {
-              Alert.alert("Success", "Recipe deleted successfully");
+              showAlert("Deleted", "Recipe deleted successfully.", [{ text: "OK" }], "checkmark-circle");
               // Refresh the recipes list
               fetchRecipes();
               // Also refresh favorites if needed
@@ -234,14 +257,17 @@ const MyRecipesPage = () => {
             }
           } catch (error: any) {
             console.error("Error deleting recipe:", error);
-            Alert.alert(
-              "Error", 
-              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe"
+            showAlert(
+              "Error",
+              error.response?.data?.error || error.response?.data?.message || "Failed to delete recipe",
+              [{ text: "OK" }],
+              "alert-circle"
             );
           }
         }
       }
-    ]
+    ],
+    "trash"
   );
 };
 
@@ -551,6 +577,66 @@ const MyRecipesPage = () => {
       )}
       {/* 2. Added GlobalChatbot here */}
       <GlobalChatbot />
+
+      {/* Custom Alert Modal */}
+      <Modal
+        transparent
+        visible={alertConfig.visible}
+        animationType="fade"
+        onRequestClose={hideAlert}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            {alertConfig.icon && (
+              <View style={styles.alertIconWrapper}>
+                <Ionicons
+                  name={alertConfig.icon as any}
+                  size={32}
+                  color={
+                    alertConfig.icon === "checkmark-circle"
+                      ? "#D4AF37"
+                      : alertConfig.icon === "trash" || alertConfig.icon === "heart-dislike"
+                      ? "#FF5252"
+                      : alertConfig.icon === "lock-closed"
+                      ? "#FF8C00"
+                      : "#FF5252"
+                  }
+                />
+              </View>
+            )}
+            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
+              {alertConfig.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.alertButton,
+                    btn.style === "destructive" && styles.alertButtonDestructive,
+                    btn.style === "cancel" && styles.alertButtonCancel,
+                    btn.style !== "destructive" && btn.style !== "cancel" && styles.alertButtonDefault,
+                  ]}
+                  onPress={() => {
+                    hideAlert();
+                    btn.onPress?.();
+                  }}
+                >
+                  <Text
+                    style={[
+                      styles.alertButtonText,
+                      btn.style === "destructive" && styles.alertButtonTextDestructive,
+                      btn.style === "cancel" && styles.alertButtonTextCancel,
+                      btn.style !== "destructive" && btn.style !== "cancel" && styles.alertButtonTextDefault,
+                    ]}
+                  >
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -737,6 +823,86 @@ const styles = StyleSheet.create({
     color: "white",
     fontWeight: "bold",
     fontSize: 16,
+  },
+  // Custom Alert styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  alertBox: {
+    backgroundColor: "#121212",
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  alertIconWrapper: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: "#1A1A1A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  alertButtonDefault: {
+    backgroundColor: "#D4AF37",
+  },
+  alertButtonDestructive: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FF5252",
+  },
+  alertButtonCancel: {
+    backgroundColor: "#1A1A1A",
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
+  alertButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  alertButtonTextDefault: {
+    color: "#000000",
+  },
+  alertButtonTextDestructive: {
+    color: "#FF5252",
+  },
+  alertButtonTextCancel: {
+    color: "#AAAAAA",
   },
 });
 

@@ -6,12 +6,12 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Dimensions,
+  Modal,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy"; // Fix for SDK 54
@@ -23,18 +23,96 @@ import { auth } from "../../config/firebase";
 
 const { width } = Dimensions.get("window");
 
+// Custom Alert Component
+const CustomAlert = ({ 
+  visible, 
+  title, 
+  message, 
+  onConfirm, 
+  onCancel, 
+  confirmText = "OK", 
+  cancelText = "Cancel",
+  type = "confirm"
+}: { 
+  visible: boolean; 
+  title: string; 
+  message: string; 
+  onConfirm: () => void; 
+  onCancel?: () => void; 
+  confirmText?: string; 
+  cancelText?: string;
+  type?: string;
+}) => (
+  <Modal
+    visible={visible}
+    transparent={true}
+    animationType="fade"
+    onRequestClose={onCancel || onConfirm}
+  >
+    <View style={styles.alertOverlay}>
+      <View style={styles.alertContainer}>
+        <Text style={styles.alertTitle}>{title}</Text>
+        <Text style={styles.alertMessage}>{message}</Text>
+        <View style={styles.alertButtons}>
+          {type === "confirm" && onCancel && (
+            <TouchableOpacity style={[styles.alertButton, styles.alertCancelButton]} onPress={onCancel}>
+              <Text style={styles.alertCancelText}>{cancelText}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity style={[styles.alertButton, styles.alertConfirmButton]} onPress={onConfirm}>
+            <Text style={styles.alertConfirmText}>{confirmText}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  </Modal>
+);
+
 const CreatePostScreen: React.FC = () => {
   const router = useRouter();
   const [image, setImage] = useState<ImagePicker.ImagePickerAsset | null>(null);
   const [caption, setCaption] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
+  // Custom alert states
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    onCancel: undefined as (() => void) | undefined,
+    confirmText: "OK",
+    cancelText: "Cancel",
+    type: "confirm" as "confirm" | "alert",
+  });
+
+  const showCustomAlert = (
+    title: string,
+    message: string,
+    onConfirm: () => void,
+    onCancel?: () => void,
+    confirmText: string = "OK",
+    cancelText: string = "Cancel",
+    type: "confirm" | "alert" = "confirm"
+  ) => {
+    setAlertConfig({
+      title,
+      message,
+      onConfirm,
+      onCancel,
+      confirmText,
+      cancelText,
+      type,
+    });
+    setAlertVisible(true);
+  };
+
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== "granted") {
-      Alert.alert("Permission Denied", "Gallery access is needed to post.");
+      showCustomAlert("Permission Denied", "Gallery access is needed to post.", () => {}, undefined, "OK", "Cancel", "alert");
       return;
     }
 
@@ -53,11 +131,11 @@ const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
   const handleUpload = async () => {
     const currentUser = auth.currentUser;
     if (!currentUser) {
-      Alert.alert("Error", "You must be logged in to share a post.");
+      showCustomAlert("Error", "You must be logged in to share a post.", () => {}, undefined, "OK", "Cancel", "alert");
       return;
     }
     if (!image) {
-      Alert.alert("Error", "Please select an image first.");
+      showCustomAlert("Error", "Please select an image first.", () => {}, undefined, "OK", "Cancel", "alert");
       return;
     }
 
@@ -66,7 +144,7 @@ const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
     try {
       // 1. Create a FormData object (The "Bag" that holds our data)
       const formData = new FormData();
-
+      
       // 2. Prepare the image file for the "Bag"
       // We extract the filename and type from the uri
       const uriParts = image.uri.split('.');
@@ -91,15 +169,16 @@ const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
       });
 
       if (response.status === 201) {
-        Alert.alert(
+        showCustomAlert(
           "Success!", 
           "Post shared! Check your level card to see your progress",
-          [
-            { 
-              text: "Great", 
-              onPress: () => router.replace("/") 
-            }
-          ]
+          () => {
+            router.replace("/");
+          },
+          undefined,
+          "Great",
+          "Cancel",
+          "alert"
         );
         setImage(null);
         setCaption("");
@@ -110,75 +189,95 @@ const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
       console.log(error.response?.data || error.message);
       const errorMessage =
         error.response?.data?.message || "Server error. Check your connection.";
-      Alert.alert("Upload Failed", errorMessage);
+      showCustomAlert("Upload Failed", errorMessage, () => {}, undefined, "OK", "Cancel", "alert");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined} 
-      style={styles.mainContainer}
-    >
-      <ScrollView contentContainerStyle={styles.container}>
-        {/* Header with Back Button */}
-        <View style={styles.headerRow}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="arrow-back" size={24} color="#FFD700" />
+    <>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : undefined} 
+        style={styles.mainContainer}
+      >
+        <ScrollView contentContainerStyle={styles.container}>
+          {/* Header with Back Button */}
+          <View style={styles.headerRow}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Ionicons name="arrow-back" size={24} color="#FFD700" />
+            </TouchableOpacity>
+            <Text style={styles.header}>New Post</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <TouchableOpacity style={styles.imageBox} onPress={pickImage} activeOpacity={0.8}>
+            {image ? (
+              <Image source={{ uri: image.uri }} style={styles.previewImage} />
+            ) : (
+              <View style={styles.placeholderContainer}>
+                <MaterialCommunityIcons name="camera-plus" size={40} color="#FFD700" />
+                <Text style={styles.placeholderText}>Select your dish photo</Text>
+              </View>
+            )}
           </TouchableOpacity>
-          <Text style={styles.header}>New Post</Text>
-          <View style={{ width: 24 }} />
-        </View>
 
-        <TouchableOpacity style={styles.imageBox} onPress={pickImage} activeOpacity={0.8}>
-          {image ? (
-            <Image source={{ uri: image.uri }} style={styles.previewImage} />
-          ) : (
-            <View style={styles.placeholderContainer}>
-              <MaterialCommunityIcons name="camera-plus" size={40} color="#FFD700" />
-              <Text style={styles.placeholderText}>Select your dish photo</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+          <View style={styles.inputSection}>
+            <Text style={styles.inputLabel}>Caption</Text>
+            <TextInput
+              style={styles.captionInput}
+              placeholder="What's the secret ingredient?..."
+              placeholderTextColor="#888"
+              value={caption}
+              onChangeText={setCaption}
+              multiline
+            />
+          </View>
 
-        <View style={styles.inputSection}>
-          <Text style={styles.inputLabel}>Caption</Text>
-          <TextInput
-            style={styles.captionInput}
-            placeholder="What's the secret ingredient?..."
-            placeholderTextColor="#888"
-            value={caption}
-            onChangeText={setCaption}
-            multiline
-          />
-        </View>
+          <TouchableOpacity
+            style={[styles.postButton, (loading || !image) && styles.disabledButton]}
+            onPress={handleUpload}
+            disabled={loading || !image}
+          >
+            {loading ? (
+              <ActivityIndicator color="#000" />
+            ) : (
+              <Text style={styles.postButtonText}>Post to Community</Text>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.postButton, (loading || !image) && styles.disabledButton]}
-          onPress={handleUpload}
-          disabled={loading || !image}
-        >
-          {loading ? (
-            <ActivityIndicator color="#000" />
-          ) : (
-            <Text style={styles.postButtonText}>Post to Community</Text>
-          )}
-        </TouchableOpacity>
+          <Text style={styles.footerText}>
+            Posting as: <Text style={{color: '#FFD700'}}>{auth.currentUser?.email || "Unknown"}</Text>
+          </Text>
+        </ScrollView>
 
-        <Text style={styles.footerText}>
-          Posting as: <Text style={{color: '#FFD700'}}>{auth.currentUser?.email || "Unknown"}</Text>
-        </Text>
-      </ScrollView>
+        {/* Full Screen Loading Overlay */}
+        {loading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="large" color="#FFD700" />
+            <Text style={styles.loadingText}>Uploading to Kitchen...</Text>
+          </View>
+        )}
+      </KeyboardAvoidingView>
 
-      {/* Full Screen Loading Overlay */}
-      {loading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="large" color="#FFD700" />
-          <Text style={styles.loadingText}>Uploading to Kitchen...</Text>
-        </View>
-      )}
-    </KeyboardAvoidingView>
+      {/* Custom Alert Modal */}
+      <CustomAlert
+        visible={alertVisible}
+        title={alertConfig.title}
+        message={alertConfig.message}
+        onConfirm={() => {
+          setAlertVisible(false);
+          alertConfig.onConfirm();
+        }}
+        onCancel={alertConfig.onCancel ? () => {
+          setAlertVisible(false);
+          if (alertConfig.onCancel) alertConfig.onCancel();
+        } : undefined}
+        confirmText={alertConfig.confirmText}
+        cancelText={alertConfig.cancelText}
+        type={alertConfig.type}
+      />
+    </>
   );
 };
 
@@ -294,6 +393,66 @@ const styles = StyleSheet.create({
     color: "#FFD700",
     marginTop: 15,
     fontWeight: "700",
+  },
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  alertContainer: {
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 24,
+    width: "80%",
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: "#FFD700",
+  },
+  alertTitle: {
+    fontSize: 20,
+    fontWeight: "bold",
+    color: "#FFD700",
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 16,
+    color: "#FFFFFF",
+    marginBottom: 24,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  alertButtons: {
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 12,
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  alertConfirmButton: {
+    backgroundColor: "#FFD700",
+  },
+  alertCancelButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FFD700",
+  },
+  alertConfirmText: {
+    color: "#000000",
+    fontWeight: "bold",
+    fontSize: 16,
+  },
+  alertCancelText: {
+    color: "#FFD700",
+    fontWeight: "bold",
+    fontSize: 16,
   },
 });
 

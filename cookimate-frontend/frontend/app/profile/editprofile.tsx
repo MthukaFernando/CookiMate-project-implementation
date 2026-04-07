@@ -8,7 +8,7 @@ import {
   StyleSheet,
   Image,
   ScrollView,
-  Alert,
+  Modal,
   ActivityIndicator,
   KeyboardAvoidingView, 
   Platform,             
@@ -46,6 +46,22 @@ const EditProfile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  const [alertConfig, setAlertConfig] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[];
+  }>({ visible: false, title: "", message: "", buttons: [] });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "OK" }],
+    icon?: string
+  ) => setAlertConfig({ visible: true, title, message, buttons, icon });
+
+  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
   useEffect(() => {
     const fetchUser = async () => {
       try {
@@ -73,9 +89,9 @@ const EditProfile = () => {
         bio,
         profilePic: selectedPic,
       });
-      Alert.alert("Success", "Profile updated!", [{ text: "OK", onPress: () => router.back() }]);
+      showAlert("Profile Updated!", "Your profile looks great.", [{ text: "OK", onPress: () => router.back() }], "checkmark-circle");
     } catch (err: any) {
-      Alert.alert("Error", err.response?.data?.message || "Update failed");
+      showAlert("Update Failed", err.response?.data?.message || "Update failed", [{ text: "Try Again" }], "alert-circle");
     } finally {
       setSaving(false);
     }
@@ -182,6 +198,51 @@ const EditProfile = () => {
           </View>
         </ScrollView>
       </TouchableWithoutFeedback>
+
+      {/* Custom Alert Modal */}
+      <Modal transparent visible={alertConfig.visible} animationType="fade" onRequestClose={hideAlert}>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            {alertConfig.icon && (
+              <View style={[
+                styles.alertIconWrapper,
+                { borderColor: alertConfig.icon === "checkmark-circle" ? "#D4AF37" : "#FF5252" }
+              ]}>
+                <Ionicons
+                  name={alertConfig.icon as any}
+                  size={32}
+                  color={alertConfig.icon === "checkmark-circle" ? "#D4AF37" : "#FF5252"}
+                />
+              </View>
+            )}
+            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
+            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
+            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
+              {alertConfig.buttons.map((btn, idx) => (
+                <TouchableOpacity
+                  key={idx}
+                  style={[
+                    styles.alertButton,
+                    btn.style === "destructive" ? styles.alertButtonDestructive
+                      : btn.style === "cancel" ? styles.alertButtonCancel
+                      : styles.alertButtonDefault,
+                  ]}
+                  onPress={() => { hideAlert(); btn.onPress?.(); }}
+                >
+                  <Text style={[
+                    styles.alertButtonText,
+                    btn.style === "destructive" ? styles.alertBtnTextDestructive
+                      : btn.style === "cancel" ? styles.alertBtnTextCancel
+                      : styles.alertBtnTextDefault,
+                  ]}>
+                    {btn.text}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 };
@@ -293,7 +354,81 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: 20
   },
-  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 }
+  saveBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
+
+  // Custom Alert styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.78)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  alertBox: {
+    backgroundColor: "#1b1b1b",
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#2A2A2A",
+  },
+  alertIconWrapper: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: "#121212",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    borderWidth: 1.5,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: "#ffb700",
+    marginBottom: 8,
+    textAlign: "center",
+    letterSpacing: 0.3,
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#AAAAAA",
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 24,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  alertButtonDefault: {
+    backgroundColor: "#ffb700",
+  },
+  alertButtonDestructive: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FF5252",
+  },
+  alertButtonCancel: {
+    backgroundColor: "#2A2A2A",
+    borderWidth: 1,
+    borderColor: "#333333",
+  },
+  alertButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  alertBtnTextDefault: { color: "#000000" },
+  alertBtnTextDestructive: { color: "#FF5252" },
+  alertBtnTextCancel: { color: "#AAAAAA" },
 });
 
 export default EditProfile;

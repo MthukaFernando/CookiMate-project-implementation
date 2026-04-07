@@ -11,7 +11,6 @@ import {
   NativeScrollEvent,
   SafeAreaView,
   ScrollView,
-  Alert,
   Platform,
   StatusBar
 } from "react-native";
@@ -50,7 +49,20 @@ const Page = () => {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedDate, setSelectedDate] = useState("");
   const [isAddingMeal, setIsAddingMeal] = useState(false);
-  
+
+  // Custom Alert State
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    onConfirm?: () => void;
+    isDestructive?: boolean;
+  }>({ visible: false, title: "", message: "" });
+
+  const showAlert = (title: string, message: string, onConfirm?: () => void, isDestructive?: boolean) => {
+    setCustomAlert({ visible: true, title, message, onConfirm, isDestructive });
+  };
+
   const [plannedRecipes, setPlannedRecipes] = useState<any[]>([]);
   
   const [carouselImages, setCarouselImages] = useState<any[]>([]);
@@ -187,7 +199,7 @@ const Page = () => {
           // Rollback on error
           setPlannedRecipes(previousRecipes);
           pendingAddsRef.current.delete(uniqueId);
-          Alert.alert("Error", "Could not save to your planner.");
+          showAlert("Error", "Could not save to your planner.");
         } finally {
           processingRecipeRef.current = false;
         }
@@ -260,46 +272,40 @@ const Page = () => {
   // OPTIMIZED DELETE: With batching and memory management
   const handleDeleteRecipe = (uniqueId: string) => {
     const uid = auth.currentUser?.uid;
-    Alert.alert(
+    showAlert(
       "Remove Recipe",
-      "Are you sure you want to delete this recipe from your planner :3?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            // OPTIMISTIC DELETE: Remove from UI immediately
-            setPlannedRecipes((prev) => {
-              const newRecipes = prev.filter((r) => r.uniqueId !== uniqueId);
-              // Clean up any references
-              return newRecipes;
-            });
-            
-            // Track pending delete
-            pendingDeletesRef.current.add(uniqueId);
+      "Are you sure you want to delete this recipe from your planner ?",
+      async () => {
+        // OPTIMISTIC DELETE: Remove from UI immediately
+        setPlannedRecipes((prev) => {
+          const newRecipes = prev.filter((r) => r.uniqueId !== uniqueId);
+          // Clean up any references
+          return newRecipes;
+        });
+        
+        // Track pending delete
+        pendingDeletesRef.current.add(uniqueId);
 
-            // Background API call with retry logic
-            const deleteWithRetry = async (retryCount = 0) => {
-              try {
-                await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
-                pendingDeletesRef.current.delete(uniqueId);
-              } catch (error) {
-                console.error("Error removing meal:", error);
-                if (retryCount < 3) {
-                  setTimeout(() => deleteWithRetry(retryCount + 1), 1000 * (retryCount + 1));
-                } else {
-                  pendingDeletesRef.current.delete(uniqueId);
-                  Alert.alert("Error", "Could not remove from database. Please refresh.");
-                  loadMealPlan(); // Force refresh on final failure
-                }
-              }
-            };
-            
-            deleteWithRetry();
-          },
-        },
-      ],
+        // Background API call with retry logic
+        const deleteWithRetry = async (retryCount = 0) => {
+          try {
+            await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
+            pendingDeletesRef.current.delete(uniqueId);
+          } catch (error) {
+            console.error("Error removing meal:", error);
+            if (retryCount < 3) {
+              setTimeout(() => deleteWithRetry(retryCount + 1), 1000 * (retryCount + 1));
+            } else {
+              pendingDeletesRef.current.delete(uniqueId);
+              showAlert("Error", "Could not remove from database. Please refresh.");
+              loadMealPlan(); // Force refresh on final failure
+            }
+          }
+        };
+        
+        deleteWithRetry();
+      },
+      true
     );
   };
 
@@ -482,6 +488,47 @@ const Page = () => {
         </TouchableOpacity>
       </Modal>
       <GlobalChatbot />
+
+      {/* Custom Alert Modal */}
+      <Modal
+        animationType="fade"
+        transparent={true}
+        visible={customAlert.visible}
+        onRequestClose={() => setCustomAlert({ ...customAlert, visible: false })}
+      >
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertBox}>
+            <View style={[styles.alertIconWrapper, { borderColor: customAlert.isDestructive ? "#FF4D4D" : "#ffc403" }]}>
+              <Ionicons
+                name={customAlert.isDestructive ? "trash-outline" : "alert-circle-outline"}
+                size={30}
+                color={customAlert.isDestructive ? "#FF4D4D" : "#ffc403"}
+              />
+            </View>
+            <Text style={styles.alertTitle}>{customAlert.title}</Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonContainer}>
+              <TouchableOpacity
+                style={[styles.alertButton, styles.cancelButton]}
+                onPress={() => setCustomAlert({ ...customAlert, visible: false })}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.alertButton, customAlert.isDestructive ? styles.destructiveButton : styles.confirmButton]}
+                onPress={() => {
+                  if (customAlert.onConfirm) customAlert.onConfirm();
+                  setCustomAlert({ ...customAlert, visible: false });
+                }}
+              >
+                <Text style={customAlert.isDestructive ? styles.destructiveButtonText : styles.confirmButtonText}>
+                  {customAlert.isDestructive ? "Remove" : "OK"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -690,6 +737,86 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   seasonalButtonText: { color: "#f2ece2", fontSize: 14, fontWeight: "bold" },
+  // Custom Alert Styles
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.75)",
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 30,
+  },
+  alertBox: {
+    width: "100%",
+    backgroundColor: "#1A1A1A",
+    borderRadius: 20,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: "#ffc40333",
+    alignItems: "center",
+  },
+  alertIconWrapper: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: "#0A0A0A",
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 14,
+    borderWidth: 1.5,
+  },
+  alertTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "white",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  alertMessage: {
+    fontSize: 14,
+    color: "#cccccc",
+    textAlign: "center",
+    marginBottom: 22,
+    lineHeight: 20,
+  },
+  alertButtonContainer: {
+    flexDirection: "row",
+    width: "100%",
+    gap: 10,
+  },
+  alertButton: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  cancelButton: {
+    backgroundColor: "#2A2A2A",
+    borderWidth: 1,
+    borderColor: "#333",
+  },
+  confirmButton: {
+    backgroundColor: "#ffc403",
+  },
+  destructiveButton: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+    borderColor: "#FF4D4D",
+  },
+  cancelButtonText: {
+    color: "#aaaaaa",
+    fontWeight: "600",
+    fontSize: 14,
+  },
+  confirmButtonText: {
+    color: "#000000",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
+  destructiveButtonText: {
+    color: "#FF4D4D",
+    fontWeight: "bold",
+    fontSize: 14,
+  },
 });
 
 export default Page;
