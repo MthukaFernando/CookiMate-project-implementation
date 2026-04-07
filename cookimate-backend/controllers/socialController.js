@@ -128,26 +128,30 @@ export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
   const limit = 10;
   const skip = (page - 1) * limit;
-  const { uid } = req.query; // ✅ current logged-in user's firebaseUid
+  const { uid } = req.query; // current logged-in user's firebaseUid
  
   try {
-    let blockedUids = [];
+    let blockedFirebaseUids = [];
  
     if (uid) {
       const currentUser = await User.findOne({ firebaseUid: uid });
-      if (currentUser && Array.isArray(currentUser.blockedUsers)) {
-        // ✅ blockedUsers is now a flat [String] array of firebaseUids
-        blockedUids = currentUser.blockedUsers;
+      if (currentUser && currentUser.blockedUsers && Array.isArray(currentUser.blockedUsers)) {
+        // Extract the firebaseUid from each blocked user object in the array
+        blockedFirebaseUids = currentUser.blockedUsers.map(blockedItem => blockedItem.firebaseUid);
       }
     }
- 
     
- 
-    const posts = await Post.find({
-      moderationStatus: { $ne: "rejected" },
-      // ✅ post.user is a firebaseUid string — $nin correctly excludes blocked ones
-      user: { $nin: blockedUids },
-    })
+    // Query posts - exclude those where the post.user is in the blockedFirebaseUids array
+    const query = {
+      moderationStatus: { $ne: "rejected" }
+    };
+    
+    // Only add the $nin condition if there are blocked users
+    if (blockedFirebaseUids.length > 0) {
+      query.user = { $nin: blockedFirebaseUids };
+    }
+    
+    const posts = await Post.find(query)
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -161,7 +165,7 @@ export const getFeed = async (req, res) => {
         path: "comments.user",
         model: "User",
         foreignField: "firebaseUid",
-        select: "username profilePic",
+        select: "username profilePic firebaseUid",
       });
  
     res.status(200).json(posts);
