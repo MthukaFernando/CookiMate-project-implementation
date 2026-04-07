@@ -83,8 +83,8 @@ export default function CommunityFeed() {
   // --- DELETED ACCOUNT MODAL ---
   const [deletedAccountModalVisible, setDeletedAccountModalVisible] = useState(false);
 
-  // --- NETWORK ERROR MODAL (tapping profile while offline) ---
-  const [networkProfileModalVisible, setNetworkProfileModalVisible] = useState(false);
+  // --- NETWORK ERROR MODAL ---
+  const [networkErrorVisible, setNetworkErrorVisible] = useState(false);
 
   // --- REPORT STATES ---
   const [reportModalVisible, setReportModalVisible] = useState(false);
@@ -102,10 +102,16 @@ export default function CommunityFeed() {
     try {
       const response = await axios.get(`${BASE_URL}/social/feed`, {
         params: { uid: currentUser?.uid },
+        timeout: 5000,
       });
       setPosts(response.data);
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      const isNetworkIssue = !error.response || error.code === 'ECONNABORTED' || error.message === 'Network Error' || error.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        console.log("Fetch feed error:", error.message);
+      }
     } finally {
       setRefreshing(false);
       setLoading(false);
@@ -115,7 +121,7 @@ export default function CommunityFeed() {
   const checkUserNotification = async () => {
     if (!currentUser) return;
     try {
-      const res = await axios.get(`${BASE_URL}/users/${currentUser.uid}`);
+      const res = await axios.get(`${BASE_URL}/users/${currentUser.uid}`, { timeout: 5000 });
       if (res.data.lastMessage) {
         showAlert(
           "Post Removed",
@@ -124,17 +130,21 @@ export default function CommunityFeed() {
             {
               text: "I Understand",
               onPress: async () => {
-                await axios.put(`${BASE_URL}/users/${currentUser.uid}/clear-notification`);
+                try {
+                  await axios.put(`${BASE_URL}/users/${currentUser.uid}/clear-notification`, {}, { timeout: 5000 });
+                } catch (e: any) {
+                  console.log("Clear notification error", e.message);
+                }
               },
             },
           ],
           "alert-circle-outline",
           theme.gold,
-          theme.gold, // border color
+          theme.gold,
         );
       }
-    } catch (err) {
-      console.log(err);
+    } catch (err: any) {
+      console.log("Check notification error:", err.message);
     }
   };
 
@@ -145,7 +155,7 @@ export default function CommunityFeed() {
         setReportedPostIds(new Set(JSON.parse(stored)));
       }
     } catch (err) {
-      console.error("Failed to load reported posts", err);
+      console.log("Failed to load reported posts", err);
     }
   };
 
@@ -172,15 +182,22 @@ export default function CommunityFeed() {
         targetId: reportingTargetId,
         targetType: "post",
         reason: reason,
-      });
+      }, { timeout: 5000 });
+
       const updatedSet = new Set(reportedPostIds);
       updatedSet.add(reportingTargetId);
       setReportedPostIds(updatedSet);
       await AsyncStorage.setItem(REPORTED_POSTS_KEY, JSON.stringify([...updatedSet]));
       setShowThankYou(true);
-    } catch (err) {
-      console.error(err);
-      showAlert("Error", "Could not submit report.", undefined, "close-circle-outline", theme.error, theme.error);
+    } catch (err: any) {
+      const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+        setReportModalVisible(false);
+      } else {
+        console.log("Report failed:", err.message);
+        showAlert("Error", "Could not submit report.", undefined, "close-circle-outline", theme.error, theme.error);
+      }
     }
   };
 
@@ -198,10 +215,18 @@ export default function CommunityFeed() {
     if (text.length > 1) {
       setIsSearching(true);
       try {
-        const res = await axios.get(`${BASE_URL}/users/search`, { params: { username: text } });
+        const res = await axios.get(`${BASE_URL}/users/search`, { 
+          params: { username: text },
+          timeout: 5000 
+        });
         setSearchResults(res.data);
-      } catch (err) {
-        console.log(err);
+      } catch (err: any) {
+        const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
+        if (isNetworkIssue) {
+          setNetworkErrorVisible(true);
+        } else {
+          console.log("Search error:", err.message);
+        }
       }
     } else {
       setIsSearching(false);
@@ -224,14 +249,19 @@ export default function CommunityFeed() {
       }),
     );
     try {
-      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid });
-    } catch (err) {
-      console.error("Like failed", err);
-      fetchFeed();
+      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid }, { timeout: 5000 });
+    } catch (err: any) {
+      const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else {
+        console.log("Like failed", err.message);
+      }
+      fetchFeed(); // Revert on fail
     }
   };
 
-const handleCommentSubmit = async (postId: string) => {
+  const handleCommentSubmit = async (postId: string) => {
     if (!commentText.trim() || !currentUser) return;
     
     setIsSubmitting(true);
@@ -240,17 +270,21 @@ const handleCommentSubmit = async (postId: string) => {
       const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
         userId: currentUser.uid,
         text: commentText,
-      });
+      }, { timeout: 5000 });
 
       setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
       setCommentText("");
       
     } catch (err: any) {
-      if (err.response && err.response.status === 400) {
+      const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
+      
+      if (isNetworkIssue) {
+        setNetworkErrorVisible(true);
+      } else if (err.response && err.response.status === 400) {
         showAlert("Moderation", err.response.data.message, undefined, "shield-outline", theme.gold, theme.gold);
       } else {
-        console.error("Comment failed:", err);
-        showAlert("Error", "Could not post comment. Please check your connection.", undefined, "wifi-outline", theme.error, theme.error);
+        console.log("Comment failed:", err.message);
+        showAlert("Error", "Could not post comment. Please try again later.", undefined, "close-circle-outline", theme.error, theme.error);
       }
     } finally {
       setIsSubmitting(false);
@@ -271,19 +305,27 @@ const handleCommentSubmit = async (postId: string) => {
             try {
               const res = await axios.delete(
                 `${BASE_URL}/social/${postId}/comment/${commentId}`,
-                { data: { userId: currentUser.uid } },
+                { 
+                  data: { userId: currentUser.uid },
+                  timeout: 5000
+                },
               );
               setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
-            } catch (err) {
-              console.error("Failed to delete comment", err);
-              showAlert("Error", "Could not delete comment.", undefined, "close-circle-outline", theme.error, theme.error);
+            } catch (err: any) {
+              const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
+              if (isNetworkIssue) {
+                setNetworkErrorVisible(true);
+              } else {
+                console.log("Failed to delete comment", err.message);
+                showAlert("Error", "Could not delete comment.", undefined, "close-circle-outline", theme.error, theme.error);
+              }
             }
           },
         },
       ],
       "trash-outline",
-      theme.error, // icon color
-      theme.error, // border color (red)
+      theme.error,
+      theme.error,
     );
   };
 
@@ -313,7 +355,6 @@ const handleCommentSubmit = async (postId: string) => {
                     setDeletedAccountModalVisible(true);
                     return;
                   }
-                  // Verify connectivity before navigating — avoids 404 on bad network
                   try {
                     await axios.get(`${BASE_URL}/users/${item.user.firebaseUid}`, { timeout: 5000 });
                     router.push(`/Community/${item.user.firebaseUid}`);
@@ -321,13 +362,14 @@ const handleCommentSubmit = async (postId: string) => {
                     const isNetworkIssue =
                       !err.response ||
                       err.code === "ECONNABORTED" ||
-                      err.message === "Network Error";
+                      err.message === "Network Error" ||
+                      err.message.includes("Network");
                     if (isNetworkIssue) {
-                      setNetworkProfileModalVisible(true);
+                      setNetworkErrorVisible(true);
                     } else if (err.response?.status === 404) {
                       setDeletedAccountModalVisible(true);
                     } else {
-                      setNetworkProfileModalVisible(true);
+                      setNetworkErrorVisible(true);
                     }
                   }
                 }}
@@ -532,21 +574,26 @@ const handleCommentSubmit = async (postId: string) => {
         contentContainerStyle={{ paddingBottom: 40 + insets.bottom }}
       />
 
-      {/* --- NETWORK ERROR MODAL (tapping profile while offline) --- */}
-      <Modal visible={networkProfileModalVisible} transparent animationType="fade" onRequestClose={() => setNetworkProfileModalVisible(false)}>
-        <View style={styles.modalOverlay}>
-          <View style={styles.reportCard}>
-            <View style={styles.thankYouArea}>
+      {/* --- NETWORK ERROR MODAL --- */}
+      <Modal 
+        visible={networkErrorVisible} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setNetworkErrorVisible(false)}
+      >
+        <View style={styles.networkModalOverlay}>
+          <View style={styles.networkErrorCard}>
+            <View style={styles.networkErrorContent}>
               <Ionicons name="cloud-offline-outline" size={60} color={theme.muted} style={{ marginBottom: 15 }} />
-              <Text style={[styles.thankYouTitle, { color: theme.muted }]}>No Connection</Text>
-              <Text style={styles.thankYouText}>
-                Couldn't load this profile. Check your internet connection and try again.
+              <Text style={styles.networkErrorTitle}>No Connection</Text>
+              <Text style={styles.networkErrorText}>
+                Couldn't complete the request. Please check your internet connection and try again.
               </Text>
-              <TouchableOpacity
-                style={[styles.modalBtn, { backgroundColor: theme.gold, marginTop: 10, width: "100%" }]}
-                onPress={() => setNetworkProfileModalVisible(false)}
+              <TouchableOpacity 
+                style={styles.modalCloseBtn} 
+                onPress={() => setNetworkErrorVisible(false)}
               >
-                <Text style={[styles.modalBtnText, { color: "#000", textAlign: "center" }]}>OK</Text>
+                <Text style={styles.modalCloseBtnText}>Got it</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -671,6 +718,7 @@ const handleCommentSubmit = async (postId: string) => {
           </View>
         </View>
       </Modal>
+
       {/* --- CUSTOM ALERT MODAL --- */}
       <Modal visible={customAlert.visible} transparent animationType="fade" onRequestClose={dismissAlert}>
         <View style={styles.modalOverlay}>
@@ -790,7 +838,6 @@ const styles = StyleSheet.create({
   },
   overlayTitle: { color: theme.gold, fontWeight: "bold", fontSize: 14 },
   overlayScroll: { flex: 1 },
-  // ✅ FIX: space-between + alignItems so trash icon aligns correctly
   commentLine: {
     flexDirection: "row", marginBottom: 12,
     alignItems: "flex-start", justifyContent: "space-between",
@@ -851,4 +898,53 @@ const styles = StyleSheet.create({
   thankYouArea: { alignItems: "center", paddingVertical: 10 },
   thankYouTitle: { color: theme.gold, fontSize: 20, fontWeight: "bold", marginBottom: 10 },
   thankYouText: { color: theme.text, fontSize: 14, textAlign: "center", lineHeight: 20, marginBottom: 20 },
+
+  // --- Network Error Modal Styles ---
+  networkModalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  networkErrorCard: {
+    backgroundColor: theme.card,
+    borderRadius: 24,
+    padding: 25,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  networkErrorContent: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  networkErrorTitle: {
+    color: theme.gold,
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  networkErrorText: {
+    color: theme.text,
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalCloseBtn: {
+    backgroundColor: theme.gold,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalCloseBtnText: {
+    color: "#000000",
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
