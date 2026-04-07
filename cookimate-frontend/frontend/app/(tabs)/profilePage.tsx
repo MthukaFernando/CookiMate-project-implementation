@@ -9,7 +9,7 @@ import {
   ScrollView,
   ActivityIndicator,
   SafeAreaView,
-  Modal, // Added Modal import
+  Modal,
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
@@ -61,73 +61,102 @@ const ProfilePage = () => {
     icon?: string;
     iconColor?: string;
     borderColor?: string;
-    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+    buttons?: {
+      text: string;
+      onPress?: () => void;
+      style?: "default" | "destructive" | "cancel";
+    }[];
   }>({ visible: false, title: "", message: "" });
 
   const showAlert = (
     title: string,
     message: string,
-    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    buttons?: {
+      text: string;
+      onPress?: () => void;
+      style?: "default" | "destructive" | "cancel";
+    }[],
     icon?: string,
     iconColor?: string,
     borderColor?: string,
   ) => {
-    setCustomAlert({ visible: true, title, message, buttons, icon, iconColor, borderColor });
+    setCustomAlert({
+      visible: true,
+      title,
+      message,
+      buttons,
+      icon,
+      iconColor,
+      borderColor,
+    });
   };
 
-  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+  const dismissAlert = () =>
+    setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const fetchData = async () => {
     try {
       setLoading(true);
-      // 1. Get the latest User data
-      const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
+
+      // 1. Get the latest User data with a 5-second timeout
+      const userResponse = await axios.get(`${API_URL}/api/users/${uid}`, {
+        timeout: 5000,
+      });
       const userData = userResponse.data;
       setUser(userData);
 
       const userCurrentLevel = userData.level || 1;
 
       if (userData && userData._id) {
-        // 2. Fetch Dashboard for the progress bar calculation
+        // 2. Fetch Dashboard
         try {
           const gamificationResponse = await axios.get(
             `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
+            { timeout: 5000 },
           );
           setGamification(gamificationResponse.data);
-        } catch (gamificationErr) {
+        } catch (gamificationErr: any) {
+          // Silent log for background tasks to avoid UI disruption
           console.log("No gamification data found for this user yet.");
         }
 
-        // 3. FETCH ALL LEVELS & CALCULATE ACHIEVEMENTS
+        // 3. FETCH ALL LEVELS & ACHIEVEMENTS
         try {
-          const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
-          const allLevels = levelsRes.data;
-          
-          // ACHIEVEMENTS LOGIC: 
-          // If user is Level 2, they finished Level 1.
-          // If user is Level 3, they finished Level 1 and 2.
-          const finished = allLevels.filter(
-            (lvl: any) => lvl.levelNumber < userCurrentLevel
+          const levelsRes = await axios.get(
+            `${API_URL}/api/gamification/levels`,
+            { timeout: 5000 },
           );
-          
+          const allLevels = levelsRes.data;
+
+          const finished = allLevels.filter(
+            (lvl: any) => lvl.levelNumber < userCurrentLevel,
+          );
+
           setCompletedLevels(finished);
-        } catch (levelErr) {
-          console.error("Error fetching levels for achievements", levelErr);
+        } catch (levelErr: any) {
+          console.log("Skipping levels fetch due to error:", levelErr.message);
         }
       }
     } catch (err: any) {
-      // --- NETWORK ERROR CHECK ---
-      if (err.message === "Network Error" || err.message.includes("Network")) {
+      // --- ROBUST NETWORK ERROR CHECK ---
+      const isNetworkIssue =
+        !err.response ||
+        err.code === "ECONNABORTED" ||
+        err.message === "Network Error" ||
+        err.message.includes("Network");
+
+      if (isNetworkIssue) {
         showAlert(
-          "Network Issue", 
-          "Could not load your profile. Please check your connection.", 
-          [{ text: "OK" }], 
-          "cloud-offline-outline", 
-          theme.muted, 
-          theme.border
+          "No Connection",
+          "Couldn't reach the server. Please check your internet connection and try again.",
+          [{ text: "Got it" }],
+          "cloud-offline-outline",
+          theme.muted,
+          theme.border,
         );
       } else {
-        console.error("Fetch error", err.message);
+        // Use console.log instead of console.error to prevent the RedBox error during development
+        console.log("Profile Fetch Error:", err.message);
       }
     } finally {
       setLoading(false);
@@ -148,6 +177,7 @@ const ProfilePage = () => {
     );
   }
 
+  // --- PROGRESS CALCULATION ---
   let progressPercent = 0;
   let currentLevelName = "Rookie Cook";
 
@@ -244,21 +274,19 @@ const ProfilePage = () => {
           </View>
         </View>
 
-        {/* 2. STATS SECTION (Cleaned up Nesting) */}
+        {/* 2. STATS SECTION */}
         <View style={styles.bottomSubContainer}>
           <Text style={styles.sectionTitle}>Cooking Journey</Text>
           <View style={styles.statsGrid}>
             <StatItem
               icon="coffee"
               label="Cooked"
-              // CHANGED: Use lifetime total from user model, not the capped dashboard stats
               value={user?.recipesCookedCount || 0}
               onPress={() => router.push("/profile/cookedHistory" as any)}
             />
             <StatItem
               icon="heart"
               label="Favs"
-              // CHANGED: Use lifetime total array length from user model
               value={user?.favorites?.length || 0}
               onPress={() => router.push("/profile/favoritesPage")}
             />
@@ -276,6 +304,7 @@ const ProfilePage = () => {
             />
           </View>
         </View>
+
         {/* 3. ACHIEVEMENTS */}
         <View style={styles.bottomSubContainer}>
           <Text style={styles.sectionTitle}>Achievements</Text>
@@ -303,7 +332,7 @@ const ProfilePage = () => {
           </ScrollView>
         </View>
       </ScrollView>
-      {/* 2. Added GlobalChatbot here at the root level */}
+
       <GlobalChatbot />
 
       {/* --- CUSTOM ALERT MODAL --- */}
@@ -444,21 +473,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: "#0A0A0A",
   },
-  scrollContent: { 
-    flexGrow: 1,          
-    paddingHorizontal: 25, 
-    paddingTop: 5,       
+  scrollContent: {
+    flexGrow: 1,
+    paddingHorizontal: 25,
+    paddingTop: 5,
     paddingBottom: 150,
-    backgroundColor: "#0A0A0A"
+    backgroundColor: "#0A0A0A",
   },
-  
+
   topSubContainer: {
     backgroundColor: "#000000",
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#ffffff',
-    shadowColor: '#000',
+    borderColor: "#ffffff",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 6,
@@ -479,7 +508,12 @@ const styles = StyleSheet.create({
   nameText: { fontSize: 22, fontWeight: "bold", color: "#FFFFFF" },
   usernameText: { fontSize: 14, color: "#A6A6A6", marginBottom: 6 },
   bioText: { fontSize: 13, color: "#d1cebe", marginBottom: 10, lineHeight: 18 },
-  bioPlaceholder: { fontSize: 12, color: "#555555", marginBottom: 10, fontStyle: "italic" },
+  bioPlaceholder: {
+    fontSize: 12,
+    color: "#555555",
+    marginBottom: 10,
+    fontStyle: "italic",
+  },
   actionRow: { flexDirection: "row", gap: 10 },
   editBtn: {
     backgroundColor: "#D4AF37",
@@ -497,7 +531,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   levelContainer: { marginTop: 20 },
-  levelLabelRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 5 },
+  levelLabelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 5,
+  },
   levelLabel: { fontWeight: "bold", color: "#FFFFFF" },
   pointsLabel: { fontSize: 12, color: "#A6A6A6" },
   progressBar: {
@@ -517,8 +555,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#D4AF37",
   },
-  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#FFFFFF", marginBottom: 15 },
-  statsGrid: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", gap: 10 },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#FFFFFF",
+    marginBottom: 15,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    gap: 10,
+  },
   statCard: {
     width: "48%",
     flexDirection: "row",
@@ -558,7 +606,12 @@ const styles = StyleSheet.create({
     overflow: "hidden",
   },
   badgeImage: { width: "75%", height: "75%" },
-  badgeTitle: { fontSize: 11, fontWeight: "600", color: "#FFFFFF", textAlign: "center" },
+  badgeTitle: {
+    fontSize: 11,
+    fontWeight: "600",
+    color: "#FFFFFF",
+    textAlign: "center",
+  },
 
   // --- CUSTOM ALERT STYLES ---
   modalOverlay: {
