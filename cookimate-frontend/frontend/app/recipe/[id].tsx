@@ -23,6 +23,18 @@ import Timer from "../details/timerPage";
 import RecipeChatbot from "../RecipeChat"; // Reusable chatbot component
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
+const theme = {
+  bg: "#0A0A0A",
+  card: "#1E1E1E",
+  gold: "#D4AF37",
+  accent: "#FFD54F",
+  text: "#FFFFFF",
+  muted: "#AAAAAA",
+  border: "#333333",
+  error: "#FF3B30",
+  overlay: "rgba(0,0,0,0.8)",
+};
+
 const extractAllTimings = (text: string): number[] => {
   if (!text) return [];
 
@@ -81,22 +93,28 @@ export default function RecipeDetails() {
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(0);
 
   // Custom Alert state
-  const [alertConfig, setAlertConfig] = useState<{
+  const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
     message: string;
     icon?: string;
-    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[];
-  }>({ visible: false, title: "", message: "", buttons: [] });
+    iconColor?: string;
+    borderColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+  }>({ visible: false, title: "", message: "" });
 
   const showAlert = (
     title: string,
     message: string,
-    buttons: { text: string; style?: "default" | "cancel" | "destructive"; onPress?: () => void }[] = [{ text: "OK" }],
-    icon?: string
-  ) => setAlertConfig({ visible: true, title, message, buttons, icon });
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+    borderColor?: string,
+  ) => {
+    setCustomAlert({ visible: true, title, message, buttons, icon, iconColor, borderColor });
+  };
 
-  const hideAlert = () => setAlertConfig((prev) => ({ ...prev, visible: false }));
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const handleStartCooking = () => {
     setCurrentStepIndex(0);
@@ -133,10 +151,14 @@ const handleCompleteRecipe = async () => {
       }
       setCookingMode(false);
       setCurrentStepIndex(0);
-    } catch (err) {
-      console.error("Failed to update cook count", err);
+    } catch (err: any) {
       setCookingMode(false);
-      showAlert("Done!", "Recipe finished, but we couldn't save to history.", [{ text: "OK" }], "alert-circle");
+      if (err.message === "Network Error" || err.message.includes("Network")) {
+        showAlert("Network Issue", "Please check your internet connection and try again.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+      } else {
+        console.error("Failed to update cook count", err);
+        showAlert("Done!", "Recipe finished, but we couldn't save to history.", [{ text: "OK" }], "alert-circle");
+      }
     }
   };
 
@@ -210,7 +232,9 @@ const handleCompleteRecipe = async () => {
           console.log("Gamification update failed, but favorite was saved.");
         }
       } catch (error: any) {
-        if (error.response?.status === 400) {
+        if (error.message === "Network Error" || error.message.includes("Network")) {
+          showAlert("Network Issue", "Please check your internet connection.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+        } else if (error.response?.status === 400) {
           setIsFavorite(true);
         } else {
           showAlert("Error", "Could not add to favourites.", [{ text: "OK" }], "alert-circle");
@@ -230,12 +254,12 @@ const handleCompleteRecipe = async () => {
           setError(""); // Clear any previous errors
         }
       } catch (err: any) {
-        console.error(
-          "Axios Error Fetching Details:",
-          err.response?.status,
-          err.message,
-        );
-        setError("Failed to load recipe details. Please try again.");
+        if (err.message === "Network Error" || err.message.includes("Network")) {
+          showAlert("Network Issue", "Please check your connection and try again.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+        } else {
+          console.error("Axios Error Fetching Details:", err.response?.status, err.message);
+          setError("Failed to load recipe details. Please try again.");
+        }
       } finally {
         setLoading(false);
       }
@@ -458,45 +482,87 @@ const handleCompleteRecipe = async () => {
       </Modal>
 
       {/* Custom Alert Modal */}
-      <Modal transparent visible={alertConfig.visible} animationType="fade" onRequestClose={hideAlert}>
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertBox}>
-            {alertConfig.icon && (
-              <View style={[
-                styles.alertIconWrapper,
-                { borderColor: alertConfig.icon === "trophy" ? "#D4AF37" : alertConfig.icon === "heart-dislike" ? "#FF5252" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252" }
-              ]}>
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal
+        visible={customAlert.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissAlert}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.reportCard,
+              { borderColor: customAlert.borderColor ?? theme.gold },
+            ]}
+          >
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
                 <Ionicons
-                  name={alertConfig.icon as any}
-                  size={30}
-                  color={alertConfig.icon === "trophy" ? "#D4AF37" : alertConfig.icon === "heart-dislike" ? "#FF5252" : alertConfig.icon === "lock-closed" ? "#FF8C00" : "#FF5252"}
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? theme.gold}
+                  style={{ marginBottom: 14 }}
                 />
+              )}
+              <Text
+                style={[
+                  styles.thankYouTitle,
+                  { color: customAlert.iconColor ?? theme.gold },
+                ]}
+              >
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginTop: 16,
+                  width: "100%",
+                }}
+              >
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtn,
+                        { flex: 1 },
+                        isDestructive && { backgroundColor: theme.error },
+                        isCancel && {
+                          backgroundColor: "#333",
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
+                        !isDestructive &&
+                          !isCancel && {
+                            backgroundColor:
+                              customAlert.iconColor ?? theme.gold,
+                          },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalBtnText,
+                          { textAlign: "center" },
+                          isCancel && { color: theme.muted },
+                          isDestructive && { color: "#FFF" },
+                          !isDestructive && !isCancel && { color: "#000" },
+                        ]}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
-            )}
-            <Text style={styles.alertTitle}>{alertConfig.title}</Text>
-            <Text style={styles.alertMessage}>{alertConfig.message}</Text>
-            <View style={[styles.alertButtonRow, alertConfig.buttons.length === 1 && { justifyContent: "center" }]}>
-              {alertConfig.buttons.map((btn, idx) => (
-                <TouchableOpacity
-                  key={idx}
-                  style={[
-                    styles.alertButton,
-                    btn.style === "destructive" ? styles.alertButtonDestructive
-                      : btn.style === "cancel" ? styles.alertButtonCancel
-                      : styles.alertButtonDefault,
-                  ]}
-                  onPress={() => { hideAlert(); btn.onPress?.(); }}
-                >
-                  <Text style={[
-                    styles.alertButtonText,
-                    btn.style === "destructive" ? styles.alertBtnTextDestructive
-                      : btn.style === "cancel" ? styles.alertBtnTextCancel
-                      : styles.alertBtnTextDefault,
-                  ]}>
-                    {btn.text}
-                  </Text>
-                </TouchableOpacity>
-              ))}
             </View>
           </View>
         </View>
@@ -694,63 +760,44 @@ const styles = StyleSheet.create({
   },
   modalTimerText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
   // Custom Alert styles
-  alertOverlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.8)",
+    backgroundColor: theme.overlay,
     justifyContent: "center",
     alignItems: "center",
-    paddingHorizontal: 30,
+    padding: 20,
   },
-  alertBox: {
-    backgroundColor: "#121212",
-    borderRadius: 20,
-    padding: 28,
+  reportCard: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    padding: 24,
     width: "100%",
-    alignItems: "center",
     borderWidth: 1,
-    borderColor: "#2A2A2A",
   },
-  alertIconWrapper: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "#0A0A0A",
-    justifyContent: "center",
+  thankYouArea: {
     alignItems: "center",
-    marginBottom: 16,
-    borderWidth: 1.5,
   },
-  alertTitle: {
-    fontSize: 18,
+  thankYouTitle: {
+    fontSize: 22,
     fontWeight: "bold",
-    color: "white",
-    marginBottom: 8,
+    marginBottom: 10,
     textAlign: "center",
-    letterSpacing: 0.3,
   },
-  alertMessage: {
-    fontSize: 14,
-    color: "#AAAAAA",
+  thankYouText: {
+    color: theme.muted,
+    fontSize: 15,
     textAlign: "center",
-    lineHeight: 20,
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 20,
   },
-  alertButtonRow: {
-    flexDirection: "row",
-    gap: 10,
-    width: "100%",
-  },
-  alertButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 12,
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
     alignItems: "center",
+    justifyContent: "center",
   },
-  alertButtonDefault: { backgroundColor: "#D4AF37" },
-  alertButtonDestructive: { backgroundColor: "transparent", borderWidth: 1, borderColor: "#FF5252" },
-  alertButtonCancel: { backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333333" },
-  alertButtonText: { fontSize: 14, fontWeight: "700" },
-  alertBtnTextDefault: { color: "#000000" },
-  alertBtnTextDestructive: { color: "#FF5252" },
-  alertBtnTextCancel: { color: "#AAAAAA" },
+  modalBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
