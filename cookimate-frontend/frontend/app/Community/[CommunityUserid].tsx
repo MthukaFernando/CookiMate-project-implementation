@@ -30,7 +30,9 @@ const COLUMN_COUNT = 3;
 const GAP = 5;
 const IMAGE_SIZE = (width - 40 - GAP * (COLUMN_COUNT - 1)) / COLUMN_COUNT;
 
-const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com/api`;
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const BASE_URL = `http://${address}:5000/api`;
 
 const COLORS = {
   background: "#050505",
@@ -58,7 +60,6 @@ interface Post {
   }[];
 }
 
-// FIX 1: Removed duplicate `stats` key — it was declared twice in the interface
 interface UserProfile {
   _id: string;
   name: string;
@@ -87,6 +88,7 @@ export default function CommunityUserProfile() {
   const [showModalComments, setShowModalComments] = useState(false);
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBlocking, setIsBlocking] = useState(false);
 
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [showThankYou, setShowThankYou] = useState(false);
@@ -114,7 +116,7 @@ export default function CommunityUserProfile() {
 
   const fetchProfile = async () => {
     try {
-      if (!CommunityUserid) return;
+      if (!CommunityUserid || !currentUser) return;
       setLoading(true);
       const response = await axios.get(
         `${BASE_URL}/users/community/${CommunityUserid}`,
@@ -123,6 +125,7 @@ export default function CommunityUserProfile() {
       setProfile(response.data);
       setIsFollowing(response.data.isFollowing);
       setIsBlocked(response.data.blockedByCurrentUser || false);
+      console.log("Blocked status from API:", response.data.blockedByCurrentUser);
     } catch (error) {
       console.error("Error fetching profile:", error);
     } finally {
@@ -156,12 +159,10 @@ export default function CommunityUserProfile() {
       );
     } catch (error) {
       console.error("Follow error:", error);
+      Alert.alert("Error", "Could not update follow status.");
     }
   };
 
-  // FIX 2: Added the missing closing `};` — handleBlockUser was nested inside
-  // handleLikeToggle because the catch block was never closed, making the
-  // block button completely non-functional
   const handleLikeToggle = async () => {
     if (!currentUser || !selectedPost) return;
     const postId = selectedPost.id || (selectedPost as any)._id;
@@ -190,35 +191,51 @@ export default function CommunityUserProfile() {
       console.error("Like error:", error);
       Alert.alert("Error", "Could not process like.");
     }
-  }; // ← was missing — everything below was accidentally inside handleLikeToggle
+  };
 
   const handleBlockUser = async () => {
-    if (!currentUser) return;
+    if (!currentUser || isBlocking) return;
+    
     Alert.alert(
       isBlocked ? "Unblock User" : "Block User",
       isBlocked
-        ? "Do you want to unblock this user?"
-        : "Are you sure you want to block this user?",
+        ? "Do you want to unblock this user? You will see their content again."
+        : "Are you sure you want to block this user? You won't see their posts or comments.",
       [
         { text: "Cancel", style: "cancel" },
         {
           text: isBlocked ? "Unblock" : "Block",
           style: "destructive",
           onPress: async () => {
+            setIsBlocking(true);
             try {
-              await axios.put(`${BASE_URL}/users/block`, {
+              const response = await axios.put(`${BASE_URL}/users/block`, {
                 currentUserUid: currentUser.uid,
                 targetUserUid: CommunityUserid,
               });
-              setIsBlocked((prev) => !prev);
+              
+              const newBlockedStatus = response.data.blocked;
+              setIsBlocked(newBlockedStatus);
+              
               Alert.alert(
-                isBlocked ? "Unblocked" : "Blocked",
-                `User has been ${isBlocked ? "unblocked" : "blocked"}.`,
+                newBlockedStatus ? "Blocked" : "Unblocked",
+                newBlockedStatus 
+                  ? "User has been blocked. Their content will no longer appear in your feed."
+                  : "User has been unblocked. You may need to refresh to see their content.",
               );
-              if (!isBlocked) router.replace("/Community/CommunityFeedCards");
+              
+              // Refresh the profile to get updated status
+              await fetchProfile();
+              
+              // If blocked, navigate back to feed
+              if (newBlockedStatus) {
+                router.replace("/Community/CommunityFeedCards");
+              }
             } catch (err) {
-              console.error(err);
-              Alert.alert("Error", "Could not update block status.");
+              console.error("Block/Unblock error:", err);
+              Alert.alert("Error", "Could not update block status. Please try again.");
+            } finally {
+              setIsBlocking(false);
             }
           },
         },
@@ -250,13 +267,12 @@ export default function CommunityUserProfile() {
       );
     } catch (err) {
       console.error(err);
+      Alert.alert("Error", "Could not post comment.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  // FIX 3: Removed git merge conflict markers (<<<<<<< HEAD / ======= / >>>>>>>)
-  // Kept the robust version that handles both p.id and p._id
   const handleDeletePost = (postId: string) => {
     Alert.alert(
       "Delete Post",
@@ -293,8 +309,6 @@ export default function CommunityUserProfile() {
     );
   };
 
-  // FIX 4: handleReportPress now opens the styled modal for already-reported
-  // instead of a plain native Alert, keeping UI consistent
   const handleReportPress = () => {
     if (isUserReported) {
       setShowAlreadyReported(true);
@@ -317,7 +331,6 @@ export default function CommunityUserProfile() {
         reason,
       });
       setIsUserReported(true);
-      // Persist so the flag stays red after navigating away and back
       try {
         const raw = await AsyncStorage.getItem(getStorageKey(currentUser.uid));
         const existing: string[] = raw ? JSON.parse(raw) : [];
@@ -360,23 +373,15 @@ export default function CommunityUserProfile() {
 
   if (!profile) return null;
 
-  // FIX 5: Rebuilt ProfileHeader from scratch —
-  //   • Removed erroneous topActionRow wrapper that was never closed
-  //   • Closed the flag TouchableOpacity properly
-  //   • Grouped flag + block into a single right-side View
-  //   • Fixed all mismatched </View> counts
   const ProfileHeader = () => (
     <View style={styles.header}>
       <View style={styles.topRow}>
-        {/* Back button — left side */}
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Ionicons name="chevron-back" size={24} color={COLORS.textLight} />
         </TouchableOpacity>
 
-        {/* Flag + Block — right side, only shown for other users */}
         {currentUser?.uid !== CommunityUserid && (
           <View style={styles.topRightActions}>
-            {/* Report flag */}
             <TouchableOpacity onPress={handleReportPress} style={styles.reportBtn}>
               <Ionicons
                 name={isUserReported ? "flag" : "flag-outline"}
@@ -385,30 +390,35 @@ export default function CommunityUserProfile() {
               />
             </TouchableOpacity>
 
-            {/* Block / Unblock pill */}
             <TouchableOpacity
               style={[styles.blockCornerBtn, isBlocked && styles.blockCornerBtnActive]}
               onPress={handleBlockUser}
+              disabled={isBlocking}
             >
-              <Ionicons
-                name={isBlocked ? "ban" : "ban-outline"}
-                size={18}
-                color={isBlocked ? COLORS.textMuted : COLORS.accentRed}
-              />
-              <Text
-                style={[
-                  styles.blockCornerText,
-                  isBlocked && { color: COLORS.textMuted },
-                ]}
-              >
-                {isBlocked ? "Unblock" : "Block"}
-              </Text>
+              {isBlocking ? (
+                <ActivityIndicator size="small" color={COLORS.accentRed} />
+              ) : (
+                <>
+                  <Ionicons
+                    name={isBlocked ? "ban" : "ban-outline"}
+                    size={18}
+                    color={isBlocked ? COLORS.textMuted : COLORS.accentRed}
+                  />
+                  <Text
+                    style={[
+                      styles.blockCornerText,
+                      isBlocked && { color: COLORS.textMuted },
+                    ]}
+                  >
+                    {isBlocked ? "Unblock" : "Block"}
+                  </Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         )}
       </View>
 
-      {/* Profile card */}
       <View style={styles.profileCard}>
         <Image
           source={{
@@ -475,13 +485,10 @@ export default function CommunityUserProfile() {
         )}
       />
 
-      {/* ── REPORT USER MODAL ── */}
       <Modal visible={reportModalVisible} transparent animationType="fade">
         <View style={styles.reportOverlay}>
           <View style={styles.reportCard}>
-
             {showAlreadyReported ? (
-              /* Screen 1: user tapped the flag again after already reporting */
               <View style={styles.thankYouArea}>
                 <Ionicons
                   name="flag"
@@ -512,9 +519,7 @@ export default function CommunityUserProfile() {
                   </Text>
                 </TouchableOpacity>
               </View>
-
             ) : showThankYou ? (
-              /* Screen 2: report just submitted successfully */
               <View style={styles.thankYouArea}>
                 <Ionicons name="checkmark-circle" size={60} color={COLORS.primaryGold} />
                 <Text style={styles.thankYouTitle}>User Reported</Text>
@@ -539,9 +544,7 @@ export default function CommunityUserProfile() {
                   </Text>
                 </TouchableOpacity>
               </View>
-
             ) : (
-              /* Screen 3: reason selection */
               <View>
                 <View style={styles.modalHeaderReport}>
                   <Text style={styles.reportModalTitle}>Report User</Text>
@@ -561,14 +564,10 @@ export default function CommunityUserProfile() {
                 ))}
               </View>
             )}
-
           </View>
         </View>
       </Modal>
 
-      {/* ── POST DETAIL MODAL ── */}
-      {/* FIX 6: Removed the duplicate modal header that was copy-pasted at line ~639
-          (second <Image>, <Text>, <View> block that left tags unclosed) */}
       <Modal visible={!!selectedPost} transparent animationType="fade">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -576,8 +575,6 @@ export default function CommunityUserProfile() {
         >
           <Pressable style={StyleSheet.absoluteFill} onPress={closeModal} />
           <View style={styles.modalCard}>
-
-            {/* Single, correct modal header */}
             <View style={styles.modalHeader}>
               <Image
                 source={{
@@ -709,7 +706,6 @@ export default function CommunityUserProfile() {
                 )}
               </View>
             )}
-
           </View>
         </KeyboardAvoidingView>
       </Modal>
@@ -720,21 +716,17 @@ export default function CommunityUserProfile() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
   header: { marginBottom: 20 },
-
-  // Top row: back btn on left, flag + block group on right
   topRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginTop: 10,
   },
-  // FIX 7: Added topRightActions to group flag + block — removed unused topActionRow
   topRightActions: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-
   backBtn: {
     width: 40,
     height: 40,
@@ -770,7 +762,6 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     fontSize: 13,
   },
-
   profileCard: {
     backgroundColor: COLORS.surface,
     borderRadius: 30,
@@ -823,7 +814,6 @@ const styles = StyleSheet.create({
   },
   followingBtnText: { color: "green", fontWeight: "bold" },
   followBtnText: { color: COLORS.background, fontWeight: "bold" },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.9)",
