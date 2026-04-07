@@ -28,7 +28,10 @@ import { globalStyle } from '../globalStyleSheet.style';
 import GlobalChatbot from "../GlobalChatbot"; 
 
 const { width } = Dimensions.get("window");
-const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com/api`;
+
+const debuggerHost = Constants.expoConfig?.hostUri;
+const address = debuggerHost ? debuggerHost.split(":")[0] : "localhost";
+const BASE_URL = `http://${address}:5000/api`;
 
 const theme = {
   bg: "#0A0A0A",
