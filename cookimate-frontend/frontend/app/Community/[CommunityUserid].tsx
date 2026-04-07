@@ -12,7 +12,6 @@ import {
   ListRenderItemInfo,
   ActivityIndicator,
   ScrollView,
-  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -94,6 +93,26 @@ export default function CommunityUserProfile() {
   const [isUserReported, setIsUserReported] = useState(false);
 
   const currentUser = auth.currentUser;
+
+  // --- CUSTOM ALERT ---
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    iconColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+  }>({ visible: false, title: "", message: "" });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+  ) => setCustomAlert({ visible: true, title, message, buttons, icon, iconColor });
+
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   // Load persisted report status from AsyncStorage on mount
   useEffect(() => {
@@ -188,13 +207,13 @@ export default function CommunityUserProfile() {
       );
     } catch (error) {
       console.error("Like error:", error);
-      Alert.alert("Error", "Could not process like.");
+      showAlert("Error", "Could not process like.", undefined, "heart-dislike-outline", COLORS.accentRed);
     }
   }; // ← was missing — everything below was accidentally inside handleLikeToggle
 
   const handleBlockUser = async () => {
     if (!currentUser) return;
-    Alert.alert(
+    showAlert(
       isBlocked ? "Unblock User" : "Block User",
       isBlocked
         ? "Do you want to unblock this user?"
@@ -211,18 +230,23 @@ export default function CommunityUserProfile() {
                 targetUserUid: CommunityUserid,
               });
               setIsBlocked((prev) => !prev);
-              Alert.alert(
+              showAlert(
                 isBlocked ? "Unblocked" : "Blocked",
                 `User has been ${isBlocked ? "unblocked" : "blocked"}.`,
+                undefined,
+                isBlocked ? "ban-outline" : "ban",
+                isBlocked ? COLORS.textMuted : COLORS.accentRed,
               );
               if (!isBlocked) router.replace("/Community/CommunityFeedCards");
             } catch (err) {
               console.error(err);
-              Alert.alert("Error", "Could not update block status.");
+              showAlert("Error", "Could not update block status.", undefined, "close-circle-outline", COLORS.accentRed);
             }
           },
         },
       ],
+      isBlocked ? "ban-outline" : "ban",
+      isBlocked ? COLORS.textMuted : COLORS.accentRed,
     );
   };
 
@@ -258,7 +282,7 @@ export default function CommunityUserProfile() {
   // FIX 3: Removed git merge conflict markers (<<<<<<< HEAD / ======= / >>>>>>>)
   // Kept the robust version that handles both p.id and p._id
   const handleDeletePost = (postId: string) => {
-    Alert.alert(
+    showAlert(
       "Delete Post",
       "Are you sure you want to remove this post forever?",
       [
@@ -285,11 +309,13 @@ export default function CommunityUserProfile() {
               closeModal();
             } catch (error) {
               console.error("Error deleting post:", error);
-              Alert.alert("Error", "Could not delete post.");
+              showAlert("Error", "Could not delete post.", undefined, "close-circle-outline", COLORS.accentRed);
             }
           },
         },
       ],
+      "trash-outline",
+      COLORS.accentRed,
     );
   };
 
@@ -334,7 +360,7 @@ export default function CommunityUserProfile() {
       setShowThankYou(true);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Could not submit report.");
+      showAlert("Error", "Could not submit report.", undefined, "close-circle-outline", COLORS.accentRed);
     }
   };
 
@@ -713,6 +739,59 @@ export default function CommunityUserProfile() {
           </View>
         </KeyboardAvoidingView>
       </Modal>
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal visible={customAlert.visible} transparent animationType="fade" onRequestClose={dismissAlert}>
+        <View style={styles.reportOverlay}>
+          <View style={styles.reportCard}>
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
+                <Ionicons
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? COLORS.primaryGold}
+                  style={{ marginBottom: 12 }}
+                />
+              )}
+              <Text style={[styles.thankYouTitle, { color: customAlert.iconColor ?? COLORS.primaryGold }]}>
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View style={{ flexDirection: "row", gap: 10, width: "100%" }}>
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtnAction,
+                        { flex: 1, paddingVertical: 14, borderRadius: 12 },
+                        isDestructive && { backgroundColor: COLORS.accentRed },
+                        isCancel && { backgroundColor: COLORS.surfaceLight, borderWidth: 1, borderColor: COLORS.border },
+                        !isDestructive && !isCancel && { backgroundColor: customAlert.iconColor ?? COLORS.primaryGold },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={{
+                          textAlign: "center",
+                          fontWeight: "bold",
+                          color: isCancel ? COLORS.textMuted : isDestructive ? "#FFF" : COLORS.background,
+                        }}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -920,7 +999,7 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     padding: 20,
     borderWidth: 1,
-    borderColor: COLORS.border,
+    borderColor: COLORS.accentRed,
   },
   modalHeaderReport: {
     flexDirection: "row",

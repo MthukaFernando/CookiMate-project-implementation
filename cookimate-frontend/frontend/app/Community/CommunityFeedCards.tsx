@@ -14,7 +14,6 @@ import {
   Platform,
   ActivityIndicator,
   StatusBar,
-  Alert,
   Modal,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -57,6 +56,30 @@ export default function CommunityFeed() {
   const [commentText, setCommentText] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // --- CUSTOM ALERT ---
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    iconColor?: string;
+    borderColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+  }>({ visible: false, title: "", message: "" });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+    borderColor?: string,
+  ) => {
+    setCustomAlert({ visible: true, title, message, buttons, icon, iconColor, borderColor });
+  };
+
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+
   // --- DELETED ACCOUNT MODAL ---
   const [deletedAccountModalVisible, setDeletedAccountModalVisible] = useState(false);
 
@@ -91,14 +114,21 @@ export default function CommunityFeed() {
     try {
       const res = await axios.get(`${BASE_URL}/users/${currentUser.uid}`);
       if (res.data.lastMessage) {
-        Alert.alert("Post Removed", res.data.lastMessage, [
-          {
-            text: "I Understand",
-            onPress: async () => {
-              await axios.put(`${BASE_URL}/users/${currentUser.uid}/clear-notification`);
+        showAlert(
+          "Post Removed",
+          res.data.lastMessage,
+          [
+            {
+              text: "I Understand",
+              onPress: async () => {
+                await axios.put(`${BASE_URL}/users/${currentUser.uid}/clear-notification`);
+              },
             },
-          },
-        ]);
+          ],
+          "alert-circle-outline",
+          theme.gold,
+          theme.gold, // border color
+        );
       }
     } catch (err) {
       console.log(err);
@@ -147,7 +177,7 @@ export default function CommunityFeed() {
       setShowThankYou(true);
     } catch (err) {
       console.error(err);
-      Alert.alert("Error", "Could not submit report.");
+      showAlert("Error", "Could not submit report.", undefined, "close-circle-outline", theme.error, theme.error);
     }
   };
 
@@ -214,10 +244,10 @@ const handleCommentSubmit = async (postId: string) => {
       
     } catch (err: any) {
       if (err.response && err.response.status === 400) {
-        Alert.alert("Moderation", err.response.data.message);
+        showAlert("Moderation", err.response.data.message, undefined, "shield-outline", theme.gold, theme.gold);
       } else {
         console.error("Comment failed:", err);
-        Alert.alert("Error", "Could not post comment. Please check your connection.");
+        showAlert("Error", "Could not post comment. Please check your connection.", undefined, "wifi-outline", theme.error, theme.error);
       }
     } finally {
       setIsSubmitting(false);
@@ -226,7 +256,7 @@ const handleCommentSubmit = async (postId: string) => {
 
   const handleDeleteComment = async (postId: string, commentId: string) => {
     if (!currentUser) return;
-    Alert.alert(
+    showAlert(
       "Delete Comment",
       "Are you sure you want to delete this comment?",
       [
@@ -243,11 +273,14 @@ const handleCommentSubmit = async (postId: string) => {
               setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
             } catch (err) {
               console.error("Failed to delete comment", err);
-              Alert.alert("Error", "Could not delete comment.");
+              showAlert("Error", "Could not delete comment.", undefined, "close-circle-outline", theme.error, theme.error);
             }
           },
         },
       ],
+      "trash-outline",
+      theme.error, // icon color
+      theme.error, // border color (red)
     );
   };
 
@@ -585,7 +618,7 @@ const handleCommentSubmit = async (postId: string) => {
                         style={[styles.modalBtn, { backgroundColor: theme.gold }]}
                         onPress={() => {
                           if (otherReason.trim()) submitReport(`Other: ${otherReason}`);
-                          else Alert.alert("Input Required", "Please provide a reason.");
+                          else showAlert("Input Required", "Please provide a reason.", undefined, "create-outline", theme.gold, theme.gold);
                         }}
                       >
                         <Text style={[styles.modalBtnText, { color: "#000" }]}>Submit</Text>
@@ -598,6 +631,62 @@ const handleCommentSubmit = async (postId: string) => {
           </View>
         </View>
       </Modal>
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal visible={customAlert.visible} transparent animationType="fade" onRequestClose={dismissAlert}>
+        <View style={styles.modalOverlay}>
+          <View style={[styles.reportCard, { borderColor: customAlert.borderColor ?? theme.gold }]}>
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
+                <Ionicons
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? theme.gold}
+                  style={{ marginBottom: 14 }}
+                />
+              )}
+              <Text style={[styles.thankYouTitle, { color: customAlert.iconColor ?? theme.gold }]}>
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View style={{ flexDirection: "row", gap: 10, marginTop: 16, width: "100%" }}>
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtn,
+                        { flex: 1 },
+                        isDestructive && { backgroundColor: theme.error },
+                        isCancel && { backgroundColor: "#333", borderWidth: 1, borderColor: theme.border },
+                        !isDestructive && !isCancel && { backgroundColor: customAlert.iconColor ?? theme.gold },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalBtnText,
+                          { textAlign: "center" },
+                          isCancel && { color: theme.muted },
+                          isDestructive && { color: "#FFF" },
+                          !isDestructive && !isCancel && { color: "#000" },
+                        ]}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <GlobalChatbot />   
     </KeyboardAvoidingView>
   );
@@ -639,7 +728,7 @@ const styles = StyleSheet.create({
     padding: 15, borderWidth: 1, borderColor: theme.border,
   },
   headerArea: { marginBottom: 12 },
-  // ✅ FIX: named style so flag button sits at far right
+
   postHeaderRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
   userRow: { flexDirection: "row", alignItems: "center" },
   avatar: { width: 38, height: 38, borderRadius: 19, marginRight: 12, borderWidth: 1.5, borderColor: theme.gold },
@@ -668,7 +757,7 @@ const styles = StyleSheet.create({
   },
   cUser: { color: theme.gold, fontWeight: "bold", fontSize: 13 },
   cText: { color: "#EEE", fontSize: 14, lineHeight: 20 },
-  // ✅ FIX: was missing from the merged file
+
   deleteBtn: { padding: 4, marginLeft: 8 },
   noCommentsText: { color: theme.muted, fontSize: 13, fontStyle: "italic", textAlign: "center", marginTop: 40 },
 

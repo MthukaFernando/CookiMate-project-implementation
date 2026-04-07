@@ -9,7 +9,7 @@ import {
   Dimensions,
   ActivityIndicator,
   TextInput,
-  Alert,
+  Modal,
 } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -40,6 +40,26 @@ const CookedHistoryPage = () => {
   const [recipes, setRecipes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+
+  // --- CUSTOM ALERT ---
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    iconColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+  }>({ visible: false, title: "", message: "" });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+  ) => setCustomAlert({ visible: true, title, message, buttons, icon, iconColor });
+
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const fetchCookedHistory = async () => {
     setLoading(true);
@@ -72,7 +92,7 @@ const CookedHistoryPage = () => {
 
   // DELETE FUNCTION
   const handleDelete = (recipeId: string) => {
-    Alert.alert(
+    showAlert(
       "Remove Recipe",
       "Are you sure you want to remove this from your cooking history?",
       [
@@ -89,11 +109,13 @@ const CookedHistoryPage = () => {
               // Update local state immediately
               setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
             } catch (error) {
-              Alert.alert("Error", "Could not delete recipe.");
+              showAlert("Error", "Could not delete recipe.", undefined, "close-circle-outline", "#FF4444");
             }
           },
         },
       ],
+      "trash-outline",
+      "#FF4444",
     );
   };
 
@@ -219,6 +241,57 @@ const CookedHistoryPage = () => {
           ]}
         />
       )}
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal visible={customAlert.visible} transparent animationType="fade" onRequestClose={dismissAlert}>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            {customAlert.icon && (
+              <Ionicons
+                name={customAlert.icon as any}
+                size={52}
+                color={customAlert.iconColor ?? "#D4AF37"}
+                style={{ marginBottom: 12 }}
+              />
+            )}
+            <Text style={[styles.alertTitle, { color: customAlert.iconColor ?? "#D4AF37" }]}>
+              {customAlert.title}
+            </Text>
+            <Text style={styles.alertMessage}>{customAlert.message}</Text>
+            <View style={styles.alertButtonRow}>
+              {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                const isDestructive = btn.style === "destructive";
+                const isCancel = btn.style === "cancel";
+                return (
+                  <TouchableOpacity
+                    key={i}
+                    style={[
+                      styles.alertBtn,
+                      isDestructive && { backgroundColor: "#FF4444" },
+                      isCancel && { backgroundColor: "#1A1A1A", borderWidth: 1, borderColor: "#333" },
+                      !isDestructive && !isCancel && { backgroundColor: customAlert.iconColor ?? "#D4AF37" },
+                    ]}
+                    onPress={() => {
+                      dismissAlert();
+                      btn.onPress?.();
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.alertBtnText,
+                        isCancel && { color: "#888" },
+                        isDestructive && { color: "#FFF" },
+                        !isDestructive && !isCancel && { color: "#000" },
+                      ]}
+                    >
+                      {btn.text}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -371,6 +444,50 @@ const styles = StyleSheet.create({
     borderRadius: 25,
   },
   exploreText: { fontWeight: "bold", color: "#000" },
+
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.85)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  alertCard: {
+    width: "85%",
+    backgroundColor: "#161616",
+    borderRadius: 24,
+    padding: 24,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#282828",
+  },
+  alertTitle: {
+    fontSize: 19,
+    fontWeight: "bold",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  alertMessage: {
+    color: "#AAAAAA",
+    fontSize: 14,
+    textAlign: "center",
+    lineHeight: 20,
+    marginBottom: 22,
+  },
+  alertButtonRow: {
+    flexDirection: "row",
+    gap: 10,
+    width: "100%",
+  },
+  alertBtn: {
+    flex: 1,
+    paddingVertical: 13,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  alertBtnText: {
+    fontWeight: "bold",
+    fontSize: 14,
+  },
 });
 
 export default CookedHistoryPage;
