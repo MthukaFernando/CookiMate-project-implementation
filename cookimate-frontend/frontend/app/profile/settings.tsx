@@ -11,6 +11,8 @@ import {
   FlatList,
   ActivityIndicator,
   Switch,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -529,69 +531,89 @@ const CustomPrefModal = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={styles.modalOverlay}>
+      <KeyboardAvoidingView
+        style={styles.modalOverlay}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+      >
         <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Custom Preferences</Text>
-            <TouchableOpacity onPress={onClose}>
-              <Feather name="x" size={24} color="#A6A6A6" />
-            </TouchableOpacity>
-          </View>
-          
-          <Text style={styles.modalSubtitle}>
-            Your custom preferences:
-          </Text>
-          
-          {/* List of custom preferences */}
-          <FlatList
-            data={customPreferences}
-            keyExtractor={(item, index) => `${item}-${index}`}
-            style={styles.customPrefList}
-            renderItem={({ item }) => (
-              <View style={styles.customPrefItem}>
-                <View style={styles.customPrefItemContent}>
-                  <View style={[styles.optionIcon, { backgroundColor: "rgba(212,175,55,0.15)", width: 36, height: 36 }]}>
-                    <Feather name="edit" size={18} color="#D4AF37" />
-                  </View>
-                  <Text style={styles.customPrefText}>{item}</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.removeButton}
-                  onPress={() => onRemove(item)}
-                >
-                  <Feather name="trash-2" size={20} color="#FF4444" />
-                </TouchableOpacity>
-              </View>
-            )}
-            ListEmptyComponent={
-              <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>No custom preferences added yet</Text>
-              </View>
-            }
-          />
-          
-          {/* Add new preference section */}
-          <View style={styles.addSection}>
-            <Text style={styles.modalSubtitle}>Add new preference:</Text>
-            <View style={styles.addRow}>
-              <TextInput
-                style={styles.customInputInline}
-                placeholder="e.g., No mushrooms, Low sodium, etc."
-                placeholderTextColor="#A6A6A6"
-                value={newPreference}
-                onChangeText={setNewPreference}
-              />
-              <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
-                <Feather name="plus" size={24} color="#0A0A0A" />
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 20 }}
+            keyboardShouldPersistTaps="handled"
+          >
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Custom Preferences</Text>
+              <TouchableOpacity onPress={onClose}>
+                <Feather name="x" size={24} color="#A6A6A6" />
               </TouchableOpacity>
             </View>
-          </View>
-          
-          <TouchableOpacity style={styles.saveButton} onPress={onClose}>
-            <Text style={styles.saveButtonText}>Done</Text>
-          </TouchableOpacity>
+
+            {/* Add new preference section */}
+            <View style={styles.addSectionTop}>
+              <Text style={styles.modalSubtitle}>Add new preference:</Text>
+              <View style={styles.addRow}>
+                <TextInput
+                  style={styles.customInputInline}
+                  placeholder="e.g., No mushrooms, Low sodium, etc."
+                  placeholderTextColor="#A6A6A6"
+                  value={newPreference}
+                  onChangeText={setNewPreference}
+                  returnKeyType="done"
+                  onSubmitEditing={handleAdd}
+                />
+                <TouchableOpacity style={styles.addButton} onPress={handleAdd}>
+                  <Feather name="plus" size={24} color="#0A0A0A" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <Text style={[styles.modalSubtitle, { marginTop: 20 }]}>
+              Your custom preferences:
+            </Text>
+
+            {/* List of custom preferences */}
+            {customPreferences.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>
+                  No custom preferences added yet
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.customPrefList}>
+                {customPreferences.map((item, index) => (
+                  <View key={`${item}-${index}`} style={styles.customPrefItem}>
+                    <View style={styles.customPrefItemContent}>
+                      <View
+                        style={[
+                          styles.optionIcon,
+                          {
+                            backgroundColor: "rgba(212,175,55,0.15)",
+                            width: 36,
+                            height: 36,
+                          },
+                        ]}
+                      >
+                        <Feather name="edit" size={18} color="#D4AF37" />
+                      </View>
+                      <Text style={styles.customPrefText}>{item}</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={styles.removeButton}
+                      onPress={() => onRemove(item)}
+                    >
+                      <Feather name="trash-2" size={20} color="#FF4444" />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+              </View>
+            )}
+
+            <TouchableOpacity style={styles.saveButton} onPress={onClose}>
+              <Text style={styles.saveButtonText}>Done</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 };
@@ -1595,7 +1617,6 @@ const styles = StyleSheet.create({
     textAlignVertical: "top",
   },
   customPrefList: {
-    maxHeight: 400,
     marginBottom: 20,
   },
   customPrefItem: {
@@ -1625,6 +1646,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: "rgba(255,68,68,0.15)",
   },
+  
   emptyContainer: {
     padding: 40,
     alignItems: "center",
@@ -1639,6 +1661,9 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: "#2A2A2A",
     paddingTop: 15,
+  },
+  addSectionTop: {
+    marginBottom: 10,
   },
   addRow: {
     flexDirection: "row",
