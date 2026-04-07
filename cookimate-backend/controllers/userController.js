@@ -293,6 +293,7 @@ export const deleteFromHistory = async (req, res) => {
 };
 
 // Get Community Profile
+// Get Community Profile
 export const getCommunityProfile = async (req, res) => {
   try {
     const { uid } = req.params; 
@@ -302,9 +303,25 @@ export const getCommunityProfile = async (req, res) => {
 
     let viewer = null;
     let blockedByCurrentUser = false;
+    
     if (viewerId) {
       viewer = await User.findOne({ firebaseUid: viewerId });
-      blockedByCurrentUser = viewer?.blockedUsers?.includes(uid) || false;
+      
+      // Fix: Check if the target user's Firebase UID exists in blockedUsers array
+      if (viewer && viewer.blockedUsers && Array.isArray(viewer.blockedUsers)) {
+        // Check if the target user's UID is in the blocked list
+        blockedByCurrentUser = viewer.blockedUsers.some(blocked => {
+          // If blocked is an object with firebaseUid (new format)
+          if (typeof blocked === 'object' && blocked.firebaseUid) {
+            return blocked.firebaseUid === uid;
+          }
+          // If blocked is a string (old format)
+          if (typeof blocked === 'string') {
+            return blocked === uid;
+          }
+          return false;
+        });
+      }
     }
 
     const userPosts = await Post.find({ user: uid })
@@ -318,7 +335,7 @@ export const getCommunityProfile = async (req, res) => {
       profilePic: user.profilePic,
       bio: user.bio,
       isFollowing: viewer?.following?.includes(user._id) || false,
-      blockedByCurrentUser,
+      blockedByCurrentUser, // This will now correctly return true/false
       stats: {
         recipes: user.recipesCookedCount || 0,
         followers: user.followers?.length || 0,
@@ -333,10 +350,10 @@ export const getCommunityProfile = async (req, res) => {
       })),
     });
   } catch (error) {
+    console.error("Error in getCommunityProfile:", error);
     res.status(500).json({ message: error.message });
   }
 };
-
 // Add to meal plan
 export const addToMealPlan = async (req, res) => {
   try {
@@ -408,23 +425,122 @@ export const deleteUser = async (req, res) => {
 };
 
 // Toggle Block
+// controllers/userController.js
+
+// Update your existing toggleBlockUser to store both
 export const toggleBlockUser = async (req, res) => {
   try {
     const { currentUserUid, targetUserUid } = req.body;
-    if (currentUserUid === targetUserUid) return res.status(400).json({ message: "Cannot block yourself" });
+    if (currentUserUid === targetUserUid) {
+      return res.status(400).json({ message: "Cannot block yourself" });
+    }
 
+    // Get both users
     const currentUser = await User.findOne({ firebaseUid: currentUserUid });
-    if (!currentUser) return res.status(404).json({ message: "User not found" });
+    const targetUser = await User.findOne({ firebaseUid: targetUserUid });
+    
+    if (!currentUser || !targetUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
 
-    const isBlocked = currentUser.blockedUsers.includes(targetUserUid);
+    // Check if already blocked by looking for the firebaseUid in blockedUsers array
+    const isBlocked = currentUser.blockedUsers.some(
+      blocked => blocked.firebaseUid === targetUserUid
+    );
+    
     if (!isBlocked) {
-      await currentUser.updateOne({ $addToSet: { blockedUsers: targetUserUid } });
-      return res.status(200).json({ blocked: true });
+      // Block user - add to blockedUsers array as an object
+      await currentUser.updateOne({
+        $addToSet: {
+          blockedUsers: {
+            firebaseUid: targetUserUid,
+            userId: targetUser._id,
+            blockedAt: new Date(),
+          },
+        },
+      });
+      return res.status(200).json({ 
+        blocked: true, 
+        message: "User blocked successfully" 
+      });
     } else {
-      await currentUser.updateOne({ $pull: { blockedUsers: targetUserUid } });
-      return res.status(200).json({ blocked: false });
+      // Unblock user - remove from blockedUsers array
+      await currentUser.updateOne({
+        $pull: {
+          blockedUsers: { firebaseUid: targetUserUid },
+        },
+      });
+      return res.status(200).json({ 
+        blocked: false, 
+        message: "User unblocked successfully" 
+      });
     }
   } catch (error) {
+    console.error("Error in toggleBlockUser:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+// Get all blocked users with their details (populated)
+export const getBlockedUsers = async (req, res) => {
+  try {
+    const { uid } = req.params; // Current user's Firebase UID
+    
+    // Find the user and populate the blocked users
+    const user = await User.findOne({ firebaseUid: uid })
+      .populate({
+        path: 'blockedUsers.userId',
+        select: 'username name profilePic firebaseUid bio', // Select the fields you need
+        model: 'User'
+      });
+    
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Format the response to be more readable
+    const blockedUsersList = user.blockedUsers.map(blocked => ({
+      id: blocked.userId._id,
+      firebaseUid: blocked.firebaseUid,
+      name: blocked.userId.name,
+      username: blocked.userId.username,
+      profilePic: blocked.userId.profilePic,
+      bio: blocked.userId.bio,
+      blockedAt: blocked.blockedAt,
+    }));
+    
+    res.status(200).json({
+      count: blockedUsersList.length,
+      blockedUsers: blockedUsersList,
+    });
+  } catch (error) {
+    console.error("Error fetching blocked users:", error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Unblock a specific user (alternative to toggle)
+export const unblockUser = async (req, res) => {
+  try {
+    const { currentUserUid, targetUserUid } = req.params;
+    
+    const currentUser = await User.findOne({ firebaseUid: currentUserUid });
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Remove the target user from blockedUsers array
+    await currentUser.updateOne({
+      $pull: {
+        blockedUsers: { firebaseUid: targetUserUid },
+      },
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      message: "User unblocked successfully" 
+    });
+  } catch (error) {
+    console.error("Error unblocking user:", error);
     res.status(500).json({ message: error.message });
   }
 };
