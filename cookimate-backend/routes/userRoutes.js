@@ -15,7 +15,9 @@ import {
   clearNotification,
   removeFromMealPlan,
   deleteFromHistory,
-  toggleBlockUser
+  toggleBlockUser,
+  getBlockedUsers,
+  unblockUser,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -23,6 +25,11 @@ const router = express.Router();
 router.post("/", createUser);
 router.get("/levels", getLevels);
 router.put("/block", toggleBlockUser);
+// Get all blocked users with their details
+router.get("/blocked/:uid", getBlockedUsers);
+
+// Unblock a specific user
+router.delete("/unblock/:currentUserUid/:targetUserUid", unblockUser);
 router.get("/search", searchUsers);
 router.put("/follow", toggleFollow);
 router.put("/favorites/:uid", addToFavorites); 
