@@ -92,6 +92,9 @@ export default function RecipeDetails() {
   const [showTimerModal, setShowTimerModal] = useState(false);
   const [activeTimerSeconds, setActiveTimerSeconds] = useState(0);
 
+  // Network Error State
+  const [networkErrorVisible, setNetworkErrorVisible] = useState(false);
+
   // Custom Alert state
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
@@ -133,7 +136,7 @@ export default function RecipeDetails() {
   };
 
   // New function to handle recipe completion
-const handleCompleteRecipe = async () => {
+  const handleCompleteRecipe = async () => {
     try {
       const currentUserUid = auth.currentUser?.uid;
 
@@ -154,7 +157,7 @@ const handleCompleteRecipe = async () => {
     } catch (err: any) {
       setCookingMode(false);
       if (err.message === "Network Error" || err.message.includes("Network")) {
-        showAlert("Network Issue", "Please check your internet connection and try again.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+        setNetworkErrorVisible(true);
       } else {
         console.error("Failed to update cook count", err);
         showAlert("Done!", "Recipe finished, but we couldn't save to history.", [{ text: "OK" }], "alert-circle");
@@ -233,7 +236,7 @@ const handleCompleteRecipe = async () => {
         }
       } catch (error: any) {
         if (error.message === "Network Error" || error.message.includes("Network")) {
-          showAlert("Network Issue", "Please check your internet connection.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+          setNetworkErrorVisible(true);
         } else if (error.response?.status === 400) {
           setIsFavorite(true);
         } else {
@@ -255,7 +258,7 @@ const handleCompleteRecipe = async () => {
         }
       } catch (err: any) {
         if (err.message === "Network Error" || err.message.includes("Network")) {
-          showAlert("Network Issue", "Please check your connection and try again.", [{ text: "OK" }], "cloud-offline-outline", theme.muted, theme.border);
+          setNetworkErrorVisible(true);
         } else {
           console.error("Axios Error Fetching Details:", err.response?.status, err.message);
           setError("Failed to load recipe details. Please try again.");
@@ -479,6 +482,32 @@ const handleCompleteRecipe = async () => {
           initialSeconds={activeTimerSeconds}
           onClose={() => setShowTimerModal(false)}
         />
+      </Modal>
+
+      {/* --- NETWORK ERROR MODAL --- */}
+      <Modal 
+        visible={networkErrorVisible} 
+        transparent 
+        animationType="fade" 
+        onRequestClose={() => setNetworkErrorVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.networkErrorCard}>
+            <View style={styles.networkErrorContent}>
+              <Ionicons name="cloud-offline-outline" size={60} color={theme.muted} style={{ marginBottom: 15 }} />
+              <Text style={styles.networkErrorTitle}>No Connection</Text>
+              <Text style={styles.networkErrorText}>
+                Couldn't complete the request. Please check your internet connection and try again.
+              </Text>
+              <TouchableOpacity 
+                style={styles.modalCloseBtn} 
+                onPress={() => setNetworkErrorVisible(false)}
+              >
+                <Text style={styles.modalCloseBtnText}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
       </Modal>
 
       {/* Custom Alert Modal */}
@@ -759,7 +788,7 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   modalTimerText: { color: "#FFFFFF", fontSize: 16, fontWeight: "bold", marginLeft: 8 },
-  // Custom Alert styles
+  // Custom Alert & Network Error styles
   modalOverlay: {
     flex: 1,
     backgroundColor: theme.overlay,
@@ -797,6 +826,46 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   modalBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
+  networkErrorCard: {
+    backgroundColor: theme.card,
+    borderRadius: 24,
+    padding: 25,
+    width: "100%",
+    maxWidth: 400,
+    borderWidth: 1,
+    borderColor: theme.border,
+  },
+  networkErrorContent: {
+    alignItems: "center",
+    paddingVertical: 10,
+  },
+  networkErrorTitle: {
+    color: theme.gold,
+    fontSize: 22,
+    fontWeight: "900",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  networkErrorText: {
+    color: theme.text,
+    fontSize: 16,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalCloseBtn: {
+    backgroundColor: theme.gold,
+    paddingVertical: 14,
+    paddingHorizontal: 30,
+    borderRadius: 12,
+    alignItems: "center",
+    width: "100%",
+  },
+  modalCloseBtnText: {
+    color: "#000000",
     fontSize: 16,
     fontWeight: "bold",
   },
