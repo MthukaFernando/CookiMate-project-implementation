@@ -126,7 +126,7 @@ export const createPost = async (req, res) => {
 // 2. Get Feed: Populate user info correctly
 export const getFeed = async (req, res) => {
   const page = parseInt(req.query.page) || 1;
-  const limit = 10;
+  const limit = 100;
   const skip = (page - 1) * limit;
   const { uid } = req.query; // ✅ current logged-in user's firebaseUid
  
