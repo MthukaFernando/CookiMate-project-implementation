@@ -9,17 +9,31 @@ import {
   ScrollView,
   ActivityIndicator,
   SafeAreaView,
+  Modal, // Added Modal import
 } from "react-native";
 import axios from "axios";
 import { useRouter, useFocusEffect } from "expo-router";
 import { Feather, MaterialCommunityIcons, Ionicons } from "@expo/vector-icons";
 import { globalStyle } from "../globalStyleSheet.style";
 import Constants from "expo-constants";
-import GlobalChatbot from "../GlobalChatbot"; // 1. Added Import
+import GlobalChatbot from "../GlobalChatbot";
 
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 const DEFAULT_AVATAR =
   "https://res.cloudinary.com/cookimate-images/image/upload/v1770965637/profile_pic3_jgp0tk.png";
+
+// --- THEME ---
+const theme = {
+  bg: "#0A0A0A",
+  card: "#1E1E1E",
+  gold: "#D4AF37",
+  accent: "#FFD54F",
+  text: "#FFFFFF",
+  muted: "#AAAAAA",
+  border: "#333333",
+  error: "#FF3B30",
+  overlay: "rgba(0,0,0,0.8)",
+};
 
 const statKeysMap: any = {
   cookRecipes: "recipesCooked",
@@ -39,50 +53,87 @@ const ProfilePage = () => {
   const currentUser = auth.currentUser;
   const uid = currentUser?.uid;
 
+  // --- CUSTOM ALERT STATE ---
+  const [customAlert, setCustomAlert] = useState<{
+    visible: boolean;
+    title: string;
+    message: string;
+    icon?: string;
+    iconColor?: string;
+    borderColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
+  }>({ visible: false, title: "", message: "" });
+
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+    borderColor?: string,
+  ) => {
+    setCustomAlert({ visible: true, title, message, buttons, icon, iconColor, borderColor });
+  };
+
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
+
   const fetchData = async () => {
-  try {
-    setLoading(true);
-    // 1. Get the latest User data
-    const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
-    const userData = userResponse.data;
-    setUser(userData);
+    try {
+      setLoading(true);
+      // 1. Get the latest User data
+      const userResponse = await axios.get(`${API_URL}/api/users/${uid}`);
+      const userData = userResponse.data;
+      setUser(userData);
 
-    const userCurrentLevel = userData.level || 1;
+      const userCurrentLevel = userData.level || 1;
 
-    if (userData && userData._id) {
-      // 2. Fetch Dashboard for the progress bar calculation
-      try {
-        const gamificationResponse = await axios.get(
-          `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
-        );
-        setGamification(gamificationResponse.data);
-      } catch (gamificationErr) {
-        console.log("No gamification data found for this user yet.");
+      if (userData && userData._id) {
+        // 2. Fetch Dashboard for the progress bar calculation
+        try {
+          const gamificationResponse = await axios.get(
+            `${API_URL}/api/gamification/user/${userData._id}/dashboard`,
+          );
+          setGamification(gamificationResponse.data);
+        } catch (gamificationErr) {
+          console.log("No gamification data found for this user yet.");
+        }
+
+        // 3. FETCH ALL LEVELS & CALCULATE ACHIEVEMENTS
+        try {
+          const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
+          const allLevels = levelsRes.data;
+          
+          // ACHIEVEMENTS LOGIC: 
+          // If user is Level 2, they finished Level 1.
+          // If user is Level 3, they finished Level 1 and 2.
+          const finished = allLevels.filter(
+            (lvl: any) => lvl.levelNumber < userCurrentLevel
+          );
+          
+          setCompletedLevels(finished);
+        } catch (levelErr) {
+          console.error("Error fetching levels for achievements", levelErr);
+        }
       }
-
-      // 3. FETCH ALL LEVELS & CALCULATE ACHIEVEMENTS
-      try {
-        const levelsRes = await axios.get(`${API_URL}/api/gamification/levels`);
-        const allLevels = levelsRes.data;
-        
-        // ACHIEVEMENTS LOGIC: 
-        // If user is Level 2, they finished Level 1.
-        // If user is Level 3, they finished Level 1 and 2.
-        const finished = allLevels.filter(
-          (lvl: any) => lvl.levelNumber < userCurrentLevel
+    } catch (err: any) {
+      // --- NETWORK ERROR CHECK ---
+      if (err.message === "Network Error" || err.message.includes("Network")) {
+        showAlert(
+          "Network Issue", 
+          "Could not load your profile. Please check your connection.", 
+          [{ text: "OK" }], 
+          "cloud-offline-outline", 
+          theme.muted, 
+          theme.border
         );
-        
-        setCompletedLevels(finished);
-      } catch (levelErr) {
-        console.error("Error fetching levels for achievements", levelErr);
+      } else {
+        console.error("Fetch error", err.message);
       }
+    } finally {
+      setLoading(false);
     }
-  } catch (err: any) {
-    console.error("Fetch error", err.message);
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchData();
@@ -227,33 +278,119 @@ const ProfilePage = () => {
         </View>
         {/* 3. ACHIEVEMENTS */}
         <View style={styles.bottomSubContainer}>
-  <Text style={styles.sectionTitle}>Achievements</Text>
-  <ScrollView
-    horizontal
-    showsHorizontalScrollIndicator={false}
-    contentContainerStyle={styles.badgeScroll}
-    nestedScrollEnabled={true}
-  >
-    {completedLevels.length === 0 ? (
-      <View style={{ paddingVertical: 10 }}>
-        <Text style={{ color: "#555", fontStyle: "italic" }}>
-          No badges earned yet. Complete your first level to unlock!
-        </Text>
-      </View>
-    ) : (
-      completedLevels.map((lvl, index) => (
-        <BadgeItem
-          key={lvl.levelNumber || index}
-          imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR}
-          title={lvl.levelName}
-        />
-      ))
-    )}
-  </ScrollView>
-</View>
+          <Text style={styles.sectionTitle}>Achievements</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.badgeScroll}
+            nestedScrollEnabled={true}
+          >
+            {completedLevels.length === 0 ? (
+              <View style={{ paddingVertical: 10 }}>
+                <Text style={{ color: "#555", fontStyle: "italic" }}>
+                  No badges earned yet. Complete your first level to unlock!
+                </Text>
+              </View>
+            ) : (
+              completedLevels.map((lvl, index) => (
+                <BadgeItem
+                  key={lvl.levelNumber || index}
+                  imageUrl={lvl.badge?.imageUrl || DEFAULT_AVATAR}
+                  title={lvl.levelName}
+                />
+              ))
+            )}
+          </ScrollView>
+        </View>
       </ScrollView>
       {/* 2. Added GlobalChatbot here at the root level */}
       <GlobalChatbot />
+
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal
+        visible={customAlert.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissAlert}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.reportCard,
+              { borderColor: customAlert.borderColor ?? theme.gold },
+            ]}
+          >
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
+                <Ionicons
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? theme.gold}
+                  style={{ marginBottom: 14 }}
+                />
+              )}
+              <Text
+                style={[
+                  styles.thankYouTitle,
+                  { color: customAlert.iconColor ?? theme.gold },
+                ]}
+              >
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginTop: 16,
+                  width: "100%",
+                }}
+              >
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtn,
+                        { flex: 1 },
+                        isDestructive && { backgroundColor: theme.error },
+                        isCancel && {
+                          backgroundColor: "#333",
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
+                        !isDestructive &&
+                          !isCancel && {
+                            backgroundColor:
+                              customAlert.iconColor ?? theme.gold,
+                          },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalBtnText,
+                          { textAlign: "center" },
+                          isCancel && { color: theme.muted },
+                          isDestructive && { color: "#FFF" },
+                          !isDestructive && !isCancel && { color: "#000" },
+                        ]}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -422,6 +559,48 @@ const styles = StyleSheet.create({
   },
   badgeImage: { width: "75%", height: "75%" },
   badgeTitle: { fontSize: 11, fontWeight: "600", color: "#FFFFFF", textAlign: "center" },
+
+  // --- CUSTOM ALERT STYLES ---
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  reportCard: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    borderWidth: 1,
+  },
+  thankYouArea: {
+    alignItems: "center",
+  },
+  thankYouTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  thankYouText: {
+    color: theme.muted,
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
+  },
 });
 
 export default ProfilePage;

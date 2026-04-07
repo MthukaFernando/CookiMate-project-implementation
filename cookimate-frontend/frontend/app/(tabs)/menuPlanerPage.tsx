@@ -28,6 +28,18 @@ const CAROUSEL_WIDTH = width * 0.9;
 
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
+const theme = {
+  bg: "#0A0A0A",
+  card: "#1E1E1E",
+  gold: "#D4AF37",
+  accent: "#FFD54F",
+  text: "#FFFFFF",
+  muted: "#AAAAAA",
+  border: "#333333",
+  error: "#FF3B30",
+  overlay: "rgba(0,0,0,0.8)",
+};
+
 const mealCategories = [
   { label: "Breakfast     🍳🥞", color: "#ceb604" },
   { label: "Lunch     🥗🌮", color: "#ceb604" },
@@ -50,18 +62,29 @@ const Page = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [isAddingMeal, setIsAddingMeal] = useState(false);
 
-  // Custom Alert State
+  // --- CUSTOM ALERT STATE ---
   const [customAlert, setCustomAlert] = useState<{
     visible: boolean;
     title: string;
     message: string;
-    onConfirm?: () => void;
-    isDestructive?: boolean;
+    icon?: string;
+    iconColor?: string;
+    borderColor?: string;
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[];
   }>({ visible: false, title: "", message: "" });
 
-  const showAlert = (title: string, message: string, onConfirm?: () => void, isDestructive?: boolean) => {
-    setCustomAlert({ visible: true, title, message, onConfirm, isDestructive });
+  const showAlert = (
+    title: string,
+    message: string,
+    buttons?: { text: string; onPress?: () => void; style?: "default" | "destructive" | "cancel" }[],
+    icon?: string,
+    iconColor?: string,
+    borderColor?: string,
+  ) => {
+    setCustomAlert({ visible: true, title, message, buttons, icon, iconColor, borderColor });
   };
+
+  const dismissAlert = () => setCustomAlert((prev) => ({ ...prev, visible: false }));
 
   const [plannedRecipes, setPlannedRecipes] = useState<any[]>([]);
   
@@ -102,8 +125,19 @@ const Page = () => {
         pendingDeletesRef.current.clear();
         pendingAddsRef.current.clear();
       }
-    } catch (error) {
-      console.error("Error loading meal plan from DB:", error);
+    } catch (error: any) {
+      if (error.message === "Network Error" || error.message.includes("Network")) {
+        showAlert(
+          "Network Issue", 
+          "Please check your internet connection and try again.", 
+          [{ text: "OK" }], 
+          "cloud-offline-outline", 
+          theme.muted, 
+          theme.border
+        );
+      } else {
+        console.error("Error loading meal plan from DB:", error);
+      }
     }
   };
 
@@ -194,12 +228,24 @@ const Page = () => {
           // Remove from pending adds on success
           pendingAddsRef.current.delete(uniqueId);
           
-        } catch (error) {
+        } catch (error: any) {
           console.error("Error saving meal:", error);
           // Rollback on error
           setPlannedRecipes(previousRecipes);
           pendingAddsRef.current.delete(uniqueId);
-          showAlert("Error", "Could not save to your planner.");
+          
+          if (error.message === "Network Error" || error.message.includes("Network")) {
+            showAlert(
+              "Network Issue", 
+              "Please check your internet connection and try again.", 
+              [{ text: "OK" }], 
+              "cloud-offline-outline", 
+              theme.muted, 
+              theme.border
+            );
+          } else {
+            showAlert("Error", "Could not save to your planner.", [{ text: "OK", style: "destructive" }]);
+          }
         } finally {
           processingRecipeRef.current = false;
         }
@@ -274,38 +320,59 @@ const Page = () => {
     const uid = auth.currentUser?.uid;
     showAlert(
       "Remove Recipe",
-      "Are you sure you want to delete this recipe from your planner ?",
-      async () => {
-        // OPTIMISTIC DELETE: Remove from UI immediately
-        setPlannedRecipes((prev) => {
-          const newRecipes = prev.filter((r) => r.uniqueId !== uniqueId);
-          // Clean up any references
-          return newRecipes;
-        });
-        
-        // Track pending delete
-        pendingDeletesRef.current.add(uniqueId);
+      "Are you sure you want to delete this recipe from your planner?",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Remove",
+          style: "destructive",
+          onPress: async () => {
+            // OPTIMISTIC DELETE: Remove from UI immediately
+            setPlannedRecipes((prev) => {
+              const newRecipes = prev.filter((r) => r.uniqueId !== uniqueId);
+              return newRecipes;
+            });
+            
+            // Track pending delete
+            pendingDeletesRef.current.add(uniqueId);
 
-        // Background API call with retry logic
-        const deleteWithRetry = async (retryCount = 0) => {
-          try {
-            await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
-            pendingDeletesRef.current.delete(uniqueId);
-          } catch (error) {
-            console.error("Error removing meal:", error);
-            if (retryCount < 3) {
-              setTimeout(() => deleteWithRetry(retryCount + 1), 1000 * (retryCount + 1));
-            } else {
-              pendingDeletesRef.current.delete(uniqueId);
-              showAlert("Error", "Could not remove from database. Please refresh.");
-              loadMealPlan(); // Force refresh on final failure
-            }
+            // Background API call with retry logic
+            const deleteWithRetry = async (retryCount = 0) => {
+              try {
+                await axios.put(`${API_URL}/api/users/meal-plan/remove/${uid}`, { uniqueId });
+                pendingDeletesRef.current.delete(uniqueId);
+              } catch (error: any) {
+                console.error("Error removing meal:", error);
+                if (retryCount < 3) {
+                  setTimeout(() => deleteWithRetry(retryCount + 1), 1000 * (retryCount + 1));
+                } else {
+                  pendingDeletesRef.current.delete(uniqueId);
+                  
+                  if (error.message === "Network Error" || error.message.includes("Network")) {
+                    showAlert(
+                      "Network Issue", 
+                      "Check your connection. Could not remove from database.", 
+                      [{ text: "OK" }], 
+                      "cloud-offline-outline", 
+                      theme.muted, 
+                      theme.border
+                    );
+                  } else {
+                    showAlert("Error", "Could not remove from database. Please refresh.", [{ text: "OK", style: "destructive" }]);
+                  }
+                  
+                  loadMealPlan(); // Force refresh on final failure
+                }
+              }
+            };
+            
+            deleteWithRetry();
           }
-        };
-        
-        deleteWithRetry();
-      },
-      true
+        }
+      ],
+      "trash-outline",
+      theme.error,
+      theme.error
     );
   };
 
@@ -489,42 +556,87 @@ const Page = () => {
       </Modal>
       <GlobalChatbot />
 
-      {/* Custom Alert Modal */}
+      {/* --- CUSTOM ALERT MODAL --- */}
       <Modal
-        animationType="fade"
-        transparent={true}
         visible={customAlert.visible}
-        onRequestClose={() => setCustomAlert({ ...customAlert, visible: false })}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissAlert}
       >
-        <View style={styles.alertOverlay}>
-          <View style={styles.alertBox}>
-            <View style={[styles.alertIconWrapper, { borderColor: customAlert.isDestructive ? "#FF4D4D" : "#ffc403" }]}>
-              <Ionicons
-                name={customAlert.isDestructive ? "trash-outline" : "alert-circle-outline"}
-                size={30}
-                color={customAlert.isDestructive ? "#FF4D4D" : "#ffc403"}
-              />
-            </View>
-            <Text style={styles.alertTitle}>{customAlert.title}</Text>
-            <Text style={styles.alertMessage}>{customAlert.message}</Text>
-            <View style={styles.alertButtonContainer}>
-              <TouchableOpacity
-                style={[styles.alertButton, styles.cancelButton]}
-                onPress={() => setCustomAlert({ ...customAlert, visible: false })}
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.reportCard,
+              { borderColor: customAlert.borderColor ?? theme.gold },
+            ]}
+          >
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
+                <Ionicons
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? theme.gold}
+                  style={{ marginBottom: 14 }}
+                />
+              )}
+              <Text
+                style={[
+                  styles.thankYouTitle,
+                  { color: customAlert.iconColor ?? theme.gold },
+                ]}
               >
-                <Text style={styles.cancelButtonText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.alertButton, customAlert.isDestructive ? styles.destructiveButton : styles.confirmButton]}
-                onPress={() => {
-                  if (customAlert.onConfirm) customAlert.onConfirm();
-                  setCustomAlert({ ...customAlert, visible: false });
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginTop: 16,
+                  width: "100%",
                 }}
               >
-                <Text style={customAlert.isDestructive ? styles.destructiveButtonText : styles.confirmButtonText}>
-                  {customAlert.isDestructive ? "Remove" : "OK"}
-                </Text>
-              </TouchableOpacity>
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtn,
+                        { flex: 1 },
+                        isDestructive && { backgroundColor: theme.error },
+                        isCancel && {
+                          backgroundColor: "#333",
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
+                        !isDestructive &&
+                          !isCancel && {
+                            backgroundColor:
+                              customAlert.iconColor ?? theme.gold,
+                          },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalBtnText,
+                          { textAlign: "center" },
+                          isCancel && { color: theme.muted },
+                          isDestructive && { color: "#FFF" },
+                          !isDestructive && !isCancel && { color: "#000" },
+                        ]}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
             </View>
           </View>
         </View>
@@ -737,85 +849,40 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   seasonalButtonText: { color: "#f2ece2", fontSize: 14, fontWeight: "bold" },
+  
   // Custom Alert Styles
-  alertOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.75)",
-    justifyContent: "center",
-    alignItems: "center",
-    paddingHorizontal: 30,
-  },
-  alertBox: {
-    width: "100%",
-    backgroundColor: "#1A1A1A",
-    borderRadius: 20,
+  reportCard: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
     padding: 24,
-    borderWidth: 1,
-    borderColor: "#ffc40333",
-    alignItems: "center",
-  },
-  alertIconWrapper: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
-    backgroundColor: "#0A0A0A",
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-    borderWidth: 1.5,
-  },
-  alertTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "white",
-    marginBottom: 8,
-    textAlign: "center",
-  },
-  alertMessage: {
-    fontSize: 14,
-    color: "#cccccc",
-    textAlign: "center",
-    marginBottom: 22,
-    lineHeight: 20,
-  },
-  alertButtonContainer: {
-    flexDirection: "row",
     width: "100%",
-    gap: 10,
+    borderWidth: 1,
   },
-  alertButton: {
-    flex: 1,
-    paddingVertical: 13,
-    borderRadius: 12,
+  thankYouArea: {
     alignItems: "center",
   },
-  cancelButton: {
-    backgroundColor: "#2A2A2A",
-    borderWidth: 1,
-    borderColor: "#333",
-  },
-  confirmButton: {
-    backgroundColor: "#ffc403",
-  },
-  destructiveButton: {
-    backgroundColor: "transparent",
-    borderWidth: 1,
-    borderColor: "#FF4D4D",
-  },
-  cancelButtonText: {
-    color: "#aaaaaa",
-    fontWeight: "600",
-    fontSize: 14,
-  },
-  confirmButtonText: {
-    color: "#000000",
+  thankYouTitle: {
+    fontSize: 22,
     fontWeight: "bold",
-    fontSize: 14,
+    marginBottom: 10,
+    textAlign: "center",
   },
-  destructiveButtonText: {
-    color: "#FF4D4D",
+  thankYouText: {
+    color: theme.muted,
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnText: {
+    fontSize: 16,
     fontWeight: "bold",
-    fontSize: 14,
   },
 });
 
