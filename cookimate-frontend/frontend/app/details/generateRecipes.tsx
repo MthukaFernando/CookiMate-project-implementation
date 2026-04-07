@@ -41,6 +41,18 @@ const BRAND = {
   border: "#333333",
 };
 
+const theme = {
+  bg: "#0A0A0A",
+  card: "#1E1E1E",
+  gold: "#D4AF37",
+  accent: "#FFD54F",
+  text: "#FFFFFF",
+  muted: "#AAAAAA",
+  border: "#333333",
+  error: "#FF3B30",
+  overlay: "rgba(0, 0, 0, 0.9)",
+};
+
 const QUICK_ADDS = [
   "Beef",
   "Pasta",
@@ -76,6 +88,47 @@ const MEAL_TYPES = [
 ];
 const TIMES = ["< 15m", "< 30m", "< 45m", "1h+"];
 const SERVINGS = ["1", "2", "4", "6+"];
+
+// --- CUSTOM ALERT ---
+const [customAlert, setCustomAlert] = useState<{
+  visible: boolean;
+  title: string;
+  message: string;
+  icon?: string;
+  iconColor?: string;
+  borderColor?: string;
+  buttons?: {
+    text: string;
+    onPress?: () => void;
+    style?: "default" | "destructive" | "cancel";
+  }[];
+}>({ visible: false, title: "", message: "" });
+
+const showAlert = (
+  title: string,
+  message: string,
+  buttons?: {
+    text: string;
+    onPress?: () => void;
+    style?: "default" | "destructive" | "cancel";
+  }[],
+  icon?: string,
+  iconColor?: string,
+  borderColor?: string,
+) => {
+  setCustomAlert({
+    visible: true,
+    title,
+    message,
+    buttons,
+    icon,
+    iconColor,
+    borderColor,
+  });
+};
+
+const dismissAlert = () =>
+  setCustomAlert((prev) => ({ ...prev, visible: false }));
 
 // Helper functions for timers
 const extractAllTimings = (text: string): number[] => {
@@ -141,7 +194,7 @@ export default function GenerateRecipesPage() {
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
-  const [showInputForm, setShowInputForm] = useState(true); 
+  const [showInputForm, setShowInputForm] = useState(true);
 
   // User preferences state
   const [userPreferences, setUserPreferences] = useState<{
@@ -191,8 +244,19 @@ export default function GenerateRecipesPage() {
             });
             console.log("User preferences loaded:", response.data);
           }
-        } catch (error) {
-          console.error("Failed to fetch user preferences:", error);
+        } catch (error: any) {
+          if (error.message === "Network Error" || error.message.includes("Network")) {
+             showAlert(
+               "Network Issue", 
+               "Couldn't load your preferences. Please check your connection.", 
+               [{ text: "OK" }], 
+               "cloud-offline-outline", 
+               theme.muted, 
+               theme.border
+             );
+          } else {
+             console.error("Failed to fetch user preferences:", error);
+          }
         }
       }
     };
@@ -354,8 +418,23 @@ export default function GenerateRecipesPage() {
       if (__DEV__) {
         console.log("Error caught:", error.message);
       }
+      if (
+        error.message === "Network request failed" || 
+        error.message === "Failed to fetch" ||
+        error.message.includes("Network")
+      ) {
+        showAlert(
+          "Network Issue", 
+          "Please check your internet connection and try again.", 
+          [{ text: "OK" }], 
+          "cloud-offline-outline", 
+          theme.muted, 
+          theme.border
+        );
+      } else {
       setError(error.message || "Failed to generate recipe. Please try again.");
-    } finally {
+      }
+     }finally {
       setLoading(false);
     }
   };
@@ -408,7 +487,22 @@ export default function GenerateRecipesPage() {
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch (error: any) {
-      setError(error.message || "Failed to save recipe");
+      if (
+        error.message === "Network request failed" || 
+        error.message === "Failed to fetch" ||
+        error.message.includes("Network")
+      ) {
+        showAlert(
+          "Network Issue", 
+          "Could not save the recipe. Please check your internet connection.", 
+          [{ text: "OK" }], 
+          "cloud-offline-outline", 
+          theme.muted, 
+          theme.border
+        );
+      } else {
+        setError(error.message || "Failed to save recipe");
+      }
     } finally {
       setSaveLoading(false);
     }
@@ -1114,6 +1208,92 @@ export default function GenerateRecipesPage() {
           onClose={() => setShowTimerModal(false)}
         />
       </Modal>
+
+      {/* --- CUSTOM ALERT MODAL --- */}
+      <Modal
+        visible={customAlert.visible}
+        transparent
+        animationType="fade"
+        onRequestClose={dismissAlert}
+      >
+        <View style={styles.modalOverlay}>
+          <View
+            style={[
+              styles.reportCard,
+              { borderColor: customAlert.borderColor ?? theme.gold },
+            ]}
+          >
+            <View style={styles.thankYouArea}>
+              {customAlert.icon && (
+                <Ionicons
+                  name={customAlert.icon as any}
+                  size={56}
+                  color={customAlert.iconColor ?? theme.gold}
+                  style={{ marginBottom: 14 }}
+                />
+              )}
+              <Text
+                style={[
+                  styles.thankYouTitle,
+                  { color: customAlert.iconColor ?? theme.gold },
+                ]}
+              >
+                {customAlert.title}
+              </Text>
+              <Text style={styles.thankYouText}>{customAlert.message}</Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginTop: 16,
+                  width: "100%",
+                }}
+              >
+                {(customAlert.buttons ?? [{ text: "OK" }]).map((btn, i) => {
+                  const isDestructive = btn.style === "destructive";
+                  const isCancel = btn.style === "cancel";
+                  return (
+                    <TouchableOpacity
+                      key={i}
+                      style={[
+                        styles.modalBtn,
+                        { flex: 1 },
+                        isDestructive && { backgroundColor: theme.error },
+                        isCancel && {
+                          backgroundColor: "#333",
+                          borderWidth: 1,
+                          borderColor: theme.border,
+                        },
+                        !isDestructive &&
+                          !isCancel && {
+                            backgroundColor:
+                              customAlert.iconColor ?? theme.gold,
+                          },
+                      ]}
+                      onPress={() => {
+                        dismissAlert();
+                        btn.onPress?.();
+                      }}
+                    >
+                      <Text
+                        style={[
+                          styles.modalBtnText,
+                          { textAlign: "center" },
+                          isCancel && { color: theme.muted },
+                          isDestructive && { color: "#FFF" },
+                          !isDestructive && !isCancel && { color: "#000" },
+                        ]}
+                      >
+                        {btn.text}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1586,6 +1766,46 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "bold",
     marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: theme.overlay,
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
+  },
+  reportCard: {
+    backgroundColor: theme.card,
+    borderRadius: 16,
+    padding: 24,
+    width: "100%",
+    borderWidth: 1,
+  },
+  thankYouArea: {
+    alignItems: "center",
+  },
+  thankYouTitle: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 10,
+    textAlign: "center",
+  },
+  thankYouText: {
+    color: theme.muted,
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  modalBtn: {
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  modalBtnText: {
+    fontSize: 16,
+    fontWeight: "bold",
   },
   completedContainer: {
     flex: 1,
