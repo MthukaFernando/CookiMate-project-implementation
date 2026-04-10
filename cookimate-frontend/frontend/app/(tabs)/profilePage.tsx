@@ -300,7 +300,7 @@ const ProfilePage = () => {
               icon="users"
               label="Fans"
               value={user?.followers?.length || 0}
-              onPress={() => console.log("Route to Followers")}
+              onPress={() => router.push("/profile/fans")}
             />
           </View>
         </View>
