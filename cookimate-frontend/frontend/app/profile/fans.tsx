@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getAuth } from "firebase/auth";
 import Constants from "expo-constants";
+import { useRouter } from "expo-router"; // Import for navigation
 
 const auth = getAuth();
 
@@ -47,6 +48,7 @@ const theme = {
 
 // ── Fan Card ──────────────────────────────────────────────────────────────────
 const FanCard = memo(({ user, index }: { user: any; index: number }) => {
+  const router = useRouter(); // Initialize router
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(16)).current;
 
@@ -67,9 +69,22 @@ const FanCard = memo(({ user, index }: { user: any; index: number }) => {
     ]).start();
   }, []);
 
+  const handlePress = () => {
+    // Navigates to the dynamic community profile using the firebaseUid
+    if (user.firebaseUid) {
+      router.push(`/Community/${user.firebaseUid}`);
+    } else {
+      console.warn("User does not have a valid firebaseUid for navigation.");
+    }
+  };
+
   return (
     <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      <TouchableOpacity activeOpacity={0.75} style={styles.card}>
+      <TouchableOpacity 
+        activeOpacity={0.75} 
+        style={styles.card} 
+        onPress={handlePress}
+      >
         <View style={styles.avatarWrapper}>
           <Image
             source={{ uri: getAvatar(user.profilePic, user.username) }}
@@ -126,7 +141,6 @@ const Fans = () => {
         return;
       }
       const url = `${BASE_URL}/api/users/fans/${firebaseUid}`;
-      console.log("Fetching:", url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -150,6 +164,7 @@ const Fans = () => {
 
   const renderItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
+      // The item itself is the user object populated by your backend
       <FanCard user={item} index={index} />
     ),
     []
@@ -164,7 +179,6 @@ const Fans = () => {
 
   if (loading) {
     return (
-      // ✅ SafeAreaView on loading screen too so spinner isn't behind notch
       <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
         <View style={styles.center}>
           <ActivityIndicator size="large" color={theme.gold} />
@@ -175,7 +189,6 @@ const Fans = () => {
   }
 
   return (
-    // ✅ edges: top covers notch/status bar, bottom covers home indicator
     <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
       <StatusBar barStyle="light-content" backgroundColor={theme.bg} />
       <FlatList
@@ -207,7 +220,6 @@ export default Fans;
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  // ✅ safeArea replaces the old container — same bg so no color flash
   safeArea: {
     flex: 1,
     backgroundColor: theme.bg,
