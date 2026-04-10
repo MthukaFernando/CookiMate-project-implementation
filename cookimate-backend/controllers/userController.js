@@ -428,3 +428,26 @@ export const toggleBlockUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getFans = async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const user = await User.findOne({ firebaseUid: uid }).populate({
+      path: "followers",
+      select: "username profilePic firebaseUid _id",
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      followers: user.followers,
+    });
+
+  } catch (error) {
+    console.error("GET FANS ERROR:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
