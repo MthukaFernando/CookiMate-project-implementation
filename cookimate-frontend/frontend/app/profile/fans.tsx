@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, memo } from "react";
 import {
   View,
   Text,
@@ -11,24 +11,23 @@ import {
   StatusBar,
   Animated,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { getAuth } from "firebase/auth";
 import Constants from "expo-constants";
 
 const auth = getAuth();
 
-// ✅ Dynamic BASE_URL — reads the IP Expo is already using, no manual changes needed
 const getBaseUrl = () => {
   const debuggerHost = Constants.expoConfig?.hostUri;
   if (debuggerHost) {
-    const host = debuggerHost.split(":")[0]; // strips Expo port, keeps IP
+    const host = debuggerHost.split(":")[0];
     return `http://${host}:5000`;
   }
-  return "http://10.0.2.2:5000"; // Android emulator fallback
+  return "http://10.0.2.2:5000";
 };
 
 const BASE_URL = getBaseUrl();
 
-// ✅ Avatar fallback — handles null/undefined profilePic
 const getAvatar = (profilePic: string | null | undefined, username: string) => {
   if (profilePic && profilePic.startsWith("http")) return profilePic;
   return `https://ui-avatars.com/api/?name=${encodeURIComponent(
@@ -47,7 +46,7 @@ const theme = {
 };
 
 // ── Fan Card ──────────────────────────────────────────────────────────────────
-const FanCard = ({ user, index }: { user: any; index: number }) => {
+const FanCard = memo(({ user, index }: { user: any; index: number }) => {
   const opacity = React.useRef(new Animated.Value(0)).current;
   const translateY = React.useRef(new Animated.Value(16)).current;
 
@@ -75,23 +74,21 @@ const FanCard = ({ user, index }: { user: any; index: number }) => {
           <Image
             source={{ uri: getAvatar(user.profilePic, user.username) }}
             style={styles.avatar}
+            fadeDuration={0}
           />
         </View>
-
         <View style={styles.info}>
           <Text style={styles.username}>@{user.username}</Text>
-          {/* name only shows if backend populates it */}
           {user.name ? <Text style={styles.name}>{user.name}</Text> : null}
         </View>
-
         <View style={styles.dot} />
       </TouchableOpacity>
     </Animated.View>
   );
-};
+});
 
 // ── Empty State ───────────────────────────────────────────────────────────────
-const EmptyState = () => (
+const EmptyState = memo(() => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyIcon}>✦</Text>
     <Text style={styles.emptyTitle}>No fans yet</Text>
@@ -99,10 +96,10 @@ const EmptyState = () => (
       Share your recipes and start building your audience.
     </Text>
   </View>
-);
+));
 
 // ── Header ────────────────────────────────────────────────────────────────────
-const Header = ({ count }: { count: number }) => (
+const Header = memo(({ count }: { count: number }) => (
   <View style={styles.header}>
     <Text style={styles.headerLabel}>FANS</Text>
     {count > 0 && (
@@ -111,7 +108,7 @@ const Header = ({ count }: { count: number }) => (
       </View>
     )}
   </View>
-);
+));
 
 // ── Main Screen ───────────────────────────────────────────────────────────────
 const Fans = () => {
@@ -128,11 +125,8 @@ const Fans = () => {
         console.warn("No logged-in user found.");
         return;
       }
-
-      // ✅ Fix: use BASE_URL variable — was previously hardcoded to wrong URL with no port
       const url = `${BASE_URL}/api/users/fans/${firebaseUid}`;
-      console.log("Fetching from:", url);
-
+      console.log("Fetching:", url);
       const res = await fetch(url);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
@@ -149,31 +143,54 @@ const Fans = () => {
     fetchFollowers();
   }, [fetchFollowers]);
 
-  const onRefresh = () => {
+  const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchFollowers();
-  };
+  }, [fetchFollowers]);
+
+  const renderItem = useCallback(
+    ({ item, index }: { item: any; index: number }) => (
+      <FanCard user={item} index={index} />
+    ),
+    []
+  );
+
+  const keyExtractor = useCallback((item: any) => item._id, []);
+
+  const ListHeader = useCallback(
+    () => <Header count={followers.length} />,
+    [followers.length]
+  );
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color={theme.gold} />
-        <Text style={styles.loadingText}>Loading fans…</Text>
-      </View>
+      // ✅ SafeAreaView on loading screen too so spinner isn't behind notch
+      <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+        <View style={styles.center}>
+          <ActivityIndicator size="large" color={theme.gold} />
+          <Text style={styles.loadingText}>Loading fans…</Text>
+        </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
+    // ✅ edges: top covers notch/status bar, bottom covers home indicator
+    <SafeAreaView style={styles.safeArea} edges={["top", "bottom"]}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.bg} />
       <FlatList
         data={followers}
-        keyExtractor={(item) => item._id}
-        renderItem={({ item, index }) => <FanCard user={item} index={index} />}
-        ListHeaderComponent={<Header count={followers.length} />}
-        ListEmptyComponent={<EmptyState />}
+        keyExtractor={keyExtractor}
+        renderItem={renderItem}
+        ListHeaderComponent={ListHeader}
+        ListEmptyComponent={EmptyState}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={10}
+        updateCellsBatchingPeriod={50}
+        initialNumToRender={10}
+        windowSize={5}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -182,7 +199,7 @@ const Fans = () => {
           />
         }
       />
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -190,7 +207,8 @@ export default Fans;
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  container: {
+  // ✅ safeArea replaces the old container — same bg so no color flash
+  safeArea: {
     flex: 1,
     backgroundColor: theme.bg,
   },
@@ -198,24 +216,15 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    backgroundColor: theme.bg,
     gap: 12,
   },
-  loadingText: {
-    color: theme.muted,
-    fontSize: 13,
-    letterSpacing: 0.5,
-  },
-  listContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 40,
-    flexGrow: 1,
-  },
+  loadingText: { color: theme.muted, fontSize: 13, letterSpacing: 0.5 },
+  listContent: { paddingHorizontal: 16, paddingBottom: 40, flexGrow: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
     gap: 10,
-    paddingTop: 24,
+    paddingTop: 16,
     paddingBottom: 16,
   },
   headerLabel: {
@@ -232,11 +241,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
-  badgeText: {
-    color: theme.gold,
-    fontSize: 11,
-    fontWeight: "600",
-  },
+  badgeText: { color: theme.gold, fontSize: 11, fontWeight: "600" },
   card: {
     flexDirection: "row",
     alignItems: "center",
@@ -260,21 +265,14 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     backgroundColor: theme.cardBorder,
   },
-  info: {
-    flex: 1,
-    marginLeft: 12,
-  },
+  info: { flex: 1, marginLeft: 12 },
   username: {
     fontSize: 15,
     fontWeight: "700",
     color: theme.text,
     letterSpacing: 0.2,
   },
-  name: {
-    fontSize: 13,
-    color: theme.muted,
-    marginTop: 2,
-  },
+  name: { fontSize: 13, color: theme.muted, marginTop: 2 },
   dot: {
     width: 6,
     height: 6,
@@ -289,16 +287,8 @@ const styles = StyleSheet.create({
     paddingTop: 100,
     gap: 8,
   },
-  emptyIcon: {
-    fontSize: 32,
-    color: theme.gold,
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    color: theme.text,
-  },
+  emptyIcon: { fontSize: 32, color: theme.gold, marginBottom: 8 },
+  emptyTitle: { fontSize: 18, fontWeight: "700", color: theme.text },
   emptySubtitle: {
     fontSize: 14,
     color: theme.muted,
