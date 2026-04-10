@@ -43,33 +43,43 @@ export async function initDictionaryForController() {
 // Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
   const HF_TOKEN = process.env.HF_TOKEN;
+  
+  // NEW URL STRUCTURE: Switched from 'api-inference' to 'router' as per your terminal logs
+  const MODEL_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell";
 
   console.log("Generating AI Image for:", recipeTitle);
-  const seed = Math.floor(Math.random() * 1000000);
 
   try {
-    const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0",
-      {
-        headers: {
-          Authorization: `Bearer ${HF_TOKEN}`,
-          "Content-Type": "application/json",
-        },
-        method: "POST",
-        body: JSON.stringify({
-          inputs: `Gourmet food photography of ${recipeTitle}, 4k`,
-          parameters: { seed: seed },
-          options: { wait_for_model: true, use_cache: false },
-        }),
+    const response = await fetch(MODEL_URL, {
+      headers: {
+        Authorization: `Bearer ${HF_TOKEN}`,
+        "Content-Type": "application/json",
       },
-    );
+      method: "POST",
+      body: JSON.stringify({
+        inputs: `Gourmet food photography of ${recipeTitle}, 4k, professional lighting, realistic textures`,
+        parameters: { 
+          num_inference_steps: 4 
+        },
+        options: { 
+          wait_for_model: true 
+        }
+      }),
+    });
 
-    if (response.status === 402 || response.status === 429) {
-      console.warn("⚠️ AI Quota reached for this month.");
-      return "QUOTA_EXCEEDED";
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`HF Error Detail [${response.status}]:`, errorText);
+      
+      // If we still get a 404/410, it might be the model name. 
+      // Fallback to a super-stable model if FLUX is unavailable:
+      if (response.status === 404 || response.status === 410) {
+          console.warn("Retrying with fallback model...");
+          return await generateFallbackImage(recipeTitle);
+      }
+      
+      throw new Error(`HF Error: ${response.status}`);
     }
-
-    if (!response.ok) throw new Error(`HF Error: ${response.status}`);
 
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -78,6 +88,23 @@ async function generateRecipeImage(recipeTitle) {
     console.error("AI Generation Failed:", error.message);
     return "ERROR";
   }
+}
+
+// Add this as a safety net
+async function generateFallbackImage(recipeTitle) {
+    const HF_TOKEN = process.env.HF_TOKEN;
+    const FALLBACK_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0";
+    
+    try {
+        const response = await fetch(FALLBACK_URL, {
+            headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
+            method: "POST",
+            body: JSON.stringify({ inputs: recipeTitle, options: { wait_for_model: true } }),
+        });
+        if (!response.ok) return "ERROR";
+        const buffer = Buffer.from(await response.arrayBuffer());
+        return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+    } catch (e) { return "ERROR"; }
 }
 
 // Enhanced sanitization function
