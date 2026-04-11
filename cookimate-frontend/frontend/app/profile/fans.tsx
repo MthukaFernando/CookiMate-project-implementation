@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, memo } from "react";
+import React, { useEffect, useState, useCallback, memo, useRef } from "react";
 import {
   View,
   Text,
@@ -10,11 +10,12 @@ import {
   RefreshControl,
   StatusBar,
   Animated,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { getAuth } from "firebase/auth";
 import Constants from "expo-constants";
-import { useRouter } from "expo-router"; // Import for navigation
+import { useRouter } from "expo-router";
 
 const auth = getAuth();
 
@@ -44,63 +45,135 @@ const theme = {
   goldFaint: "rgba(212,175,55,0.08)",
   text: "#F5F5F5",
   muted: "#777777",
+  danger: "#FF4444",
+  dangerFaint: "rgba(255,68,68,0.1)",
 };
 
 // ── Fan Card ──────────────────────────────────────────────────────────────────
-const FanCard = memo(({ user, index }: { user: any; index: number }) => {
-  const router = useRouter(); // Initialize router
-  const opacity = React.useRef(new Animated.Value(0)).current;
-  const translateY = React.useRef(new Animated.Value(16)).current;
+const FanCard = memo(
+  ({
+    user,
+    index,
+    currentUserUid,
+    onRemove,
+  }: {
+    user: any;
+    index: number;
+    currentUserUid: string | undefined;
+    onRemove: (followerUid: string) => void;
+  }) => {
+    const router = useRouter();
+    const opacity = useRef(new Animated.Value(0)).current;
+    const translateY = useRef(new Animated.Value(16)).current;
+    const [removing, setRemoving] = useState(false);
 
-  useEffect(() => {
-    Animated.parallel([
-      Animated.timing(opacity, {
-        toValue: 1,
-        duration: 320,
-        delay: index * 60,
-        useNativeDriver: true,
-      }),
-      Animated.timing(translateY, {
-        toValue: 0,
-        duration: 320,
-        delay: index * 60,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, []);
+    useEffect(() => {
+      Animated.parallel([
+        Animated.timing(opacity, {
+          toValue: 1,
+          duration: 320,
+          delay: index * 60,
+          useNativeDriver: true,
+        }),
+        Animated.timing(translateY, {
+          toValue: 0,
+          duration: 320,
+          delay: index * 60,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }, []);
 
-  const handlePress = () => {
-    // Navigates to the dynamic community profile using the firebaseUid
-    if (user.firebaseUid) {
-      router.push(`/Community/${user.firebaseUid}`);
-    } else {
-      console.warn("User does not have a valid firebaseUid for navigation.");
-    }
-  };
+    const handlePress = () => {
+      if (user.firebaseUid) {
+        router.push(`/Community/${user.firebaseUid}`);
+      }
+    };
 
-  return (
-    <Animated.View style={{ opacity, transform: [{ translateY }] }}>
-      <TouchableOpacity 
-        activeOpacity={0.75} 
-        style={styles.card} 
-        onPress={handlePress}
-      >
-        <View style={styles.avatarWrapper}>
-          <Image
-            source={{ uri: getAvatar(user.profilePic, user.username) }}
-            style={styles.avatar}
-            fadeDuration={0}
-          />
-        </View>
-        <View style={styles.info}>
-          <Text style={styles.username}>@{user.username}</Text>
-          {user.name ? <Text style={styles.name}>{user.name}</Text> : null}
-        </View>
-        <View style={styles.dot} />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-});
+    const handleRemove = () => {
+      Alert.alert(
+        "Remove Follower",
+        `Remove @${user.username} from your fans?`,
+        [
+          { text: "Cancel", style: "cancel" },
+          {
+            text: "Remove",
+            style: "destructive",
+            onPress: async () => {
+              setRemoving(true);
+              try {
+                const res = await fetch(`${BASE_URL}/api/users/remove-follower`, {
+                  method: "PUT",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    currentUserUid,
+                    followerUid: user.firebaseUid,
+                  }),
+                });
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                // Animate out then remove from list
+                Animated.parallel([
+                  Animated.timing(opacity, {
+                    toValue: 0,
+                    duration: 250,
+                    useNativeDriver: true,
+                  }),
+                  Animated.timing(translateY, {
+                    toValue: -10,
+                    duration: 250,
+                    useNativeDriver: true,
+                  }),
+                ]).start(() => onRemove(user.firebaseUid));
+              } catch (err) {
+                setRemoving(false);
+                Alert.alert("Error", "Could not remove follower. Try again.");
+              }
+            },
+          },
+        ]
+      );
+    };
+
+    return (
+      <Animated.View style={{ opacity, transform: [{ translateY }] }}>
+        <TouchableOpacity
+          activeOpacity={0.75}
+          style={styles.card}
+          onPress={handlePress}
+        >
+          {/* Avatar */}
+          <View style={styles.avatarWrapper}>
+            <Image
+              source={{ uri: getAvatar(user.profilePic, user.username) }}
+              style={styles.avatar}
+              fadeDuration={0}
+            />
+          </View>
+
+          {/* Info */}
+          <View style={styles.info}>
+            <Text style={styles.username}>@{user.username}</Text>
+            {user.name ? <Text style={styles.name}>{user.name}</Text> : null}
+          </View>
+
+          {/* Remove button */}
+          <TouchableOpacity
+            style={[styles.removeBtn, removing && styles.removeBtnDisabled]}
+            onPress={handleRemove}
+            disabled={removing}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            {removing ? (
+              <ActivityIndicator size="small" color={theme.danger} />
+            ) : (
+              <Text style={styles.removeBtnText}>Remove</Text>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Animated.View>
+    );
+  }
+);
 
 // ── Empty State ───────────────────────────────────────────────────────────────
 const EmptyState = memo(() => (
@@ -162,12 +235,23 @@ const Fans = () => {
     fetchFollowers();
   }, [fetchFollowers]);
 
+  // ✅ Remove fan from local state after successful API call
+  const handleRemove = useCallback((followerUid: string) => {
+    setFollowers((prev) =>
+      prev.filter((f) => f.firebaseUid !== followerUid)
+    );
+  }, []);
+
   const renderItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
-      // The item itself is the user object populated by your backend
-      <FanCard user={item} index={index} />
+      <FanCard
+        user={item}
+        index={index}
+        currentUserUid={firebaseUid}
+        onRemove={handleRemove}
+      />
     ),
-    []
+    [firebaseUid, handleRemove]
   );
 
   const keyExtractor = useCallback((item: any) => item._id, []);
@@ -220,10 +304,7 @@ export default Fans;
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: theme.bg,
-  },
+  safeArea: { flex: 1, backgroundColor: theme.bg },
   center: {
     flex: 1,
     justifyContent: "center",
@@ -285,12 +366,23 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   name: { fontSize: 13, color: theme.muted, marginTop: 2 },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: theme.gold,
+  removeBtn: {
+    backgroundColor: theme.dangerFaint,
+    borderWidth: 1,
+    borderColor: theme.danger,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    minWidth: 70,
+    alignItems: "center",
+  },
+  removeBtnDisabled: {
     opacity: 0.5,
+  },
+  removeBtnText: {
+    color: theme.danger,
+    fontSize: 12,
+    fontWeight: "600",
   },
   emptyContainer: {
     flex: 1,
