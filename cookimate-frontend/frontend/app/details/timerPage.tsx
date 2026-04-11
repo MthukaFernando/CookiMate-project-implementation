@@ -1,14 +1,44 @@
 import { TimerPickerModal } from "react-native-timer-picker";
 import { LinearGradient } from "expo-linear-gradient";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { TouchableOpacity, View, Text, StyleSheet, Dimensions, Platform } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { Audio } from "expo-av";
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants"; 
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { useFocusEffect } from "expo-router";
 
 type Duration = { hours?: number; minutes?: number; seconds?: number };
 const { width, height } = Dimensions.get("window");
+
+// --- BULLETPROOF NOTIFICATION BYPASS FOR EXPO GO SDK 53 ---
+let Notifications: any = null;
+
+const isExpoGo = Constants.appOwnership === 'expo' || Constants.executionEnvironment === 'storeClient';
+
+if (!isExpoGo) {
+  try {
+    // Only load the module if we are NOT in Expo Go
+    Notifications = require('expo-notifications');
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+        shouldShowBanner: true,
+        shouldShowList: true,
+        priority: Notifications.AndroidNotificationPriority?.MAX || 2,
+      }),
+    });
+  } catch (error) {
+    console.log("Failed to load notifications module:", error);
+  }
+} else {
+  console.log("Running in Expo Go: expo-notifications is intentionally bypassed to prevent SDK 53 crash.");
+}
+// -----------------------------------------------------------
 
 const UI_COLORS = {
   background: "#0A0A0A",
@@ -31,7 +61,10 @@ export default function Timer({
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [totalSeconds, setTotalSeconds] = useState(initialSeconds);
   const [running, setRunning] = useState(false);
+  
+  const notificationIdRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const notificationsEnabledRef = useRef<boolean>(true);
 
   const alarms = [
     { name: "🛎️    Classic", file: require('../../assets/sounds/classic.mp3') },
@@ -66,24 +99,92 @@ export default function Timer({
       .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  // Load notification setting every time the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      const checkNotificationSettings = async () => {
+        try {
+          const setting = await AsyncStorage.getItem("settings_notifications");
+          if (setting !== null) {
+            notificationsEnabledRef.current = JSON.parse(setting);
+          }
+        } catch (error) {
+          console.log("Error loading notification setting:", error);
+        }
+      };
+      
+      checkNotificationSettings();
+    }, [])
+  );
+
+  useEffect(() => {
+    const setupNotifications = async () => {
+      // Stop completely if Notifications didn't load (i.e. we are in Expo Go)
+      if (!Notifications) return; 
+
+      try {
+        const { status } = await Notifications.getPermissionsAsync();
+        if (status !== 'granted') {
+          await Notifications.requestPermissionsAsync();
+        }
+
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('timer-alerts', {
+            name: 'Timer Alerts',
+            importance: Notifications.AndroidImportance?.MAX || 5, 
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: '#D4AF37', 
+            sound: 'default', 
+          });
+        }
+      } catch (error) {
+        console.log("Error setting up notifications:", error);
+      }
+    };
+
+    setupNotifications();
+  }, []);
+
+  // Pure countdown logic
   useEffect(() => {
     if (running) {
       intervalRef.current = setInterval(() => {
-        setSecondsLeft((prev) => {
-          if (prev <= 1) {
-            if (intervalRef.current) clearInterval(intervalRef.current);
-            setRunning(false);
-            playAlarm();
-            return 0;
-          }
-          return prev - 1;
-        });
+        setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     }
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
   }, [running]);
+
+  // Trigger alarm and notifications when timer hits 0
+  useEffect(() => {
+    if (running && secondsLeft === 0) {
+      setRunning(false);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      
+      playAlarm();
+
+      // --- INSTANT NOTIFICATION FIX (WITH TOGGLE CHECK) ---
+      if (Notifications) {
+        if (notificationIdRef.current) {
+          Notifications.cancelScheduledNotificationAsync(notificationIdRef.current).catch(() => {});
+          notificationIdRef.current = null;
+        }
+        
+        if (notificationsEnabledRef.current) {
+          Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Timer Finished! ⏰",
+              body: "Your countdown has completed.",
+              sound: true, 
+            },
+            trigger: null, 
+          }).catch((err: any) => console.log("Instant notification error:", err));
+        }
+      }
+    }
+  }, [secondsLeft, running]);
 
   const playAlarm = async () => {
     if (!selectedAlarm) return;
@@ -102,12 +203,60 @@ export default function Timer({
     if (sound) await sound.stopAsync();
   };
 
-  const resetTimer = () => {
+  const toggleTimer = async () => {
+    if (!running && secondsLeft > 0) {
+      // STARTING THE TIMER
+      setRunning(true);
+      
+      if (Notifications && notificationsEnabledRef.current) {
+        try {
+          const id = await Notifications.scheduleNotificationAsync({
+            content: {
+              title: "Timer Finished! ⏰",
+              body: "Your countdown has completed.",
+              sound: true, 
+            },
+            trigger: { 
+              type: Notifications.SchedulableTriggerInputTypes?.TIME_INTERVAL || 'timeInterval',
+              seconds: secondsLeft,
+              channelId: 'timer-alerts',
+            },
+          });
+          notificationIdRef.current = id;
+        } catch (error) {
+          console.log("Error scheduling notification:", error);
+        }
+      }
+    } else {
+      // PAUSING THE TIMER
+      setRunning(false);
+      
+      if (Notifications && notificationIdRef.current) {
+        try {
+          await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+          notificationIdRef.current = null;
+        } catch (error) {
+          console.log("Error canceling notification:", error);
+        }
+      }
+    }
+  };
+
+  const resetTimer = async () => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     setRunning(false);
     setSecondsLeft(initialSeconds);
     setTotalSeconds(initialSeconds);
     stopAlarm();
+    
+    if (Notifications && notificationIdRef.current) {
+      try {
+        await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+        notificationIdRef.current = null;
+      } catch (error) {
+        console.log("Error canceling notification:", error);
+      }
+    }
   };
 
   return (
@@ -133,7 +282,7 @@ export default function Timer({
             {() => (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={() => secondsLeft > 0 && setRunning(!running)}
+                onPress={toggleTimer}
                 style={styles.innerCircle}
               >
                 <Text style={styles.timerText}>{formatDisplay(secondsLeft)}</Text>
@@ -196,10 +345,23 @@ export default function Timer({
         visible={showPicker}
         setIsVisible={setShowPicker}
         onConfirm={(picked: Duration) => {
+          // Pause the timer so it doesn't run invisibly
+          if (intervalRef.current) clearInterval(intervalRef.current);
+          setRunning(false);
+
           const total = (picked.hours || 0) * 3600 + (picked.minutes || 0) * 60 + (picked.seconds || 0);
           setSecondsLeft(total);
           setTotalSeconds(total);
           setShowPicker(false);
+          
+          if (Notifications && notificationIdRef.current) {
+            try {
+              Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+              notificationIdRef.current = null;
+            } catch (error) {
+              console.log("Error canceling notification:", error);
+            }
+          }
         }}
         styles={{
           theme: "dark",

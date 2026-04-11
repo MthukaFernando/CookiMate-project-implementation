@@ -981,10 +981,21 @@ const Settings = () => {
   const { showAlert, AlertComponent: SettingsAlert } = useThemedAlert();
 
   // Load preferences from backend when component mounts
+// Load preferences from backend and local storage when component mounts
   useEffect(() => {
     const loadSettings = async () => {
+      // 1. ALWAYS load device-specific local settings first (like notifications)
       try {
-        // Try to load from backend first if user is logged in
+        const notif = await AsyncStorage.getItem(STORAGE_KEYS.notifications);
+        if (notif !== null) {
+          setNotificationsEnabled(JSON.parse(notif));
+        }
+      } catch (err) {
+        console.error("Error loading notification setting:", err);
+      }
+
+      // 2. Load user-specific settings (backend or local fallback)
+      try {
         if (uid) {
           const response = await axios.get(
             `${API_URL}/api/users/preferences/${uid}`,
@@ -1003,29 +1014,25 @@ const Settings = () => {
           }
         } else {
           // Fallback to AsyncStorage if not logged in
-          const [notif, dietary, allerg, custom] = await Promise.all([
-            AsyncStorage.getItem(STORAGE_KEYS.notifications),
+          const [dietary, allerg, custom] = await Promise.all([
             AsyncStorage.getItem(STORAGE_KEYS.dietary),
             AsyncStorage.getItem(STORAGE_KEYS.allergies),
             AsyncStorage.getItem(STORAGE_KEYS.customPreferences),
           ]);
 
-          if (notif !== null) setNotificationsEnabled(JSON.parse(notif));
           if (dietary !== null) setDietaryPreferences(JSON.parse(dietary));
           if (allerg !== null) setAllergies(JSON.parse(allerg));
           if (custom !== null) setCustomPreferences(JSON.parse(custom));
         }
       } catch (err) {
-        console.error("Error loading settings:", err);
+        console.error("Error loading user preferences:", err);
         // Fallback to AsyncStorage if backend fails
-        const [notif, dietary, allerg, custom] = await Promise.all([
-          AsyncStorage.getItem(STORAGE_KEYS.notifications),
+        const [dietary, allerg, custom] = await Promise.all([
           AsyncStorage.getItem(STORAGE_KEYS.dietary),
           AsyncStorage.getItem(STORAGE_KEYS.allergies),
           AsyncStorage.getItem(STORAGE_KEYS.customPreferences),
         ]);
 
-        if (notif !== null) setNotificationsEnabled(JSON.parse(notif));
         if (dietary !== null) setDietaryPreferences(JSON.parse(dietary));
         if (allerg !== null) setAllergies(JSON.parse(allerg));
         if (custom !== null) setCustomPreferences(JSON.parse(custom));
