@@ -8,47 +8,68 @@ import {
   StyleSheet,
   Dimensions,
   Platform,
+  AppState,
 } from "react-native";
 import DropDownPicker from "react-native-dropdown-picker";
 import { Audio } from "expo-av";
 import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { Ionicons } from "@expo/vector-icons";
-import Constants from "expo-constants";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+import * as BackgroundFetch from "expo-background-fetch";
+import * as TaskManager from "expo-task-manager";
 import { useFocusEffect } from "expo-router";
 
 type Duration = { hours?: number; minutes?: number; seconds?: number };
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 
-// --- BULLETPROOF NOTIFICATION BYPASS FOR EXPO GO SDK 53 ---
-let Notifications: any = null;
+const BACKGROUND_FETCH_TASK = "background-timer-task";
 
-const isExpoGo =
-  Constants.appOwnership === "expo" ||
-  Constants.executionEnvironment === "storeClient";
+const alarms = [
+  { name: "🛎️    Classic", file: require("../../assets/sounds/classic.wav"), fileName: "classic.wav" },
+  { name: "🔊    Beep", file: require("../../assets/sounds/beep.wav"), fileName: "beep.wav" },
+  { name: "⏰    Chime", file: require("../../assets/sounds/chime.wav"), fileName: "chime.wav" },
+  { name: "📳    Buzz", file: require("../../assets/sounds/buzz.wav"), fileName: "buzz.wav" },
+  { name: "🎵    Melody", file: require("../../assets/sounds/melody.wav"), fileName: "melody.wav" },
+  { name: "🎹    Tune", file: require("../../assets/sounds/tune.wav"), fileName: "tune.wav" },
+];
 
-if (!isExpoGo) {
+// Define the background task
+TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
   try {
-    Notifications = require("expo-notifications");
-    Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-        shouldShowBanner: true,
-        shouldShowList: true,
-        priority: Notifications.AndroidNotificationPriority?.MAX || 2,
-      }),
-    });
+    const notificationsEnabled = await AsyncStorage.getItem('settings_notifications');
+    if (notificationsEnabled === 'false') {
+      console.log("🔕 Notifications disabled, skipping background task");
+      return BackgroundFetch.BackgroundFetchResult.NoData;
+    }
+    
+    const savedFinishTime = await AsyncStorage.getItem('timer_finish_time');
+    if (savedFinishTime) {
+      const finishTime = parseInt(savedFinishTime);
+      const now = Date.now();
+      if (now >= finishTime) {
+        console.log("⏰ Background task: Timer finished!");
+        await AsyncStorage.removeItem('timer_finish_time');
+        await AsyncStorage.removeItem('timer_total_seconds');
+        
+        const savedAlarm = await AsyncStorage.getItem('timer_selected_alarm');
+        if (savedAlarm) {
+          const alarmIndex = parseInt(savedAlarm);
+          const alarm = alarms[alarmIndex];
+          if (alarm) {
+            const { sound } = await Audio.Sound.createAsync(alarm.file);
+            await sound.playAsync();
+          }
+        }
+        return BackgroundFetch.BackgroundFetchResult.NewData;
+      }
+    }
+    return BackgroundFetch.BackgroundFetchResult.NoData;
   } catch (error) {
-    console.log("Failed to load notifications module:", error);
+    console.log("Background task error:", error);
+    return BackgroundFetch.BackgroundFetchResult.Failed;
   }
-} else {
-  console.log(
-    "Running in Expo Go: expo-notifications is intentionally bypassed to prevent SDK 53 crash.",
-  );
-}
-// -----------------------------------------------------------
+});
 
 const UI_COLORS = {
   background: "#0A0A0A",
@@ -60,263 +81,345 @@ const UI_COLORS = {
   accentRed: "#FF4444",
 };
 
-export default function Timer({
-  initialSeconds = 0,
-  onClose,
-}: {
-  initialSeconds?: number;
-  onClose?: () => void;
-}) {
+export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?: number; onClose?: () => void }) {
   const [showPicker, setShowPicker] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(initialSeconds);
   const [totalSeconds, setTotalSeconds] = useState(initialSeconds);
   const [running, setRunning] = useState(false);
+  const [appState, setAppState] = useState(AppState.currentState);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
 
   const notificationIdRef = useRef<string | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const notificationsEnabledRef = useRef<boolean>(true);
-
-  // We added `fileName` so the native OS knows exactly what string to look for
-  const alarms = [
-    {
-      name: "🛎️    Classic",
-      file: require("../../assets/sounds/classic.wav"),
-      fileName: "classic.wav",
-    },
-    {
-      name: "🔊    Beep",
-      file: require("../../assets/sounds/beep.wav"),
-      fileName: "beep.wav",
-    },
-    {
-      name: "⏰    Chime",
-      file: require("../../assets/sounds/chime.wav"),
-      fileName: "chime.wav",
-    },
-    {
-      name: "📳    Buzz",
-      file: require("../../assets/sounds/buzz.wav"),
-      fileName: "buzz.wav",
-    },
-    {
-      name: "🎵    Melody",
-      file: require("../../assets/sounds/melody.wav"),
-      fileName: "melody.wav",
-    },
-    {
-      name: "🎹    Tune",
-      file: require("../../assets/sounds/tune.wav"),
-      fileName: "tune.wav",
-    },
-  ];
+  const finishTimeRef = useRef<number | null>(null);
+  const alarmPlayedRef = useRef<boolean>(false);
+  const secondsLeftRef = useRef(initialSeconds);
 
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState(
-    alarms.map((alarm, index) => ({
-      label: alarm.name,
-      value: index.toString(),
-    })),
-  );
-  const [selectedAlarmValue, setSelectedAlarmValue] = useState<string | null>(
-    "0",
-  );
-  const selectedAlarm =
-    selectedAlarmValue !== null ? alarms[parseInt(selectedAlarmValue)] : null;
-
+  const [selectedAlarmValue, setSelectedAlarmValue] = useState<string | null>("0");
+  const selectedAlarm = selectedAlarmValue !== null ? alarms[parseInt(selectedAlarmValue)] : null;
   const [sound, setSound] = useState<Audio.Sound | null>(null);
+
+  // Load notification setting from AsyncStorage - runs when screen focuses
+  const loadNotificationSetting = useCallback(async () => {
+    try {
+      const setting = await AsyncStorage.getItem('settings_notifications');
+      const isEnabled = setting === null ? true : JSON.parse(setting);
+      setNotificationsEnabled(isEnabled);
+      console.log("📱 Notification setting loaded:", isEnabled);
+    } catch (error) {
+      console.log("Error loading notification setting:", error);
+    }
+  }, []);
+
+  // Load setting when component mounts
+  useEffect(() => {
+    loadNotificationSetting();
+  }, [loadNotificationSetting]);
+
+  // Reload setting when screen comes into focus (after returning from Settings)
+  useFocusEffect(
+    useCallback(() => {
+      loadNotificationSetting();
+    }, [loadNotificationSetting])
+  );
+
+  // Update notification handler based on app state AND user preference
+  useEffect(() => {
+    Notifications.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: notificationsEnabled,
+        shouldPlaySound: notificationsEnabled && appState !== 'active',
+        shouldSetBadge: false,
+        shouldShowBanner: notificationsEnabled,
+        shouldShowList: notificationsEnabled,
+        priority: Notifications.AndroidNotificationPriority?.MAX || 2,
+      }),
+    });
+  }, [appState, notificationsEnabled]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    secondsLeftRef.current = secondsLeft;
+  }, [secondsLeft]);
 
   const formatDisplay = (totalSecs: number): string => {
     const h = Math.floor(totalSecs / 3600);
     const m = Math.floor((totalSecs % 3600) / 60);
     const s = totalSecs % 60;
-    return `${h.toString().padStart(2, "0")}:${m
-      .toString()
-      .padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  useFocusEffect(
-    useCallback(() => {
-      const checkNotificationSettings = async () => {
-        try {
-          const setting = await AsyncStorage.getItem("settings_notifications");
-          if (setting !== null) {
-            notificationsEnabledRef.current = JSON.parse(setting);
-          }
-        } catch (error) {
-          console.log("Error loading notification setting:", error);
-        }
-      };
-      checkNotificationSettings();
-    }, []),
-  );
+  const playAlarm = useCallback(async () => {
+    console.log("🔊 playAlarm called, secondsLeft:", secondsLeftRef.current);
+    if (alarmPlayedRef.current || !selectedAlarm) return;
+    alarmPlayedRef.current = true;
 
-  useEffect(() => {
-    const setupNotifications = async () => {
-      if (!Notifications) return;
-
-      try {
-        const { status } = await Notifications.getPermissionsAsync();
-        if (status !== "granted") {
-          await Notifications.requestPermissionsAsync();
-        }
-
-        // Loop through all alarms and create a dedicated Android channel for each
-        if (Platform.OS === "android") {
-          for (const alarm of alarms) {
-            await Notifications.setNotificationChannelAsync(
-              `timer-alerts-${alarm.fileName}`,
-              {
-                name: `Timer Alerts (${alarm.name.trim()})`,
-                importance: Notifications.AndroidImportance?.MAX || 5,
-                vibrationPattern: [0, 250, 250, 250],
-                lightColor: "#D4AF37",
-                sound: alarm.fileName,
-              },
-            );
-          }
-        }
-      } catch (error) {
-        console.log("Error setting up notifications:", error);
-      }
-    };
-
-    setupNotifications();
-  }, []);
-
-  useEffect(() => {
-    if (running) {
-      intervalRef.current = setInterval(() => {
-        setSecondsLeft((prev) => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
-    }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [running]);
-
-  useEffect(() => {
-    if (running && secondsLeft === 0) {
-      setRunning(false);
-      if (intervalRef.current) clearInterval(intervalRef.current);
-
-      playAlarm();
-
-      if (Notifications) {
-        if (notificationIdRef.current) {
-          Notifications.cancelScheduledNotificationAsync(
-            notificationIdRef.current,
-          ).catch(() => {});
-          notificationIdRef.current = null;
-        }
-
-        if (notificationsEnabledRef.current) {
-          const soundFile = selectedAlarm?.fileName || "classic.wav";
-          const channelId = `timer-alerts-${soundFile}`;
-
-          Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Timer Finished! ⏰",
-              body: "Your countdown has completed.",
-              sound: soundFile,
-            },
-            // Using 1 second here so we can pass the specific Android channel ID
-            trigger: { seconds: 1, channelId: channelId },
-          }).catch((err: any) =>
-            console.log("Instant notification error:", err),
-          );
-        }
-      }
-    }
-  }, [secondsLeft, running]);
-
-  const playAlarm = async () => {
-    if (!selectedAlarm) return;
     if (sound) {
       await sound.stopAsync();
       await sound.unloadAsync();
     }
-    const { sound: newSound } = await Audio.Sound.createAsync(
-      selectedAlarm.file,
-    );
-    setSound(newSound);
-    await newSound.playAsync();
-  };
+    try {
+      const { sound: newSound } = await Audio.Sound.createAsync(selectedAlarm.file);
+      setSound(newSound);
+      await newSound.playAsync();
+      console.log("✅ Alarm playing successfully");
+    } catch (error) {
+      console.log("Error playing alarm:", error);
+    }
+  }, [selectedAlarm, sound]);
 
-  const stopAlarm = async () => {
-    if (sound) await sound.stopAsync();
-  };
+  const stopAlarm = useCallback(async () => {
+    alarmPlayedRef.current = false;
+    if (sound) {
+      await sound.stopAsync();
+      await sound.unloadAsync();
+      setSound(null);
+    }
+  }, [sound]);
 
-  const toggleTimer = async () => {
-    if (!running && secondsLeft > 0) {
-      setRunning(true);
+  const stopTimer = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
 
-      if (Notifications && notificationsEnabledRef.current) {
-        try {
-          const soundFile = selectedAlarm?.fileName || "classic.wav";
-          const channelId = `timer-alerts-${soundFile}`;
+  const resetTimerState = useCallback(async () => {
+    stopTimer();
+    setRunning(false);
+    setSecondsLeft(0);
+    setTotalSeconds(0);
+    finishTimeRef.current = null;
+    alarmPlayedRef.current = false;
+    await stopAlarm();
+    await AsyncStorage.multiRemove(['timer_finish_time', 'timer_total_seconds', 'timer_selected_alarm']);
+    
+    if (notificationIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+      notificationIdRef.current = null;
+    }
+  }, [stopTimer, stopAlarm]);
 
-          const id = await Notifications.scheduleNotificationAsync({
-            content: {
-              title: "Timer Finished! ⏰",
-              body: "Your countdown has completed.",
-              sound: soundFile,
-            },
-            trigger: {
-              type:
-                Notifications.SchedulableTriggerInputTypes?.TIME_INTERVAL ||
-                "timeInterval",
-              seconds: secondsLeft,
-              channelId: channelId,
-            },
+  const onTimerComplete = useCallback(async () => {
+    console.log("⏰ Timer complete!");
+    stopTimer();
+    setRunning(false);
+    setSecondsLeft(0);
+    finishTimeRef.current = null;
+    
+    if (notificationIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+      notificationIdRef.current = null;
+      console.log("🔕 Cancelled scheduled notification");
+    }
+    
+    await playAlarm();
+  }, [stopTimer, playAlarm]);
+
+  // Timer interval logic
+  useEffect(() => {
+    if (running && secondsLeftRef.current > 0) {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      
+      intervalRef.current = setInterval(() => {
+        if (secondsLeftRef.current <= 1) {
+          onTimerComplete();
+        } else {
+          setSecondsLeft(prev => prev - 1);
+        }
+      }, 1000);
+    } else if (!running && intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+    
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    };
+  }, [running, onTimerComplete]);
+
+  const saveTimerState = useCallback(async () => {
+    try {
+      if (running && finishTimeRef.current) {
+        await AsyncStorage.setItem('timer_finish_time', finishTimeRef.current.toString());
+        await AsyncStorage.setItem('timer_total_seconds', totalSeconds.toString());
+        await AsyncStorage.setItem('timer_selected_alarm', selectedAlarmValue || '0');
+      } else {
+        await AsyncStorage.multiRemove(['timer_finish_time', 'timer_total_seconds', 'timer_selected_alarm']);
+      }
+    } catch (error) {
+      console.log("Error saving timer state:", error);
+    }
+  }, [running, totalSeconds, selectedAlarmValue]);
+
+  const restoreTimerState = useCallback(async () => {
+    try {
+      const [savedFinishTime, savedTotalSeconds, savedAlarm] = await AsyncStorage.multiGet([
+        'timer_finish_time', 'timer_total_seconds', 'timer_selected_alarm'
+      ]);
+      
+      if (savedFinishTime[1] && savedTotalSeconds[1]) {
+        const finishTime = parseInt(savedFinishTime[1]);
+        const now = Date.now();
+        const remainingSeconds = Math.max(0, Math.floor((finishTime - now) / 1000));
+        
+        setTotalSeconds(parseInt(savedTotalSeconds[1]));
+        setSecondsLeft(remainingSeconds);
+        
+        if (savedAlarm[1]) {
+          setSelectedAlarmValue(savedAlarm[1]);
+        }
+        
+        if (remainingSeconds > 0) {
+          finishTimeRef.current = finishTime;
+          setRunning(true);
+        } else {
+          setRunning(false);
+          setSecondsLeft(0);
+          finishTimeRef.current = null;
+        }
+        
+        await AsyncStorage.multiRemove(['timer_finish_time', 'timer_total_seconds', 'timer_selected_alarm']);
+      }
+    } catch (error) {
+      console.log("Error restoring timer state:", error);
+    }
+  }, []);
+
+  // Setup notifications, audio, and background fetch
+  useEffect(() => {
+    const setup = async () => {
+      const { status } = await Notifications.getPermissionsAsync();
+      if (status !== 'granted') {
+        await Notifications.requestPermissionsAsync();
+      }
+      
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: false,
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      
+      if (Platform.OS === 'android') {
+        for (const alarm of alarms) {
+          await Notifications.setNotificationChannelAsync(`timer-alerts-${alarm.fileName}`, {
+            name: `Timer Alerts (${alarm.name.trim()})`,
+            importance: Notifications.AndroidImportance.MAX,
+            vibrationPattern: [0, 250, 250, 250],
+            lightColor: "#D4AF37",
+            sound: alarm.fileName,
           });
-          notificationIdRef.current = id;
-        } catch (error) {
-          console.log("Error scheduling notification:", error);
         }
       }
+      
+      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
+        minimumInterval: 15,
+        stopOnTerminate: false,
+        startOnBoot: true,
+      });
+    };
+    setup();
+    
+    return () => {
+      stopAlarm();
+      stopTimer();
+      BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
+    };
+  }, []);
+
+  // App state changes
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextAppState) => {
+      setAppState(nextAppState);
+      
+      if (nextAppState === 'background') {
+        saveTimerState();
+      } else if (nextAppState === 'active') {
+        restoreTimerState();
+      }
+    });
+    return () => subscription.remove();
+  }, [saveTimerState, restoreTimerState]);
+
+  const startTimer = async () => {
+    console.log("▶️ START pressed, secondsLeft:", secondsLeft, "notificationsEnabled:", notificationsEnabled);
+    if (secondsLeft <= 0) return;
+    
+    setRunning(true);
+    alarmPlayedRef.current = false;
+    finishTimeRef.current = Date.now() + (secondsLeft * 1000);
+    await saveTimerState();
+    
+    if (notificationsEnabled) {
+      const soundFile = selectedAlarm?.fileName || "classic.wav";
+      const channelId = `timer-alerts-${soundFile}`;
+      
+      const id = await Notifications.scheduleNotificationAsync({
+        content: {
+          title: "Timer Finished! ⏰",
+          body: "Your countdown has completed.",
+          sound: soundFile,
+        },
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+          seconds: secondsLeft,
+          channelId: channelId,
+        } as Notifications.TimeIntervalTriggerInput,
+      });
+      notificationIdRef.current = id;
+      console.log("📢 Notification scheduled for", secondsLeft, "seconds (notifications ENABLED)");
     } else {
-      setRunning(false);
-      if (Notifications && notificationIdRef.current) {
-        try {
-          await Notifications.cancelScheduledNotificationAsync(
-            notificationIdRef.current,
-          );
-          notificationIdRef.current = null;
-        } catch (error) {
-          console.log("Error canceling notification:", error);
-        }
-      }
+      console.log("🔕 Notifications DISABLED, skipping notification schedule");
+    }
+  };
+
+  const pauseTimer = async () => {
+    console.log("⏸️ Pause pressed");
+    setRunning(false);
+    finishTimeRef.current = null;
+    await saveTimerState();
+    
+    if (notificationIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+      notificationIdRef.current = null;
     }
   };
 
   const resetTimer = async () => {
-    if (intervalRef.current) clearInterval(intervalRef.current);
-    setRunning(false);
+    console.log("🔄 Reset pressed");
+    await resetTimerState();
     setSecondsLeft(initialSeconds);
     setTotalSeconds(initialSeconds);
-    stopAlarm();
-
-    if (Notifications && notificationIdRef.current) {
-      try {
-        await Notifications.cancelScheduledNotificationAsync(
-          notificationIdRef.current,
-        );
-        notificationIdRef.current = null;
-      } catch (error) {
-        console.log("Error canceling notification:", error);
-      }
-    }
   };
+
+  // Handle notification click
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
+      console.log("🔔 Notification clicked - stopping alarm and resetting timer");
+      await stopAlarm();
+      await resetTimerState();
+      if (onClose) {
+        onClose();
+      }
+    });
+    return () => subscription.remove();
+  }, [stopAlarm, resetTimerState, onClose]);
+
+  const items = alarms.map((alarm, index) => ({ label: alarm.name, value: index.toString() }));
 
   return (
     <View style={styles.timerContainer}>
       {onClose && (
         <TouchableOpacity onPress={onClose} style={styles.closeIcon}>
-          <Ionicons
-            name="chevron-back"
-            size={28}
-            color={UI_COLORS.primaryGold}
-          />
+          <Ionicons name="chevron-back" size={28} color={UI_COLORS.primaryGold} />
         </TouchableOpacity>
       )}
 
@@ -334,24 +437,12 @@ export default function Timer({
             {() => (
               <TouchableOpacity
                 activeOpacity={0.8}
-                onPress={toggleTimer}
+                onPress={running ? pauseTimer : startTimer}
                 style={styles.innerCircle}
               >
-                <Text style={styles.timerText}>
-                  {formatDisplay(secondsLeft)}
-                </Text>
-                <View
-                  style={[
-                    styles.badge,
-                    { backgroundColor: running ? "#332B14" : "#222" },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.statusText,
-                      { color: running ? UI_COLORS.primaryGold : "#31db2e" },
-                    ]}
-                  >
+                <Text style={styles.timerText}>{formatDisplay(secondsLeft)}</Text>
+                <View style={[styles.badge, { backgroundColor: running ? "#332B14" : "#222" }]}>
+                  <Text style={[styles.statusText, { color: running ? UI_COLORS.primaryGold : "#31db2e" }]}>
                     {running ? "PAUSE" : "START"}
                   </Text>
                 </View>
@@ -361,13 +452,9 @@ export default function Timer({
         </View>
 
         <View style={styles.controlsRow}>
-          <TouchableOpacity
-            onPress={() => setShowPicker(true)}
-            style={styles.mainButton}
-          >
+          <TouchableOpacity onPress={() => setShowPicker(true)} style={styles.mainButton}>
             <Text style={styles.buttonText}>Edit Timer</Text>
           </TouchableOpacity>
-
           <TouchableOpacity onPress={resetTimer} style={styles.secondaryButton}>
             <Text style={styles.secondaryButtonText}>Reset</Text>
           </TouchableOpacity>
@@ -381,13 +468,9 @@ export default function Timer({
             items={items}
             setOpen={setOpen}
             setValue={(callback) => {
-              const value =
-                typeof callback === "function"
-                  ? callback(selectedAlarmValue)
-                  : callback;
+              const value = typeof callback === "function" ? callback(selectedAlarmValue) : callback;
               setSelectedAlarmValue(value);
             }}
-            setItems={setItems}
             placeholder="Select Tone"
             placeholderStyle={{ color: UI_COLORS.textMuted }}
             style={styles.dropdown}
@@ -397,27 +480,9 @@ export default function Timer({
             dropDownDirection="TOP"
             maxHeight={260}
             disabled={running}
-            ArrowUpIconComponent={() => (
-              <Ionicons
-                name="chevron-up"
-                size={20}
-                color={UI_COLORS.primaryGold}
-              />
-            )}
-            ArrowDownIconComponent={() => (
-              <Ionicons
-                name="chevron-down"
-                size={20}
-                color={UI_COLORS.primaryGold}
-              />
-            )}
-            TickIconComponent={() => (
-              <Ionicons
-                name="checkmark"
-                size={20}
-                color={UI_COLORS.primaryGold}
-              />
-            )}
+            ArrowUpIconComponent={() => <Ionicons name="chevron-up" size={20} color={UI_COLORS.primaryGold} />}
+            ArrowDownIconComponent={() => <Ionicons name="chevron-down" size={20} color={UI_COLORS.primaryGold} />}
+            TickIconComponent={() => <Ionicons name="checkmark" size={20} color={UI_COLORS.primaryGold} />}
           />
         </View>
       </View>
@@ -426,33 +491,26 @@ export default function Timer({
         LinearGradient={LinearGradient}
         visible={showPicker}
         setIsVisible={setShowPicker}
-        onConfirm={(picked: Duration) => {
-          if (intervalRef.current) clearInterval(intervalRef.current);
+        onConfirm={async (picked: Duration) => {
+          stopTimer();
           setRunning(false);
+          finishTimeRef.current = null;
+          alarmPlayedRef.current = false;
+          await stopAlarm();
 
-          const total =
-            (picked.hours || 0) * 3600 +
-            (picked.minutes || 0) * 60 +
-            (picked.seconds || 0);
+          const total = (picked.hours || 0) * 3600 + (picked.minutes || 0) * 60 + (picked.seconds || 0);
           setSecondsLeft(total);
           setTotalSeconds(total);
           setShowPicker(false);
-
-          if (Notifications && notificationIdRef.current) {
-            try {
-              Notifications.cancelScheduledNotificationAsync(
-                notificationIdRef.current,
-              );
-              notificationIdRef.current = null;
-            } catch (error) {
-              console.log("Error canceling notification:", error);
-            }
+          
+          await AsyncStorage.multiRemove(['timer_finish_time', 'timer_total_seconds', 'timer_selected_alarm']);
+          
+          if (notificationIdRef.current) {
+            await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+            notificationIdRef.current = null;
           }
         }}
-        styles={{
-          theme: "dark",
-          backgroundColor: UI_COLORS.surface,
-        }}
+        styles={{ theme: "dark", backgroundColor: UI_COLORS.surface }}
       />
     </View>
   );

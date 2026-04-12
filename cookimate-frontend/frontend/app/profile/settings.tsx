@@ -1058,17 +1058,19 @@ const Settings = () => {
     ]);
   };
 
-  const toggleNotifications = async (value: boolean) => {
-    setNotificationsEnabled(value);
-    try {
-      await AsyncStorage.setItem(
-        STORAGE_KEYS.notifications,
-        JSON.stringify(value),
-      );
-    } catch (err) {
-      console.error("Error saving notification setting:", err);
-    }
-  };
+const toggleNotifications = async (value: boolean) => {
+  console.log("🔄 Toggling notifications to:", value);
+  setNotificationsEnabled(value);
+  try {
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.notifications,
+      JSON.stringify(value),
+    );
+    console.log("✅ Notification setting saved to AsyncStorage:", value);
+  } catch (err) {
+    console.error("Error saving notification setting:", err);
+  }
+};
 
   const toggleDietaryOption = (name: string) =>
     setDietaryPreferences((prev) =>
@@ -1279,9 +1281,9 @@ const Settings = () => {
               />
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.cardTitle}>Notifications</Text>
+              <Text style={styles.cardTitle}>Foreground functionality</Text>
               <Text style={styles.cardSubtitle}>
-                Enable or disable all notifications
+                When disabled, notifications and timer will not function while app is closed
               </Text>
             </View>
           </View>

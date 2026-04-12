@@ -20,7 +20,7 @@ import { getAuth } from "firebase/auth";
 import { auth } from "../../config/firebase";
 
 import Timer from "../details/timerPage";
-import RecipeChatbot from "../RecipeChat"; // Reusable chatbot component
+import RecipeChatbot from "../RecipeChat";
 const API_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const extractAllTimings = (text: string): number[] => {
@@ -123,13 +123,11 @@ export default function RecipeDetails() {
     setCurrentStepIndex(0);
   };
 
-  // New function to handle recipe completion
   const handleCompleteRecipe = async () => {
     try {
       const currentUserUid = auth.currentUser?.uid;
 
       if (currentUserUid && recipe?._id) {
-        // MATCHING YOUR ROUTE: /api/users/complete-recipe/:uid
         await axios.put(
           `${API_URL}/api/users/complete-recipe/${currentUserUid}`,
           { recipeId: recipe._id },
@@ -225,13 +223,11 @@ export default function RecipeDetails() {
       );
     } else {
       try {
-        // Add to favorites list
         await axios.put(`${API_URL}/api/users/favorites/${uid}`, {
           recipeId: id,
         });
         setIsFavorite(true);
 
-        // Trigger Gamification Progress
         try {
           const userRes = await axios.get(`${API_URL}/api/users/${uid}`);
           const mongoId = userRes.data._id;
@@ -258,16 +254,16 @@ export default function RecipeDetails() {
       }
     }
   };
+  
   useEffect(() => {
     const fetchRecipeDetails = async (recipeId: string) => {
       try {
         setLoading(true);
-        // Double check: Is your backend route /api/recipes/ or /api/recipe/?
         const response = await axios.get(`${API_URL}/api/recipes/${recipeId}`);
 
         if (response.data) {
           setRecipe(response.data);
-          setError(""); // Clear any previous errors
+          setError("");
         }
       } catch (err: any) {
         console.error(
@@ -430,7 +426,6 @@ export default function RecipeDetails() {
         </View>
       </ScrollView>
 
-      {/* ✅ Reusable chatbot — wired to your chatWithRecipe backend via recipeId */}
       <RecipeChatbot recipeId={id as string} />
 
       {/* Cooking Mode Modal */}
@@ -544,12 +539,20 @@ export default function RecipeDetails() {
         </SafeAreaView>
       </Modal>
 
-      {/* Timer Modal */}
-      <Modal visible={showTimerModal} animationType="fade" transparent={false}>
-        <Timer
-          initialSeconds={activeTimerSeconds}
-          onClose={() => setShowTimerModal(false)}
-        />
+      {/* Timer Modal - Already correctly configured */}
+      <Modal
+        visible={showTimerModal}
+        animationType="fade"
+        transparent={false}
+        onRequestClose={() => setShowTimerModal(false)}
+      >
+        {showTimerModal && (
+          <Timer
+            key={activeTimerSeconds}
+            initialSeconds={activeTimerSeconds}
+            onClose={() => setShowTimerModal(false)}
+          />
+        )}
       </Modal>
 
       {/* Custom Alert Modal */}
@@ -875,7 +878,6 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginLeft: 8,
   },
-  // Custom Alert styles
   alertOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.8)",
