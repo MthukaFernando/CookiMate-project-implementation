@@ -19,9 +19,7 @@ import { useRouter } from "expo-router";
 
 const auth = getAuth();
 
-
-
-const BASE_URL =  `https://cookimate-project-implementation-m4on.onrender.com`;
+const BASE_URL = `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const getAvatar = (profilePic: string | null | undefined, username: string) => {
   if (profilePic && profilePic.startsWith("http")) return profilePic;
@@ -41,7 +39,6 @@ const theme = {
   danger: "#FF4444",
   dangerFaint: "rgba(255,68,68,0.1)",
 };
-
 
 const FanCard = memo(
   ({
@@ -104,7 +101,6 @@ const FanCard = memo(
                   }),
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                // Animate out then remove from list
                 Animated.parallel([
                   Animated.timing(opacity, {
                     toValue: 0,
@@ -134,7 +130,6 @@ const FanCard = memo(
           style={styles.card}
           onPress={handlePress}
         >
-          {/* Avatar */}
           <View style={styles.avatarWrapper}>
             <Image
               source={{ uri: getAvatar(user.profilePic, user.username) }}
@@ -143,13 +138,11 @@ const FanCard = memo(
             />
           </View>
 
-          {/* Info */}
           <View style={styles.info}>
             <Text style={styles.username}>@{user.username}</Text>
             {user.name ? <Text style={styles.name}>{user.name}</Text> : null}
           </View>
 
-          {/* Remove button */}
           <TouchableOpacity
             style={[styles.removeBtn, removing && styles.removeBtnDisabled]}
             onPress={handleRemove}
@@ -168,7 +161,6 @@ const FanCard = memo(
   }
 );
 
-
 const EmptyState = memo(() => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyIcon}>✦</Text>
@@ -179,23 +171,28 @@ const EmptyState = memo(() => (
   </View>
 ));
 
-
-const Header = memo(({ count }: { count: number }) => (
+const Header = memo(({ count, onBack }: { count: number; onBack: () => void }) => (
   <View style={styles.header}>
-    <Text style={styles.headerLabel}>FANS</Text>
-    {count > 0 && (
-      <View style={styles.badge}>
-        <Text style={styles.badgeText}>{count}</Text>
-      </View>
-    )}
+    <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+      <Text style={styles.backButtonText}>←</Text>
+    </TouchableOpacity>
+    <View style={styles.headerCenter}>
+      <Text style={styles.headerLabel}>FANS</Text>
+      {count > 0 && (
+        <View style={styles.badge}>
+          <Text style={styles.badgeText}>{count}</Text>
+        </View>
+      )}
+    </View>
+    <View style={styles.headerPlaceholder} />
   </View>
 ));
-
 
 const Fans = () => {
   const [followers, setFollowers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const router = useRouter();
 
   const currentUser = auth.currentUser;
   const firebaseUid = currentUser?.uid;
@@ -228,12 +225,15 @@ const Fans = () => {
     fetchFollowers();
   }, [fetchFollowers]);
 
-  // ✅ Remove fan from local state after successful API call
   const handleRemove = useCallback((followerUid: string) => {
     setFollowers((prev) =>
       prev.filter((f) => f.firebaseUid !== followerUid)
     );
   }, []);
+
+  const handleBack = useCallback(() => {
+    router.push("/profilePage");
+  }, [router]);
 
   const renderItem = useCallback(
     ({ item, index }: { item: any; index: number }) => (
@@ -250,8 +250,8 @@ const Fans = () => {
   const keyExtractor = useCallback((item: any) => item._id, []);
 
   const ListHeader = useCallback(
-    () => <Header count={followers.length} />,
-    [followers.length]
+    () => <Header count={followers.length} onBack={handleBack} />,
+    [followers.length, handleBack]
   );
 
   if (loading) {
@@ -295,7 +295,6 @@ const Fans = () => {
 
 export default Fans;
 
-
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.bg },
   center: {
@@ -309,9 +308,32 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    justifyContent: "space-between",
     paddingTop: 16,
     paddingBottom: 16,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: "center",
+    alignItems: "center",
+    borderRadius: 20,
+    backgroundColor: theme.card,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+  },
+  backButtonText: {
+    fontSize: 24,
+    color: theme.gold,
+    fontWeight: "500",
+  },
+  headerCenter: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  headerPlaceholder: {
+    width: 40,
   },
   headerLabel: {
     fontSize: 11,
