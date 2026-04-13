@@ -19,16 +19,9 @@ import { useRouter } from "expo-router";
 
 const auth = getAuth();
 
-const getBaseUrl = () => {
-  const debuggerHost = Constants.expoConfig?.hostUri;
-  if (debuggerHost) {
-    const host = debuggerHost.split(":")[0];
-    return `http://${host}:5000`;
-  }
-  return "http://10.0.2.2:5000";
-};
 
-const BASE_URL = getBaseUrl();
+
+const BASE_URL =  `https://cookimate-project-implementation-m4on.onrender.com`;
 
 const getAvatar = (profilePic: string | null | undefined, username: string) => {
   if (profilePic && profilePic.startsWith("http")) return profilePic;
@@ -49,7 +42,7 @@ const theme = {
   dangerFaint: "rgba(255,68,68,0.1)",
 };
 
-// ── Fan Card ──────────────────────────────────────────────────────────────────
+
 const FanCard = memo(
   ({
     user,
@@ -175,7 +168,7 @@ const FanCard = memo(
   }
 );
 
-// ── Empty State ───────────────────────────────────────────────────────────────
+
 const EmptyState = memo(() => (
   <View style={styles.emptyContainer}>
     <Text style={styles.emptyIcon}>✦</Text>
@@ -186,7 +179,7 @@ const EmptyState = memo(() => (
   </View>
 ));
 
-// ── Header ────────────────────────────────────────────────────────────────────
+
 const Header = memo(({ count }: { count: number }) => (
   <View style={styles.header}>
     <Text style={styles.headerLabel}>FANS</Text>
@@ -198,7 +191,7 @@ const Header = memo(({ count }: { count: number }) => (
   </View>
 ));
 
-// ── Main Screen ───────────────────────────────────────────────────────────────
+
 const Fans = () => {
   const [followers, setFollowers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -302,7 +295,7 @@ const Fans = () => {
 
 export default Fans;
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+
 const styles = StyleSheet.create({
   safeArea: { flex: 1, backgroundColor: theme.bg },
   center: {
