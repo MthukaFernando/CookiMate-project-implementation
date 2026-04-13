@@ -102,7 +102,7 @@ export default function CommunityFeed() {
     try {
       const response = await axios.get(`${BASE_URL}/social/feed`, {
         params: { uid: currentUser?.uid },
-        timeout: 5000,
+        timeout: 15000,
       });
       setPosts(response.data);
     } catch (error: any) {
@@ -182,7 +182,7 @@ export default function CommunityFeed() {
         targetId: reportingTargetId,
         targetType: "post",
         reason: reason,
-      }, { timeout: 5000 });
+      }, { timeout: 15000 });
 
       const updatedSet = new Set(reportedPostIds);
       updatedSet.add(reportingTargetId);
@@ -217,7 +217,7 @@ export default function CommunityFeed() {
       try {
         const res = await axios.get(`${BASE_URL}/users/search`, { 
           params: { username: text },
-          timeout: 5000 
+          timeout: 15000 
         });
         setSearchResults(res.data);
       } catch (err: any) {
@@ -249,7 +249,7 @@ export default function CommunityFeed() {
       }),
     );
     try {
-      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid }, { timeout: 5000 });
+      await axios.put(`${BASE_URL}/social/${postId}/like`, { userId: currentUser.uid }, { timeout: 15000 });
     } catch (err: any) {
       const isNetworkIssue = !err.response || err.code === 'ECONNABORTED' || err.message === 'Network Error' || err.message.includes('Network');
       if (isNetworkIssue) {
@@ -270,7 +270,7 @@ export default function CommunityFeed() {
       const res = await axios.post(`${BASE_URL}/social/${postId}/comment`, {
         userId: currentUser.uid,
         text: commentText,
-      }, { timeout: 5000 });
+      }, { timeout: 15000 });
 
       setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
       setCommentText("");
@@ -307,7 +307,7 @@ export default function CommunityFeed() {
                 `${BASE_URL}/social/${postId}/comment/${commentId}`,
                 { 
                   data: { userId: currentUser.uid },
-                  timeout: 5000
+                  timeout: 15000
                 },
               );
               setPosts((prev) => prev.map((p) => (p._id === postId ? res.data : p)));
@@ -356,7 +356,7 @@ export default function CommunityFeed() {
                     return;
                   }
                   try {
-                    await axios.get(`${BASE_URL}/users/${item.user.firebaseUid}`, { timeout: 5000 });
+                    await axios.get(`${BASE_URL}/users/${item.user.firebaseUid}`, { timeout: 15000 });
                     router.push(`/Community/${item.user.firebaseUid}`);
                   } catch (err: any) {
                     const isNetworkIssue =
