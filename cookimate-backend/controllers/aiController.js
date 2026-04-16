@@ -168,8 +168,8 @@ function sanitizeIngredient(ingredient, index) {
 
     const ratio = culinaryCount / words.length;
 
-    // Requirement: At least 40% of the input must be culinary words to pass
-    if (ratio < 0.4) {
+    // Requirement: At least 20% of the input must be culinary words to pass
+    if (ratio < 0.2) {
       return {
         valid: false,
         reason: `Ingredient "${ingredient}" doesn't appear to be food-related`,

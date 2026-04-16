@@ -428,3 +428,47 @@ export const toggleBlockUser = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const getFans = async (req, res) => {
+  try {
+    const { uid } = req.params;
+
+    const user = await User.findOne({ firebaseUid: uid }).populate({
+      path: "followers",
+      select: "username profilePic firebaseUid _id",
+    });
+
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      followers: user.followers,
+    });
+
+  } catch (error) {
+    console.error("GET FANS ERROR:", error);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+// Remove a follower (someone who follows YOU)
+export const removeFollower = async (req, res) => {
+  try {
+    const { currentUserUid, followerUid } = req.body;
+
+    const currentUser = await User.findOne({ firebaseUid: currentUserUid });
+    const follower = await User.findOne({ firebaseUid: followerUid });
+
+    if (!currentUser || !follower) 
+      return res.status(404).json({ message: "User not found" });
+
+    // Remove follower from your followers list
+    await currentUser.updateOne({ $pull: { followers: follower._id } });
+    // Remove you from their following list
+    await follower.updateOne({ $pull: { following: currentUser._id } });
+
+    res.status(200).json({ message: "Follower removed" });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

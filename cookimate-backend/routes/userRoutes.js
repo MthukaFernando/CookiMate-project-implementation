@@ -15,7 +15,9 @@ import {
   clearNotification,
   removeFromMealPlan,
   deleteFromHistory,
-  toggleBlockUser
+  toggleBlockUser,
+  getFans,
+  removeFollower
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -23,6 +25,8 @@ const router = express.Router();
 router.post("/", createUser);
 router.get("/levels", getLevels);
 router.put("/block", toggleBlockUser);
+router.put("/remove-follower", removeFollower);
+router.get("/fans/:uid", getFans);
 router.get("/search", searchUsers);
 router.put("/follow", toggleFollow);
 router.put("/favorites/:uid", addToFavorites); 
