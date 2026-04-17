@@ -2,7 +2,7 @@
   "expo": {
     "name": "CookiMate",
     "slug": "cookimate",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "frontend",
@@ -43,6 +43,18 @@
     },
     "plugins": [
       "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/images/logo.png",
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "backgroundColor": "#000000"
+          }
+        }
+      ],
       "expo-audio",
       [
         "expo-notifications",

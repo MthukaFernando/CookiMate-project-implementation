@@ -1281,9 +1281,9 @@ const toggleNotifications = async (value: boolean) => {
               />
             </View>
             <View style={styles.textContainer}>
-              <Text style={styles.cardTitle}>Foreground functionality</Text>
+              <Text style={styles.cardTitle}>Notifications</Text>
               <Text style={styles.cardSubtitle}>
-                When disabled, notifications and timer will not function while app is closed
+                When disabled, timer will not send notifications
               </Text>
             </View>
           </View>
