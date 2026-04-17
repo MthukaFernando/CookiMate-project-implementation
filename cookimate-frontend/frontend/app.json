@@ -2,7 +2,7 @@
   "expo": {
     "name": "CookiMate",
     "slug": "cookimate",
-    "version": "1.0.6",
+    "version": "1.0.8",
     "orientation": "portrait",
     "icon": "./assets/images/logo.png",
     "scheme": "frontend",
@@ -14,7 +14,7 @@
     "android": {
       "package": "com.cookimateLabs.cookimate",
       "googleServicesFile": "./google-services.json",
-      "versionCode": 13,
+      "versionCode": 18,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -32,7 +32,9 @@
         "android.permission.MODIFY_AUDIO_SETTINGS",
         "WAKE_LOCK",
         "RECEIVE_BOOT_COMPLETED",
-        "FOREGROUND_SERVICE"
+        "FOREGROUND_SERVICE",
+        "android.permission.SCHEDULE_EXACT_ALARM",
+        "android.permission.POST_NOTIFICATIONS"
       ]
     },
     "web": {
@@ -41,30 +43,12 @@
     },
     "plugins": [
       "expo-router",
-      [
-        "expo-splash-screen",
-        {
-          "image": "./assets/images/logo.png",
-          "imageWidth": 200,
-          "resizeMode": "contain",
-          "backgroundColor": "#ffffff",
-          "dark": {
-            "backgroundColor": "#000000"
-          }
-        }
-      ],
       "expo-audio",
-      [
-        "expo-build-properties",
-        {
-          "android": {
-            "enableMinifyInReleaseBuilds": true
-          }
-        }
-      ],
       [
         "expo-notifications",
         {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#D4AF37",
           "sounds": [
             "./assets/sounds/classic.wav",
             "./assets/sounds/beep.wav",
@@ -73,6 +57,15 @@
             "./assets/sounds/melody.wav",
             "./assets/sounds/tune.wav"
           ]
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "enableMinifyInReleaseBuilds": false,
+            "foregroundServiceType": "specialUse"
+          }
         }
       ]
     ],
@@ -83,8 +76,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "9d734f15-bd93-4f58-8d2a-aa3111418e95"
+        "projectId": "a3607990-c57c-4d10-8420-bba05c4a0ef9"
       }
-    }
+    },
+    "owner": "minukafernando"
   }
 }

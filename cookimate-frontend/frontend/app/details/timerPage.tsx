@@ -16,14 +16,10 @@ import { AnimatedCircularProgress } from "react-native-circular-progress";
 import { Ionicons } from "@expo/vector-icons";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
-import * as BackgroundFetch from "expo-background-fetch";
-import * as TaskManager from "expo-task-manager";
 import { useFocusEffect } from "expo-router";
 
 type Duration = { hours?: number; minutes?: number; seconds?: number };
 const { width } = Dimensions.get("window");
-
-const BACKGROUND_FETCH_TASK = "background-timer-task";
 
 const alarms = [
   { name: "🛎️    Classic", file: require("../../assets/sounds/classic.wav"), fileName: "classic.wav" },
@@ -33,43 +29,6 @@ const alarms = [
   { name: "🎵    Melody", file: require("../../assets/sounds/melody.wav"), fileName: "melody.wav" },
   { name: "🎹    Tune", file: require("../../assets/sounds/tune.wav"), fileName: "tune.wav" },
 ];
-
-// Define the background task
-TaskManager.defineTask(BACKGROUND_FETCH_TASK, async () => {
-  try {
-    const notificationsEnabled = await AsyncStorage.getItem('settings_notifications');
-    if (notificationsEnabled === 'false') {
-      console.log("🔕 Notifications disabled, skipping background task");
-      return BackgroundFetch.BackgroundFetchResult.NoData;
-    }
-    
-    const savedFinishTime = await AsyncStorage.getItem('timer_finish_time');
-    if (savedFinishTime) {
-      const finishTime = parseInt(savedFinishTime);
-      const now = Date.now();
-      if (now >= finishTime) {
-        console.log("⏰ Background task: Timer finished!");
-        await AsyncStorage.removeItem('timer_finish_time');
-        await AsyncStorage.removeItem('timer_total_seconds');
-        
-        const savedAlarm = await AsyncStorage.getItem('timer_selected_alarm');
-        if (savedAlarm) {
-          const alarmIndex = parseInt(savedAlarm);
-          const alarm = alarms[alarmIndex];
-          if (alarm) {
-            const { sound } = await Audio.Sound.createAsync(alarm.file);
-            await sound.playAsync();
-          }
-        }
-        return BackgroundFetch.BackgroundFetchResult.NewData;
-      }
-    }
-    return BackgroundFetch.BackgroundFetchResult.NoData;
-  } catch (error) {
-    console.log("Background task error:", error);
-    return BackgroundFetch.BackgroundFetchResult.Failed;
-  }
-});
 
 const UI_COLORS = {
   background: "#0A0A0A",
@@ -100,7 +59,6 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
   const selectedAlarm = selectedAlarmValue !== null ? alarms[parseInt(selectedAlarmValue)] : null;
   const [sound, setSound] = useState<Audio.Sound | null>(null);
 
-  // Load notification setting from AsyncStorage - runs when screen focuses
   const loadNotificationSetting = useCallback(async () => {
     try {
       const setting = await AsyncStorage.getItem('settings_notifications');
@@ -112,19 +70,16 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     }
   }, []);
 
-  // Load setting when component mounts
   useEffect(() => {
     loadNotificationSetting();
   }, [loadNotificationSetting]);
 
-  // Reload setting when screen comes into focus (after returning from Settings)
   useFocusEffect(
     useCallback(() => {
       loadNotificationSetting();
     }, [loadNotificationSetting])
   );
 
-  // Update notification handler based on app state AND user preference
   useEffect(() => {
     Notifications.setNotificationHandler({
       handleNotification: async () => ({
@@ -138,7 +93,6 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     });
   }, [appState, notificationsEnabled]);
 
-  // Keep ref in sync with state
   useEffect(() => {
     secondsLeftRef.current = secondsLeft;
   }, [secondsLeft]);
@@ -217,7 +171,6 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     await playAlarm();
   }, [stopTimer, playAlarm]);
 
-  // Timer interval logic
   useEffect(() => {
     if (running && secondsLeftRef.current > 0) {
       if (intervalRef.current) {
@@ -292,12 +245,19 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     }
   }, []);
 
-  // Setup notifications, audio, and background fetch
+  // Setup notifications and audio - REMOVED background fetch for Play Store compatibility
   useEffect(() => {
     const setup = async () => {
-      const { status } = await Notifications.getPermissionsAsync();
-      if (status !== 'granted') {
-        await Notifications.requestPermissionsAsync();
+      const { status: existingStatus } = await Notifications.getPermissionsAsync();
+      let finalStatus = existingStatus;
+      if (existingStatus !== 'granted') {
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+      if (finalStatus !== 'granted') {
+        console.log("❌ Notification permission denied");
+        setNotificationsEnabled(false);
+        return;
       }
       
       await Audio.setAudioModeAsync({
@@ -319,23 +279,15 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
           });
         }
       }
-      
-      await BackgroundFetch.registerTaskAsync(BACKGROUND_FETCH_TASK, {
-        minimumInterval: 15,
-        stopOnTerminate: false,
-        startOnBoot: true,
-      });
     };
     setup();
     
     return () => {
       stopAlarm();
       stopTimer();
-      BackgroundFetch.unregisterTaskAsync(BACKGROUND_FETCH_TASK);
     };
   }, []);
 
-  // App state changes
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextAppState) => {
       setAppState(nextAppState);
@@ -358,6 +310,10 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     finishTimeRef.current = Date.now() + (secondsLeft * 1000);
     await saveTimerState();
     
+    if (notificationIdRef.current) {
+      await Notifications.cancelScheduledNotificationAsync(notificationIdRef.current);
+    }
+    
     if (notificationsEnabled) {
       const soundFile = selectedAlarm?.fileName || "classic.wav";
       const channelId = `timer-alerts-${soundFile}`;
@@ -367,15 +323,15 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
           title: "Timer Finished! ⏰",
           body: "Your countdown has completed.",
           sound: soundFile,
+          data: { timerCompleted: true },
         },
         trigger: {
-          type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
           seconds: secondsLeft,
           channelId: channelId,
-        } as Notifications.TimeIntervalTriggerInput,
+        },
       });
       notificationIdRef.current = id;
-      console.log("📢 Notification scheduled for", secondsLeft, "seconds (notifications ENABLED)");
+      console.log("📢 Notification scheduled for", secondsLeft, "seconds");
     } else {
       console.log("🔕 Notifications DISABLED, skipping notification schedule");
     }
@@ -400,14 +356,26 @@ export default function Timer({ initialSeconds = 0, onClose }: { initialSeconds?
     setTotalSeconds(initialSeconds);
   };
 
-  // Handle notification click
+  // Handle notification click - works even when app is killed
   useEffect(() => {
+    const checkInitialNotification = async () => {
+      const response = await Notifications.getLastNotificationResponseAsync();
+      if (response && response.notification.request.content.data?.timerCompleted) {
+        console.log("🔔 App opened by notification click");
+        await stopAlarm();
+        await resetTimerState();
+        if (onClose) onClose();
+      }
+    };
+    
+    checkInitialNotification();
+    
     const subscription = Notifications.addNotificationResponseReceivedListener(async (response) => {
-      console.log("🔔 Notification clicked - stopping alarm and resetting timer");
-      await stopAlarm();
-      await resetTimerState();
-      if (onClose) {
-        onClose();
+      if (response.notification.request.content.data?.timerCompleted) {
+        console.log("🔔 Notification clicked while app open");
+        await stopAlarm();
+        await resetTimerState();
+        if (onClose) onClose();
       }
     });
     return () => subscription.remove();
