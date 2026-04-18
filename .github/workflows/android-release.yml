@@ -34,11 +34,11 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
 
       - name: Build Android Release
-        # We use the literal path from your sidebar: cookimate-frontend/frontend/android
-        run: |
-          chmod +x gradlew
-          ./gradlew bundleRelease
-        working-directory: cookimate-frontend/frontend/android
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: wrapper
+          build-root-directory: cookimate-frontend/frontend/android
+          arguments: bundleRelease
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
