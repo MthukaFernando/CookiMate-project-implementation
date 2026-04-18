@@ -29,7 +29,9 @@ jobs:
         working-directory: cookimate-frontend/frontend
 
       - name: Decode Keystore
-        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
+        run: |
+          mkdir -p cookimate-frontend/frontend/android/app
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
 
       - name: Build Android Release
         run: ./gradlew bundleRelease
