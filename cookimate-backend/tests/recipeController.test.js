@@ -59,6 +59,15 @@ const makeMockRes = () => {
   return res;
 };
 
+// Suppress console.error output during tests (expected errors from catch blocks)
+beforeEach(() => {
+  jest.spyOn(console, "error").mockImplementation(() => {});
+});
+
+afterEach(() => {
+  console.error.mockRestore();
+});
+
 // Import controller AFTER mocks are registered 
 const {
   getAllRecipes,
