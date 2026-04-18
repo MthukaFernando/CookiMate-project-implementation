@@ -70,6 +70,14 @@ const makeMockRes = () => {
   return res;
 };
 
+// ─── SILENCE CONSOLE (must be top-level, before import) ───
+jest.spyOn(console, "error").mockImplementation(() => {});
+jest.spyOn(console, "log").mockImplementation(() => {});
+
+afterAll(() => {
+  jest.restoreAllMocks();
+});
+
 // Import controller AFTER all mocks are registered 
 const { createPost, getFeed, likePost, addComment, deletePost, deleteComment } =
   await import("../controllers/socialController.js");
