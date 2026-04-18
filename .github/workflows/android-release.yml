@@ -34,11 +34,11 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
 
       - name: Build Android Release
+        # We use the literal path from your sidebar: cookimate-frontend/frontend/android
         run: |
-          GRADLEW_PATH=$(find . -iname "gradlew" -not -path "*/node_modules/*" | head -n 1)
-          echo "Targeting app build at: $GRADLEW_PATH"
-          chmod +x "$GRADLEW_PATH"
-          cd $(dirname "$GRADLEW_PATH") && ./gradlew bundleRelease
+          chmod +x gradlew
+          ./gradlew bundleRelease
+        working-directory: cookimate-frontend/frontend/android
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
