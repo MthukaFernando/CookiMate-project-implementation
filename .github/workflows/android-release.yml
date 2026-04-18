@@ -35,8 +35,15 @@ jobs:
 
       - name: Build Android Release
         run: |
-          chmod +x cookimate-frontend/frontend/android/gradlew
-          cd cookimate-frontend/frontend/android && ./gradlew bundleRelease
+          GRADLEW_PATH=$(find . -name gradlew | head -n 1)
+          if [ -z "$GRADLEW_PATH" ]; then
+            echo "ERROR: Could not find gradlew file anywhere in the repo!"
+            exit 1
+          fi
+          echo "Found gradlew at: $GRADLEW_PATH"
+          GRADLE_DIR=$(dirname "$GRADLEW_PATH")
+          chmod +x "$GRADLEW_PATH"
+          cd "$GRADLE_DIR" && ./gradlew bundleRelease
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
