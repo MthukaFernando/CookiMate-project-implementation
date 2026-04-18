@@ -1,6 +1,6 @@
 import { jest } from "@jest/globals";
 
-// ── Mock: Post model ───────────────────────────────────────────────────────────
+// Mock: Post model 
 const mockPostFind = jest.fn();
 const mockPostFindById = jest.fn();
 const mockPostFindByIdAndDelete = jest.fn();
@@ -22,7 +22,7 @@ MockPost.findOneAndUpdate = mockPostFindOneAndUpdate;
 
 jest.unstable_mockModule("../models/Post.js", () => ({ default: MockPost }));
 
-// ── Mock: User model ───────────────────────────────────────────────────────────
+// Mock: User model 
 const mockUserFindOne = jest.fn();
 const mockUserFindByIdAndUpdate = jest.fn();
 const mockUserFindOneAndUpdate = jest.fn();
@@ -35,33 +35,33 @@ jest.unstable_mockModule("../models/user.js", () => ({
   },
 }));
 
-// ── Mock: Cloudinary ───────────────────────────────────────────────────────────
+// Mock: Cloudinary 
 const mockCloudinaryDestroy = jest.fn();
 jest.unstable_mockModule("../config/cloudinary.js", () => ({
   cloudinary: { uploader: { destroy: mockCloudinaryDestroy } },
   upload: { single: jest.fn() },
 }));
 
-// ── Mock: dotenv ───────────────────────────────────────────────────────────────
+// Mock: dotenv
 jest.unstable_mockModule("dotenv", () => ({ default: { config: jest.fn() } }));
 
-// ── Mock: axios ────────────────────────────────────────────────────────────────
+// Mock: axios 
 const mockAxiosPost = jest.fn();
 jest.unstable_mockModule("axios", () => ({ default: { post: mockAxiosPost } }));
 
-// ── Mock: gamificationHelpers ──────────────────────────────────────────────────
+// Mock: gamificationHelpers 
 const mockUpdateUserStats = jest.fn();
 jest.unstable_mockModule("../utils/gamificationHelpers.js", () => ({
   updateUserStats: mockUpdateUserStats,
 }));
 
-// ── Mock: moderator ────────────────────────────────────────────────────────────
+// Mock: moderator 
 const mockCheckText = jest.fn();
 jest.unstable_mockModule("../utils/moderator.js", () => ({
   checkText: mockCheckText,
 }));
 
-// ── Helper ─────────────────────────────────────────────────────────────────────
+// Helper 
 const makeMockRes = () => {
   const res = {};
   res.status = jest.fn().mockReturnValue(res);
@@ -70,24 +70,11 @@ const makeMockRes = () => {
   return res;
 };
 
-// ── Silence console output from controllers during tests ───────────────────────
-beforeAll(() => {
-  jest.spyOn(console, "log").mockImplementation(() => {});
-  jest.spyOn(console, "error").mockImplementation(() => {});
-});
-
-afterAll(() => {
-  console.log.mockRestore();
-  console.error.mockRestore();
-});
-
-// ── Import controller AFTER all mocks are registered ──────────────────────────
+// Import controller AFTER all mocks are registered 
 const { createPost, getFeed, likePost, addComment, deletePost, deleteComment } =
   await import("../controllers/socialController.js");
 
-// ══════════════════════════════════════════════════════════════════════════════
 // createPost
-// ══════════════════════════════════════════════════════════════════════════════
 describe("createPost", () => {
   const FIREBASE_UID = "firebase-user-001";
   const CAPTION = "Delicious pasta!";
@@ -111,21 +98,7 @@ describe("createPost", () => {
   };
 
   beforeEach(() => {
-    mockPostFind.mockReset();
-    mockPostFindById.mockReset();
-    mockPostFindByIdAndDelete.mockReset();
-    mockPostFindByIdAndUpdate.mockReset();
-    mockPostFindOneAndUpdate.mockReset();
-    mockPostSave.mockReset();
-    mockPostUpdateOne.mockReset();
-    mockUserFindOne.mockReset();
-    mockUserFindByIdAndUpdate.mockReset();
-    mockUserFindOneAndUpdate.mockReset();
-    mockCloudinaryDestroy.mockReset();
-    mockAxiosPost.mockReset();
-    mockUpdateUserStats.mockReset();
-    mockCheckText.mockReset();
-
+    jest.clearAllMocks();
     mockCheckText.mockResolvedValue(false);
     mockUserFindOne.mockResolvedValue(userDoc);
     mockPostSave.mockResolvedValue({ _id: "post-mongo-id-001" });
@@ -164,9 +137,7 @@ describe("createPost", () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
 // getFeed
-// ══════════════════════════════════════════════════════════════════════════════
 describe("getFeed", () => {
   const MOCK_POSTS = [
     { _id: "post1", caption: "Yummy ramen", user: "uid-1" },
@@ -186,10 +157,7 @@ describe("getFeed", () => {
     return chain;
   };
 
-  beforeEach(() => {
-    mockUserFindOne.mockReset();
-    mockPostFind.mockReset();
-  });
+  beforeEach(() => jest.clearAllMocks());
 
   test("returns feed posts with status 200", async () => {
     mockUserFindOne.mockResolvedValue({ blockedUsers: [] });
@@ -222,9 +190,7 @@ describe("getFeed", () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
 // likePost
-// ══════════════════════════════════════════════════════════════════════════════
 describe("likePost", () => {
   const POST_ID = "post-mongo-123";
   const USER_ID = "liker-uid";
@@ -237,10 +203,7 @@ describe("likePost", () => {
   });
 
   beforeEach(() => {
-    mockPostFindById.mockReset();
-    mockUserFindOne.mockReset();
-    mockPostUpdateOne.mockReset();
-    mockUpdateUserStats.mockReset();
+    jest.clearAllMocks();
     mockUpdateUserStats.mockResolvedValue(true);
     mockPostUpdateOne.mockResolvedValue(true);
   });
@@ -275,9 +238,7 @@ describe("likePost", () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
 // addComment
-// ══════════════════════════════════════════════════════════════════════════════
 describe("addComment", () => {
   const POST_ID = "post-mongo-abc";
   const USER_ID = "commenter-uid";
@@ -298,9 +259,7 @@ describe("addComment", () => {
   };
 
   beforeEach(() => {
-    mockCheckText.mockReset();
-    mockPostFindByIdAndUpdate.mockReset();
-    mockUserFindOneAndUpdate.mockReset();
+    jest.clearAllMocks();
     mockCheckText.mockResolvedValue(false);
     mockUserFindOneAndUpdate.mockResolvedValue(true);
   });
@@ -332,17 +291,12 @@ describe("addComment", () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
 // deletePost
-// ══════════════════════════════════════════════════════════════════════════════
 describe("deletePost", () => {
   const POST_ID = "post-to-delete";
   const USER_ID = "owner-uid";
 
-  beforeEach(() => {
-    mockPostFindById.mockReset();
-    mockPostFindByIdAndDelete.mockReset();
-  });
+  beforeEach(() => jest.clearAllMocks());
 
   test("deletes post and returns 200 when owner requests deletion", async () => {
     mockPostFindById.mockResolvedValue({ _id: POST_ID, user: USER_ID });
@@ -372,9 +326,7 @@ describe("deletePost", () => {
   });
 });
 
-// ══════════════════════════════════════════════════════════════════════════════
 // deleteComment
-// ══════════════════════════════════════════════════════════════════════════════
 describe("deleteComment", () => {
   const POST_ID = "post-abc";
   const COMMENT_ID = "comment-xyz";
@@ -385,9 +337,7 @@ describe("deleteComment", () => {
     populate: jest.fn().mockResolvedValue(resolved),
   });
 
-  beforeEach(() => {
-    mockPostFindOneAndUpdate.mockReset();
-  });
+  beforeEach(() => jest.clearAllMocks());
 
   test("deletes a comment and returns updated post with 200", async () => {
     mockPostFindOneAndUpdate.mockReturnValue(makeDeleteCommentChain(updatedPost));
