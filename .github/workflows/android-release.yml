@@ -35,9 +35,8 @@ jobs:
 
       - name: Build Android Release
         run: |
-          chmod +x gradlew
-          ./gradlew bundleRelease
-        working-directory: cookimate-frontend/frontend/android
+          chmod +x cookimate-frontend/frontend/android/gradlew
+          cd cookimate-frontend/frontend/android && ./gradlew bundleRelease
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
