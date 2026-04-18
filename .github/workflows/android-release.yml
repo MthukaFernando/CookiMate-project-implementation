@@ -36,7 +36,7 @@ jobs:
       - name: Build Android Release
         uses: gradle/gradle-build-action@v3
         with:
-          gradle-version: wrapper
+          gradle-version: '8.5' 
           build-root-directory: cookimate-frontend/frontend/android
           arguments: bundleRelease
         env:
