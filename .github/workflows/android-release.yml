@@ -25,8 +25,8 @@ jobs:
           cache-dependency-path: cookimate-frontend/frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install --legacy-peer-deps
         working-directory: cookimate-frontend/frontend
+        run: npm install --legacy-peer-deps
 
       - name: Decode Keystore
         run: |
@@ -34,11 +34,10 @@ jobs:
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
 
       - name: Build Android Release
-        uses: gradle/gradle-build-action@v3
-        with:
-          gradle-version: '8.5' 
-          build-root-directory: cookimate-frontend/frontend/android
-          arguments: bundleRelease
+        working-directory: cookimate-frontend/frontend/android
+        run: |
+          chmod +x gradlew
+          ./gradlew bundleRelease
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
