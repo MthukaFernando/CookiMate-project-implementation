@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "1034952464978",
+    "project_id": "cookimate-103",
+    "storage_bucket": "cookimate-103.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1034952464978:android:28b76af4f54a07dad35d8b",
+        "android_client_info": {
+          "package_name": "com.cookimateLabs.cookimate"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1034952464978-q5qrvmmbugj75m0e07s9q8vincr6upm7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC3_o_Z0uwJBkUcdggj8aR04EkH8d5F51c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1034952464978-q5qrvmmbugj75m0e07s9q8vincr6upm7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1034952464978-m0k1p6th6qpfjn871094egiq9mo2fojs.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.meow.cookimate"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
