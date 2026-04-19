@@ -16,6 +16,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          # THIS IS THE PART THAT SKIPS THE EXTRA TIME:
+          cache: 'gradle'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -38,9 +40,8 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
-          
-          # We use the exact path from your log screenshot, but relative to this working-directory
-          cp app/build/outputs/bundle/release/app-release.aab ../../../app-release.aab
+          # Using absolute path to force the file to the root
+          cp app/build/outputs/bundle/release/app-release.aab $GITHUB_WORKSPACE/app-release.aab
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -52,7 +53,6 @@ jobs:
         with:
           serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.cookimateLabs.cookimate
-          # Look for the file exactly where we just moved it
-          releaseFiles: app-release.aab
+          releaseFiles: ${{ github.workspace }}/app-release.aab
           track: internal
           status: completed
