@@ -41,24 +41,33 @@ jobs:
           ./gradlew bundleRelease
           cp app/build/outputs/bundle/release/app-release.aab $GITHUB_WORKSPACE/app-release.aab
         env:
-          ANDROID_KEYSTORE_PATH: "release.keystore"
+          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/cookimate-frontend/frontend/android/app/release.keystore
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Verify file exists
+      - name: Debug - List all AAB files
         run: |
-          ls -la ${{ github.workspace }}/app-release.aab
+          echo "=== AAB FILE SEARCH ==="
+          find ${{ github.workspace }} -name "*.aab" -type f
+          echo ""
+          echo "=== ROOT DIRECTORY ==="
+          ls -la ${{ github.workspace }}
+          echo ""
+          echo "=== FILE VERIFICATION ==="
+          if [ -f "${{ github.workspace }}/app-release.aab" ]; then
+            echo "✅ File exists at root"
+            file ${{ github.workspace }}/app-release.aab
+          else
+            echo "❌ File NOT found at root"
+          fi
 
-      - name: Install Play Store Publisher
-        run: |
-          npm install -g google-playstore-publisher
-
-      - name: Upload to Google Play
-        run: |
-          echo '${{ secrets.SERVICE_ACCOUNT_JSON }}' > service-account.json
-          playstore \
-            -t=internal \
-            -p=com.cookimateLabs.cookimate \
-            -k=service-account.json \
-            -a=${{ github.workspace }}/app-release.aab
+      - name: Upload to Play Store
+        uses: r0adkll/upload-google-play@v1.0.0
+        with:
+          serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: com.cookimateLabs.cookimate
+          releaseFiles: ${{ github.workspace }}/app-release.aab
+          track: internal
+          status: completed
+          debug: true
