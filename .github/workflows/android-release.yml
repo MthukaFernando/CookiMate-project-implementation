@@ -34,17 +34,10 @@ jobs:
           mkdir -p cookimate-frontend/frontend/android/app
           echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > cookimate-frontend/frontend/android/app/release.keystore
 
-      - name: Build Android Release
-        working-directory: cookimate-frontend/frontend/android
+      - name: Create dummy AAB for testing
         run: |
-          chmod +x gradlew
-          ./gradlew bundleRelease
-          cp app/build/outputs/bundle/release/app-release.aab $GITHUB_WORKSPACE/app-release.aab
-        env:
-          ANDROID_KEYSTORE_PATH: ${{ github.workspace }}/cookimate-frontend/frontend/android/app/release.keystore
-          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          echo "dummy content for testing" > ${{ github.workspace }}/app-release.aab
+          ls -la ${{ github.workspace }}/app-release.aab
 
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
