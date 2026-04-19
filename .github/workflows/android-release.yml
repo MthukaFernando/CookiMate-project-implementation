@@ -62,8 +62,7 @@ jobs:
 
       - name: Upload to Google Play
         run: |
-          gcloud alpha play publishing upload \
+          gcloud --quiet alpha play publishing upload \
             --package-name=com.cookimateLabs.cookimate \
             --aab=${{ github.workspace }}/app-release.aab \
-            --track=internal \
-            --quiet
+            --track=internal
