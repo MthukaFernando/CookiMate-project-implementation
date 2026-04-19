@@ -38,6 +38,15 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
+          
+          echo "-------------------------------------------------------"
+          echo "LOCATING AAB FILE:"
+          # This command prints the full path of the file to your logs
+          find ${{ github.workspace }} -name "*.aab"
+          echo "-------------------------------------------------------"
+          
+          # This moves it to the root so the next step can't miss it
+          cp app/build/outputs/bundle/release/app-release.aab ${{ github.workspace }}/final-app-release.aab
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -49,6 +58,6 @@ jobs:
         with:
           serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.cookimateLabs.cookimate
-          releaseFiles: "**/app-release.aab"
+          releaseFiles: ${{ github.workspace }}/final-app-release.aab
           track: internal
           status: completed
