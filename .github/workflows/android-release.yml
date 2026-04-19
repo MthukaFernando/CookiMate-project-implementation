@@ -46,10 +46,20 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
-      - name: Upload to Play Store
-        uses: google-github-actions/upload-aab-to-play-console@v4
+      - name: Verify file exists
+        run: |
+          ls -la ${{ github.workspace }}/app-release.aab
+
+      - name: Setup Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
         with:
-          serviceAccountJsonLiteral: ${{ secrets.SERVICE_ACCOUNT_JSON }}
-          packageName: com.cookimateLabs.cookimate
-          aabFile: ${{ github.workspace }}/app-release.aab
-          track: internal
+          service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          project_id: cookimate-493709
+
+      - name: Upload to Google Play
+        run: |
+          gcloud config set play publishing app-id com.cookimateLabs.cookimate
+          gcloud alpha play publishing upload \
+            --package-name=com.cookimateLabs.cookimate \
+            --aab=${{ github.workspace }}/app-release.aab \
+            --track=internal
