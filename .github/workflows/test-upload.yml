@@ -1,0 +1,23 @@
+name: Test Upload Action
+
+on:
+  push:
+    branches: [ frontend-pipeline ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create test file
+        run: |
+          echo "test content" > test.txt
+          ls -la test.txt
+          
+      - name: Test upload action with simple file
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+          packageName: com.cookimateLabs.cookimate
+          releaseFiles: test.txt
+          track: internal
+          status: completed
