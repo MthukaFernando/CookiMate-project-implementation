@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Create test file
         run: |
-          echo "test content" > test.txt
+          echo "test content v2" > test.txt
           ls -la test.txt
           
       - name: Test upload action with simple file
