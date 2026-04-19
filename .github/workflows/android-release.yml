@@ -47,12 +47,15 @@ jobs:
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      - name: Verify file exists at root
+        run: |
+          ls -la ${{ github.workspace }}/app-release.aab
+          
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.cookimateLabs.cookimate
-          # We point exactly to the file we just moved to the root.
           releaseFiles: ${{ github.workspace }}/app-release.aab
           track: internal
           status: completed
