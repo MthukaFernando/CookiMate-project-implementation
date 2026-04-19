@@ -50,15 +50,18 @@ jobs:
         run: |
           ls -la ${{ github.workspace }}/app-release.aab
 
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+
       - name: Setup Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
-          service_account_key: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           project_id: cookimate-493709
 
       - name: Upload to Google Play
         run: |
-          gcloud config set play publishing app-id com.cookimateLabs.cookimate
           gcloud alpha play publishing upload \
             --package-name=com.cookimateLabs.cookimate \
             --aab=${{ github.workspace }}/app-release.aab \
