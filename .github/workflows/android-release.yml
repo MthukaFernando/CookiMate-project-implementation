@@ -16,7 +16,6 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-          # THIS IS THE PART THAT SKIPS THE EXTRA TIME:
           cache: 'gradle'
 
       - name: Setup Node.js
@@ -40,19 +39,31 @@ jobs:
         run: |
           chmod +x gradlew
           ./gradlew bundleRelease
-          # Using absolute path to force the file to the root
-          cp app/build/outputs/bundle/release/app-release.aab $GITHUB_WORKSPACE/app-release.aab
         env:
           ANDROID_KEYSTORE_PATH: "release.keystore"
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
+      - name: Verify AAB file exists
+        run: |
+          echo "Checking if AAB file exists at expected location:"
+          ls -la cookimate-frontend/frontend/android/app/build/outputs/bundle/release/ || echo "Directory not found"
+          if [ -f "cookimate-frontend/frontend/android/app/build/outputs/bundle/release/app-release.aab" ]; then
+            echo "✅ AAB file found!"
+            ls -lh cookimate-frontend/frontend/android/app/build/outputs/bundle/release/app-release.aab
+          else
+            echo "❌ AAB file NOT found!"
+            echo "Searching for any .aab files in the project:"
+            find . -name "*.aab" 2>/dev/null || echo "No .aab files found"
+            exit 1
+          fi
+
       - name: Upload to Play Store
         uses: r0adkll/upload-google-play@v1
         with:
           serviceAccountJson: ${{ secrets.SERVICE_ACCOUNT_JSON }}
           packageName: com.cookimateLabs.cookimate
-          releaseFiles: ${{ github.workspace }}/app-release.aab
+          releaseFiles: cookimate-frontend/frontend/android/app/build/outputs/bundle/release/app-release.aab
           track: internal
           status: completed
