@@ -2,6 +2,20 @@ import React from 'react';
 import { render } from '@testing-library/react-native';
 import MyRecipesPage from '../app/details/myRecipes'; 
 
+// ─── Suppress console noise ───────────────────────────────────────────────────
+beforeAll(() => {
+  jest.spyOn(console, 'error').mockImplementation(() => {});
+  jest.spyOn(console, 'warn').mockImplementation(() => {});
+  jest.spyOn(console, 'log').mockImplementation(() => {});
+});
+
+afterAll(() => {
+  (console.error as jest.Mock).mockRestore();
+  (console.warn as jest.Mock).mockRestore();
+  (console.log as jest.Mock).mockRestore();
+});
+// ──────────────────────────────────────────────────────────────────────────────
+
 // 1. MOCK FIREBASE
 jest.mock('firebase/app', () => ({ initializeApp: jest.fn() }));
 jest.mock('firebase/auth', () => ({
