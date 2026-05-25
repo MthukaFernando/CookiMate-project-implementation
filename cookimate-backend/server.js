@@ -25,6 +25,9 @@ app.get("/", (req, res) => {
   res.send("Cookimate API is running! ");
 });
 
+// Keep-alive ping for Render free tier
+app.get("/ping", (req, res) => res.send("pong"));
+
 app.use("/api/users", userRoutes);
 app.use("/api/users", userPreferencesRoutes);
 app.use("/api/recipes", recipeRoutes);
