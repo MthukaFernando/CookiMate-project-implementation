@@ -41,55 +41,45 @@ export async function initDictionaryForController() {
 }
 
 // Helper function to generate the image
-// Helper function to generate the image
+// Now retries across multiple Pollinations models (flux -> turbo -> flux-realism)
+// instead of falling back to Hugging Face
 async function generateRecipeImage(recipeTitle) {
   const prompt = `Gourmet food photography of ${recipeTitle}, 4k, professional lighting, realistic textures`;
-  const POLLINATIONS_URL = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
+  const encodedPrompt = encodeURIComponent(prompt);
 
   console.log("Generating AI Image for:", recipeTitle);
 
-  try {
-    const response = await fetch(POLLINATIONS_URL);
+  const attempts = [
+    `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux`,
+    `https://image.pollinations.ai/prompt/${encodedPrompt}?model=turbo`,
+    `https://image.pollinations.ai/prompt/${encodedPrompt}?model=flux-realism`,
+  ];
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Pollinations Error Detail [${response.status}]:`, errorText);
-      console.warn("Retrying with fallback model (Hugging Face)...");
-      return await generateFallbackImage(recipeTitle);
-    }
-
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    return `data:image/jpeg;base64,${buffer.toString("base64")}`;
-  } catch (error) {
-    console.error("AI Generation Failed:", error.message);
-    console.warn("Retrying with fallback model (Hugging Face)...");
-    return await generateFallbackImage(recipeTitle);
-  }
-}
-
-// Add this as a safety net
-async function generateFallbackImage(recipeTitle) {
-    const HF_TOKEN = process.env.HF_TOKEN;
-    const FALLBACK_URL = "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell";
-
+  for (const url of attempts) {
     try {
-        const response = await fetch(FALLBACK_URL, {
-            headers: { Authorization: `Bearer ${HF_TOKEN}`, "Content-Type": "application/json" },
-            method: "POST",
-            body: JSON.stringify({ inputs: recipeTitle, options: { wait_for_model: true } }),
-        });
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Fallback HF Error [${response.status}]:`, errorText);
-            return "ERROR";
-        }
-        const buffer = Buffer.from(await response.arrayBuffer());
-        return `data:image/jpeg;base64,${buffer.toString("base64")}`;
-    } catch (e) {
-        console.error("Fallback Image Generation Failed:", e.message);
-        return "ERROR";
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Pollinations Error [${response.status}] on ${url}:`, errorText);
+        continue; // try next model
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      return `data:image/jpeg;base64,${buffer.toString("base64")}`;
+    } catch (error) {
+      console.error(`Fetch failed for ${url}:`, error.message);
+      continue; // try next model
     }
+  }
+
+  console.error("All Pollinations attempts failed for:", recipeTitle);
+  return "ERROR";
 }
 
 // Enhanced sanitization function
@@ -307,7 +297,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`
     const recipeTitle = responseData.title;
     console.log("🍴 Recipe Created:", recipeTitle);
 
-    const imageUri = await generateFallbackImage(recipeTitle);
+    const imageUri = await generateRecipeImage(recipeTitle);
 
     console.log("✅ Sending data to mobile app...");
     res.status(200).json({
