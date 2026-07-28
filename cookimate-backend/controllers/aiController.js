@@ -307,7 +307,7 @@ Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`
     const recipeTitle = responseData.title;
     console.log("🍴 Recipe Created:", recipeTitle);
 
-    const imageUri = await generateRecipeImage(recipeTitle);
+    const imageUri = await generateFallbackImage(recipeTitle);
 
     console.log("✅ Sending data to mobile app...");
     res.status(200).json({
