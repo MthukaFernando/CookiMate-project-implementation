@@ -41,41 +41,21 @@ export async function initDictionaryForController() {
 }
 
 // Helper function to generate the image
+// Helper function to generate the image
 async function generateRecipeImage(recipeTitle) {
-  const HF_TOKEN = process.env.HF_TOKEN;
-
-  // Switched primary model to stable-diffusion-xl-base-1.0 (OpenRAIL++ license, no gating needed)
-  const MODEL_URL = "https://router.huggingface.co/hf-inference/models/stabilityai/stable-diffusion-xl-base-1.0";
+  const prompt = `Gourmet food photography of ${recipeTitle}, 4k, professional lighting, realistic textures`;
+  const POLLINATIONS_URL = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}`;
 
   console.log("Generating AI Image for:", recipeTitle);
 
   try {
-    const response = await fetch(MODEL_URL, {
-      headers: {
-        Authorization: `Bearer ${HF_TOKEN}`,
-        "Content-Type": "application/json",
-      },
-      method: "POST",
-      body: JSON.stringify({
-        inputs: `Gourmet food photography of ${recipeTitle}, 4k, professional lighting, realistic textures`,
-        options: {
-          wait_for_model: true
-        }
-      }),
-    });
+    const response = await fetch(POLLINATIONS_URL);
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`HF Error Detail [${response.status}]:`, errorText);
-
-      // If we still get a 404/410, it might be the model name.
-      // Fallback to a super-stable model if primary is unavailable:
-      if (response.status === 404 || response.status === 410) {
-          console.warn("Retrying with fallback model...");
-          return await generateFallbackImage(recipeTitle);
-      }
-
-      throw new Error(`HF Error: ${response.status}`);
+      console.error(`Pollinations Error Detail [${response.status}]:`, errorText);
+      console.warn("Retrying with fallback model (Hugging Face)...");
+      return await generateFallbackImage(recipeTitle);
     }
 
     const arrayBuffer = await response.arrayBuffer();
@@ -83,7 +63,8 @@ async function generateRecipeImage(recipeTitle) {
     return `data:image/jpeg;base64,${buffer.toString("base64")}`;
   } catch (error) {
     console.error("AI Generation Failed:", error.message);
-    return "ERROR";
+    console.warn("Retrying with fallback model (Hugging Face)...");
+    return await generateFallbackImage(recipeTitle);
   }
 }
 
