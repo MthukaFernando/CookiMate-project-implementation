@@ -261,7 +261,7 @@ Ingredients: ${cleanIngredients.join(", ") || "Any"}
 Note: ${cleanPrompt || "surprise me with a delicious recipe"}${preferencesText}`,
         },
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
       response_format: { type: "json_object" },
     });
 
@@ -649,7 +649,7 @@ STRICT RULES:
         },
         { role: "user", content: message },
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
     });
 
     res.status(200).json({ reply: chatCompletion.choices[0].message.content });
@@ -820,7 +820,7 @@ export const handleGlobalChat = async (req, res) => {
         },
         ...messages,
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "openai/gpt-oss-120b",
     });
 
     res.status(200).json({ reply: chatCompletion.choices[0].message.content });
