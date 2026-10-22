@@ -26,6 +26,7 @@ import { getAuth } from "firebase/auth";
 import { auth } from "../../config/firebase";
 import ConfettiCannon from "react-native-confetti-cannon";
 import Timer from "../details/timerPage";
+import StrandsLoader from "../../components/StrandsLoader";
 import axios from "axios";
 
 // --- CONFIGURATION ---
@@ -143,6 +144,8 @@ export default function GenerateRecipesPage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [showInputForm, setShowInputForm] = useState(true);
   const [networkErrorVisible, setNetworkErrorVisible] = useState(false);
+  const [ballReady, setBallReady] = useState(false);
+  const loadingFadeAnim = useRef(new Animated.Value(0)).current;
 
   // User preferences state
   const [userPreferences, setUserPreferences] = useState<{
@@ -228,6 +231,15 @@ export default function GenerateRecipesPage() {
     extrapolate: "clamp",
   });
 
+  const handleBallReady = () => {
+    setBallReady(true);
+    Animated.timing(loadingFadeAnim, {
+      toValue: 1,
+      duration: 280,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const togglePanel = (open: boolean) => {
     setIsExpanded(open);
     Animated.spring(slideAnim, {
@@ -277,6 +289,8 @@ export default function GenerateRecipesPage() {
     setGeneratedRecipe(null);
     setRecipeImage(null);
     setSaveSuccess(false);
+    setBallReady(false);
+    loadingFadeAnim.setValue(0);
 
     try {
       const response = await fetch(`${API_URL}/api/recipes/generate-text`, {
@@ -599,7 +613,10 @@ export default function GenerateRecipesPage() {
             style={{ flex: 1 }}
           >
             <ScrollView
-              contentContainerStyle={styles.scrollBody}
+              contentContainerStyle={[
+                styles.scrollBody,
+                loading && styles.scrollBodyCentered,
+              ]}
               showsVerticalScrollIndicator={false}
             >
               {/* Input Form */}
@@ -800,11 +817,25 @@ export default function GenerateRecipesPage() {
 
               {/* Loading State */}
               {loading && (
-                <View style={styles.loadingContainer}>
-                  <ActivityIndicator size="large" color={BRAND.accent} />
-                  <Text style={styles.loadingText}>
-                    Creating your recipe...
-                  </Text>
+                <View style={styles.loadingContainerCentered}>
+                  <Animated.View
+                    style={{ opacity: loadingFadeAnim, alignItems: "center" }}
+                  >
+                    <StrandsLoader
+                      size={180}
+                      colors={["#FFB300", "#FF8C00", "#d95b56", "#ffe0b3"]}
+                      glass
+                      energy={0.9}
+                      speed={1.8}
+                      intro={false}
+                      interactive={false}
+                      clickPulse={false}
+                      onReady={handleBallReady}
+                    />
+                    <Text style={styles.loadingText}>
+                      Creating your recipe...
+                    </Text>
+                  </Animated.View>
                 </View>
               )}
 
@@ -1404,6 +1435,16 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 50,
+  },
+  loadingContainerCentered: {
+    flex: 1,
+    width: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  scrollBodyCentered: {
+    flexGrow: 1,
+    justifyContent: "center",
   },
   loadingText: {
     color: BRAND.textMain,
